@@ -1,0 +1,8 @@
+# Render blueprint: one free web service that runs the sync server.
+services:
+  - type: web
+    name: cowrite
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run server

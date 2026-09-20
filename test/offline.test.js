@@ -19,9 +19,9 @@ const openTab = (url) => {
 }
 
 const withServer = async (fn) => {
-  const wss = start(0)
-  await new Promise(resolve => wss.on('listening', resolve))
-  try { await fn(`ws://localhost:${wss.address().port}`) } finally { wss.close() }
+  const server = start(0)
+  await new Promise(resolve => server.on('listening', resolve))
+  try { await fn(`ws://localhost:${server.address().port}`) } finally { server.close() }
 }
 
 test('a tab that goes offline, edits, and returns ends with the same text as the other tab', () => withServer(async (url) => {

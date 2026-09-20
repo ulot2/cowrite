@@ -58,6 +58,11 @@ Tabs of the same browser also sync directly through BroadcastChannel. The status
 2. Start the server with `npm run server`. It listens on port 1234.
 3. Start the page with `npm run dev`, then open http://localhost:5173 in two tabs.
 
+## Deploy
+
+1. Server: on Render, create a new Blueprint instance from this repo. Render reads `render.yaml` and runs the server on the free plan.
+2. Page: set the repository variable `WS_URL` to the server address with `wss://`. Then push to `main`, or run the CI workflow by hand. It builds the page and publishes it to GitHub Pages.
+
 ## Tests
 
 `npm test` runs two tests against a real server on a free port:

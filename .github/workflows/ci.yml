@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
+  # Builds the page with the live server address and publishes it to GitHub Pages.
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build -- --base=/cowrite/
+        env: { VITE_WS_URL: ${{ vars.WS_URL }} }
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: dist }
+      - uses: actions/deploy-pages@v5

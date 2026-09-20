@@ -5,6 +5,7 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import { fileURLToPath } from 'node:url'
+import { createServer } from 'node:http'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -18,9 +19,11 @@ export const start = (port) => {
   const awareness = new awarenessProtocol.Awareness(doc)
   awareness.setLocalState(null) // the server is not a user
 
-  const wss = new WebSocketServer({ port })
+  // Plain HTTP gets a short text answer, so a health check or a browser visit sees 200.
+  const server = createServer((req, res) => res.end('cowrite sync server. Connect with a WebSocket.'))
+  const wss = new WebSocketServer({ server })
   const owned = new Map() // socket -> Set of awareness client ids it announced
-  wss.on('close', () => awareness.destroy()) // stops the awareness timer, so the process can exit
+  server.on('close', () => awareness.destroy()) // stops the awareness timer, so the process can exit
 
   const send = (ws, msg) => { if (ws.readyState === ws.OPEN) ws.send(msg) }
   const broadcast = (msg, except) => { for (const c of wss.clients) if (c !== except) send(c, msg) }
@@ -85,11 +88,11 @@ export const start = (port) => {
     }
   })
 
-  return wss
+  return server.listen(port)
 }
 
 // Run directly (not imported): listen on $PORT, or 1234.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const wss = start(Number(process.env.PORT) || 1234)
-  wss.on('listening', () => console.log(`cowrite server on ws://localhost:${wss.address().port}`))
+  const server = start(Number(process.env.PORT) || 1234)
+  server.on('listening', () => console.log(`cowrite server on ws://localhost:${server.address().port}`))
 }
