@@ -1,7 +1,7 @@
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { EditorState } from '@codemirror/state'
-import { EditorView, keymap } from '@codemirror/view'
+import { EditorView, keymap, placeholder } from '@codemirror/view'
 import { standardKeymap } from '@codemirror/commands'
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next'
 
@@ -49,6 +49,7 @@ new EditorView({
     extensions: [
       keymap.of([...yUndoManagerKeymap, ...standardKeymap]),
       EditorView.lineWrapping,
+      placeholder('Type here. Then open this page in a second tab and watch it follow.'),
       EditorView.contentAttributes.of({ 'aria-label': 'Shared document' }),
       yCollab(text, provider.awareness),
     ],
