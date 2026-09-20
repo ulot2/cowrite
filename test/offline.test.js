@@ -1,8 +1,9 @@
-import { test } from 'node:test'
+import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { createServer } from 'node:net'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
-import { start } from '../server/index.js'
 
 // Waits until cond() is true. Fails after 5 seconds.
 const until = (cond, what) => new Promise((resolve, reject) => {
@@ -11,22 +12,41 @@ const until = (cond, what) => new Promise((resolve, reject) => {
   tick()
 })
 
-// A "tab": one doc and one connection to the server. No BroadcastChannel, so the only path is the server.
-const openTab = (url) => {
+const freePort = () => new Promise(resolve => {
+  const s = createServer().listen(0, () => { const { port } = s.address(); s.close(() => resolve(port)) })
+})
+
+// One `wrangler dev` (the local Cloudflare runtime) for the whole file.
+let url, proc
+before(async () => {
+  const port = await freePort()
+  proc = spawn(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'dev', '--port', String(port), '--inspector-port', String(await freePort())], { stdio: ['ignore', 'pipe', 'inherit'] })
+  await new Promise((resolve, reject) => {
+    proc.stdout.on('data', (d) => { if (d.toString().includes('Ready on')) resolve() })
+    proc.on('exit', (code) => reject(new Error('wrangler dev exited with ' + code)))
+    setTimeout(() => reject(new Error('wrangler dev did not start in 60 s')), 60000).unref()
+  })
+  url = `ws://localhost:${port}`
+})
+after(() => {
+  // On Windows, kill the whole tree, or the runtime keeps running after node exits.
+  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F'])
+  else proc.kill()
+})
+
+// A "tab": one doc and one connection to a room. No BroadcastChannel, so the only path is the server.
+const openTab = (room) => {
   const doc = new Y.Doc()
-  const provider = new WebsocketProvider(url, 'main', doc, { disableBc: true })
+  const provider = new WebsocketProvider(url, room, doc, { disableBc: true })
   return { doc, text: doc.getText('content'), provider, close: () => { provider.destroy(); doc.destroy() } }
 }
+// Storage survives between runs, so every run gets a room of its own.
+const freshRoom = () => 'test-' + Date.now() + '-' + Math.random().toString(36).slice(2)
 
-const withServer = async (fn) => {
-  const server = start(0)
-  await new Promise(resolve => server.on('listening', resolve))
-  try { await fn(`ws://localhost:${server.address().port}`) } finally { server.close() }
-}
-
-test('a tab that goes offline, edits, and returns ends with the same text as the other tab', () => withServer(async (url) => {
-  const a = openTab(url)
-  const b = openTab(url)
+test('a tab that goes offline, edits, and returns ends with the same text as the other tab', async () => {
+  const room = freshRoom()
+  const a = openTab(room)
+  const b = openTab(room)
   a.text.insert(0, 'hello')
   await until(() => b.text.toString() === 'hello', 'b receives hello')
 
@@ -43,11 +63,12 @@ test('a tab that goes offline, edits, and returns ends with the same text as the
   await until(() => a.text.toString() === merged && b.text.toString() === merged, 'both tabs merge')
 
   a.close(); b.close()
-}))
+})
 
-test('two offline tabs that insert at the same spot agree on one order when they return', () => withServer(async (url) => {
-  const a = openTab(url)
-  const b = openTab(url)
+test('two offline tabs that insert at the same spot agree on one order when they return', async () => {
+  const room = freshRoom()
+  const a = openTab(room)
+  const b = openTab(room)
   a.text.insert(0, '-')
   await until(() => b.text.toString() === '-', 'b receives the dash')
 
@@ -60,4 +81,17 @@ test('two offline tabs that insert at the same spot agree on one order when they
   assert.match(a.text.toString(), /^(AB|BA)-$/)
 
   a.close(); b.close()
-}))
+})
+
+test('the document survives a fresh connection after all tabs closed', async () => {
+  const room = freshRoom()
+  const a = openTab(room)
+  a.text.insert(0, 'kept')
+  await until(() => a.provider.synced, 'a synced')
+  await new Promise(r => setTimeout(r, 200)) // let the update reach storage
+  a.close()
+
+  const b = openTab(room)
+  await until(() => b.text.toString() === 'kept', 'b loads the stored text')
+  b.close()
+})

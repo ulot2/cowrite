@@ -10,7 +10,7 @@ const doc = new Y.Doc()
 const text = doc.getText('content')
 
 // The provider ships updates to the server and reconnects on its own.
-const url = import.meta.env.VITE_WS_URL || 'ws://localhost:1234'
+const url = import.meta.env.VITE_WS_URL || 'ws://localhost:8787'
 const provider = new WebsocketProvider(url, 'main', doc)
 
 // Presence: this tab's name and color, shared with the other tabs through "awareness".

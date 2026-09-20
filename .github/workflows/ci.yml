@@ -28,6 +28,10 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      # The sync server: one Durable Object on Cloudflare. The token is a repo secret.
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - run: npm run build -- --base=/cowrite/
         env:
           VITE_WS_URL: ${{ vars.WS_URL }}

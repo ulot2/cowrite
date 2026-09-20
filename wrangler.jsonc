@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cowrite",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  // The Worker gets env.DOC: a handle to the Doc class. One Doc instance per room name.
+  "durable_objects": {
+    "bindings": [{ "name": "DOC", "class_name": "Doc" }]
+  },
+  // Each Doc gets its own SQLite database (free plan supports SQLite-backed objects).
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }]
+}
