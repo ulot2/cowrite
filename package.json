@@ -8,7 +8,7 @@
     "build": "vite build",
     "server": "node server/index.js",
     "check": "tsc --noEmit",
-    "test": "node --test test/"
+    "test": "node --test"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
