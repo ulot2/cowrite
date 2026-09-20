@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cowrite</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 48rem; padding: 1rem; }
+    header { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    h1 { font-size: 1.25rem; margin: 0; }
+    #status { margin: 0; }
+    #editor { border: 1px solid #8884; border-radius: 4px; }
+    .cm-editor { min-height: 60vh; font-size: 1rem; }
+    .cm-editor.cm-focused { outline: 2px solid #1565c0; outline-offset: 2px; }
+    #editor .cm-scroller { font-family: inherit; }
+    #editor .cm-content { padding-top: 1.5rem; } /* room for a name label on line one */
+    /* The library hides the name label until hover. Keep it visible and readable. */
+    .cm-ySelectionInfo { opacity: 1 !important; font: 0.75rem system-ui, sans-serif !important; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>cowrite</h1>
+    <label>Your name <input id="name" type="text" maxlength="24"></label>
+    <button id="toggle" type="button">Go offline</button>
+    <p id="status" role="status"></p>
+  </header>
+  <div id="editor"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
