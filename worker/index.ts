@@ -45,12 +45,15 @@ export class Doc extends DurableObject<Env> {
 
     // A presence change (cursor, name) goes to every client, including the sender.
     this.awareness.on('update', ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
-      if (origin instanceof WebSocket) {
-        // Remember which awareness ids this socket announced. Stored on the socket itself,
-        // because memory is gone after hibernation but the socket survives.
-        const owned = new Set<number>(origin.deserializeAttachment() ?? [])
-        for (const id of [...added, ...updated]) owned.add(id)
-        origin.serializeAttachment([...owned])
+      const ws = origin as WebSocket | null
+      if (ws && typeof ws.serializeAttachment === 'function') {
+        // Remember which awareness ids this socket introduced. Only `added` counts: clients echo
+        // every change they hear, so `updated` would make every socket own everyone. Stored on
+        // the socket itself, because memory is gone after hibernation but the socket survives.
+        const owned = new Set<number>(ws.deserializeAttachment() ?? [])
+        for (const id of added) owned.add(id)
+        for (const id of removed) owned.delete(id)
+        ws.serializeAttachment([...owned])
       }
       const enc = encoding.createEncoder()
       encoding.writeVarUint(enc, AWARENESS)
@@ -76,7 +79,9 @@ export class Doc extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     // Plain HTTP gets a short text answer, so a health check or a browser visit sees 200.
-    if (request.headers.get('Upgrade') !== 'websocket') return new Response('cowrite sync server. Connect with a WebSocket.')
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response(`cowrite sync server. ${this.ctx.getWebSockets().length} connected, ${this.awareness.getStates().size} present. Connect with a WebSocket.`)
+    }
 
     const [client, server] = Object.values(new WebSocketPair())
     // Hibernation API: Cloudflare keeps the socket open even while this object sleeps,
@@ -89,7 +94,10 @@ export class Doc extends DurableObject<Env> {
     sync.writeSyncStep1(enc, this.doc)
     server.send(encoding.toUint8Array(enc))
 
-    // Tell the new client who is already here.
+    // Tell the new client who is already here. First drop anyone silent for 30 s (clients renew
+    // every 15 s), which replaces the timer we removed in the constructor.
+    const stale = [...this.awareness.meta].filter(([, m]) => Date.now() - m.lastUpdated > 30000).map(([id]) => id)
+    if (stale.length) awarenessProtocol.removeAwarenessStates(this.awareness, stale, null)
     const ids = [...this.awareness.getStates().keys()]
     if (ids.length) {
       const enc = encoding.createEncoder()

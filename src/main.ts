@@ -11,7 +11,9 @@ const text = doc.getText('content')
 
 // The provider ships updates to the server and reconnects on its own.
 const url = import.meta.env.VITE_WS_URL || 'ws://localhost:8787'
-const provider = new WebsocketProvider(url, 'main', doc)
+// disableBc: tabs of one browser could also sync directly through BroadcastChannel. That path
+// relays presence out of order, so the server files a tab under the wrong socket. Server only.
+const provider = new WebsocketProvider(url, 'main', doc, { disableBc: true })
 
 // Presence: this tab's name and color, shared with the other tabs through "awareness".
 const nameInput = document.querySelector<HTMLInputElement>('#name')!
@@ -26,13 +28,17 @@ nameInput.value = 'Guest ' + Math.floor(Math.random() * 100)
 setUser(nameInput.value)
 nameInput.addEventListener('input', () => setUser(nameInput.value.trim() || 'Anonymous'))
 
-// Status line: connection state and who is here, as text.
+// Status line: connection state (a colored dot and a word) and who is here, as text.
 const status = document.querySelector<HTMLElement>('#status')!
+const statusText = document.querySelector<HTMLElement>('#status-text')!
+const labels = { connected: 'Connected', connecting: 'Connecting…', disconnected: 'Offline' }
+let state: keyof typeof labels = 'connecting'
 const render = () => {
   const names = [...provider.awareness.getStates().values()].map(s => s.user?.name).filter(Boolean)
-  status.textContent = `${provider.wsconnected ? 'Connected' : 'Offline'} · here: ${names.join(', ')}`
+  status.dataset.state = state
+  statusText.textContent = `${labels[state]} · ${names.join(', ')}`
 }
-provider.on('status', render)
+provider.on('status', ({ status }) => { state = status; render() })
 provider.awareness.on('change', render)
 
 // Offline switch for the demo: the document keeps working, and syncs again on reconnect.

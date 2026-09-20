@@ -83,6 +83,19 @@ test('two offline tabs that insert at the same spot agree on one order when they
   a.close(); b.close()
 })
 
+test("a tab that closes disappears from the other tab's presence list", async () => {
+  const room = freshRoom()
+  const a = openTab(room)
+  const b = openTab(room)
+  a.provider.awareness.setLocalStateField('user', { name: 'Ada' })
+  b.provider.awareness.setLocalStateField('user', { name: 'Grace' })
+  await until(() => b.provider.awareness.getStates().size === 2, 'b sees both')
+
+  a.close()
+  await until(() => b.provider.awareness.getStates().size === 1, 'the server removed a on close')
+  b.close()
+})
+
 test('the document survives a fresh connection after all tabs closed', async () => {
   const room = freshRoom()
   const a = openTab(room)
