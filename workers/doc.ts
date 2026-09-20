@@ -12,6 +12,9 @@ const AWARENESS = 1
 const COMPACT_AT = 200
 
 type AwarenessChange = { added: number[]; updated: number[]; removed: number[] }
+// What we keep on each socket. Memory is gone after hibernation, the socket and its attachment are not.
+type Attachment = { role: string; owned: number[] }
+const attachmentOf = (ws: WebSocket): Attachment => ws.deserializeAttachment() ?? { role: 'viewer', owned: [] }
 
 // One Doc per room. It holds the Y.Doc, stores every update, and forwards messages between sockets.
 // Cloudflare runs one copy of it, so all edits for a room pass through one place, in order.
@@ -48,12 +51,12 @@ export class Doc extends DurableObject<Env> {
       const ws = origin as WebSocket | null
       if (ws && typeof ws.serializeAttachment === 'function') {
         // Remember which awareness ids this socket introduced. Only `added` counts: clients echo
-        // every change they hear, so `updated` would make every socket own everyone. Stored on
-        // the socket itself, because memory is gone after hibernation but the socket survives.
-        const owned = new Set<number>(ws.deserializeAttachment() ?? [])
+        // every change they hear, so `updated` would make every socket own everyone.
+        const attachment = attachmentOf(ws)
+        const owned = new Set(attachment.owned)
         for (const id of added) owned.add(id)
         for (const id of removed) owned.delete(id)
-        ws.serializeAttachment([...owned])
+        ws.serializeAttachment({ ...attachment, owned: [...owned] })
       }
       const enc = encoding.createEncoder()
       encoding.writeVarUint(enc, AWARENESS)
@@ -87,6 +90,8 @@ export class Doc extends DurableObject<Env> {
     // Hibernation API: Cloudflare keeps the socket open even while this object sleeps,
     // and wakes it with webSocketMessage / webSocketClose when something arrives.
     this.ctx.acceptWebSocket(server)
+    // The Worker checked the session and the role before it forwarded the request.
+    server.serializeAttachment({ role: request.headers.get('X-Role') ?? 'viewer', owned: [] } satisfies Attachment)
 
     // Handshake: ask the new client what it has (step 1). It answers with step 2 and its own step 1.
     const enc = encoding.createEncoder()
@@ -113,6 +118,8 @@ export class Doc extends DurableObject<Env> {
     const dec = decoding.createDecoder(new Uint8Array(data))
     switch (decoding.readVarUint(dec)) {
       case SYNC: {
+        // A viewer may ask for the document (step 1) but never change it (step 2 or an update).
+        if (attachmentOf(ws).role === 'viewer' && decoding.peekVarUint(dec) !== sync.messageYjsSyncStep1) return
         // readSyncMessage answers step 1 with step 2, and applies step 2 and updates to the doc.
         const enc = encoding.createEncoder()
         encoding.writeVarUint(enc, SYNC)
@@ -128,7 +135,7 @@ export class Doc extends DurableObject<Env> {
 
   // When a tab closes, its cursor and name leave the other tabs.
   webSocketClose(ws: WebSocket) {
-    awarenessProtocol.removeAwarenessStates(this.awareness, ws.deserializeAttachment() ?? [], null)
+    awarenessProtocol.removeAwarenessStates(this.awareness, attachmentOf(ws).owned, null)
   }
 
   webSocketError(ws: WebSocket) {
@@ -136,10 +143,3 @@ export class Doc extends DurableObject<Env> {
   }
 }
 
-// The Worker: every request for ws://host/<room> goes to the Doc named <room>.
-export default {
-  fetch(request, env) {
-    const room = new URL(request.url).pathname.slice(1) || 'main'
-    return env.DOC.get(env.DOC.idFromName(room)).fetch(request)
-  },
-} satisfies ExportedHandler<Env>

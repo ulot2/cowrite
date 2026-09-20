@@ -1,12 +1,19 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cowrite",
-  "main": "worker/index.ts",
-  "compatibility_date": "2026-09-01",
-  // The Worker gets env.DOC: a handle to the Doc class. One Doc instance per room name.
+  "main": "workers/app.ts",
+  "compatibility_date": "2026-09-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+  "vars": { "BETTER_AUTH_URL": "https://cowrite.cowrite.workers.dev" },
+  // env.DOC: one Doc object per document. Same migration tag as v1.0, so existing objects survive.
   "durable_objects": {
     "bindings": [{ "name": "DOC", "class_name": "Doc" }]
   },
-  // Each Doc gets its own SQLite database (free plan supports SQLite-backed objects).
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }],
+  // env.DB: the SQL database for users, documents, and roles. Tables come from migrations/.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "cowrite", "database_id": "3b3ebdce-3385-4130-bcb0-0b1fea2f2b86", "migrations_dir": "migrations" }
+  ]
 }

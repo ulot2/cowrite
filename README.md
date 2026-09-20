@@ -1,6 +1,6 @@
 # cowrite
 
-Two browser tabs edit one text document at the same time. Each tab sees the other user's cursor and name. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and edit it live with other people. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -8,11 +8,14 @@ Two browser tabs edit one text document at the same time. Each tab sees the othe
 
 ## Try it
 
-Live demo: **https://ulot2.github.io/cowrite/**
+Live: **https://cowrite.cowrite.workers.dev**
 
-1. Open the link in two tabs.
-2. Type in one tab. The other tab follows, and shows your cursor with your name.
-3. Click "Go offline" in one tab, type in both, then click "Reconnect". Both tabs end with the same text.
+1. Create an account with an email and a password, or continue with GitHub.
+2. Create a document and open it in two tabs.
+3. Type in one tab. The other tab follows, and shows your cursor with your name.
+4. Click "Go offline" in one tab, type in both, then click "Reconnect". Both tabs end with the same text.
+
+The v1.0 demo without accounts is tagged `v1.0.0`.
 
 ## Why this exists
 
@@ -29,9 +32,9 @@ The server is one Cloudflare Durable Object (a small server with a name, one run
 ```mermaid
 sequenceDiagram
     participant A as Tab A
-    participant S as Server (worker/index.ts)
+    participant S as Server (workers/app.ts, workers/doc.ts)
     participant B as Tab B
-    A->>S: connect
+    A->>S: connect (session cookie, role check)
     S->>A: sync step 1: "here is what I have"
     A->>S: sync step 2: "here is what you miss"
     A->>S: update: insert "hello" at 0
@@ -52,25 +55,31 @@ When a tab reconnects, the two sides exchange "state vectors" (a list of how man
 
 Every update is one row in the object's database. On wake, the object replays the rows. After 200 rows it folds them into one row that holds the whole document.
 
+Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents` and `memberships` tables in D1 say who can open which document. The Worker checks the session and the role before it hands a WebSocket to the object, and the object ignores edits from a viewer.
+
 ## Run it locally
 
 1. Install the dependencies with `npm install`.
-2. Start the server with `npm run server`. It runs the Cloudflare runtime on your machine, on port 8787.
-3. Start the page with `npm run dev`, then open http://localhost:5173 in two tabs.
+2. Create `.dev.vars` with two lines: `BETTER_AUTH_SECRET=<any long random string>` and `BETTER_AUTH_URL=http://localhost:5173`.
+3. Create the local database tables with `npx wrangler d1 migrations apply cowrite --local`.
+4. Start everything with `npm run dev` (app, Worker, object, and database in one process), then open http://localhost:5173.
 
 ## Deploy
 
-1. Server: run `npx wrangler login` once, then `npm run deploy`. Wrangler prints the address, such as `https://cowrite.<you>.workers.dev`.
-2. Page: set the repository variable `WS_URL` to that address with `wss://`, and the secret `CLOUDFLARE_API_TOKEN` to a Cloudflare API token with Workers edit rights. Then push to `main`. The CI workflow deploys the server and publishes the page to GitHub Pages.
+1. Run `npx wrangler login` once. Create the database with `npx wrangler d1 create cowrite` and put its id in `wrangler.jsonc`.
+2. Set the secrets once: `npx wrangler secret put BETTER_AUTH_SECRET`, and for GitHub login `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` from a GitHub OAuth app whose callback is `https://<your address>/api/auth/callback/github`.
+3. Apply the migrations with `npx wrangler d1 migrations apply cowrite --remote`, then `npm run deploy`.
+4. For CI deploys, add the repository secret `CLOUDFLARE_API_TOKEN` (a token with Workers and D1 edit rights). Every push to `main` then runs the tests, the migrations, and the deploy.
 
 ## Tests
 
-`npm test` starts the Cloudflare runtime on a free port and runs four tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs five tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
 - A tab that closes disappears from the other tab's presence list.
 - A document written by one tab is still there for a new tab after every tab closed.
+- A socket without a session gets 401, a socket for a document you cannot open gets 403.
 
 ## Accessibility
 
@@ -80,9 +89,9 @@ Every update is one row in the object's database. On wake, the object replays th
 
 ## Limits
 
-- One document, plain text, no accounts. That is the scope.
+- Plain text, and no sharing yet: only the owner can open a document. Rich text is next, then sharing and roles.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack
 
-TypeScript, Vite, CodeMirror 6, Yjs, y-websocket. One Cloudflare Durable Object of about 130 lines as the server. Page on GitHub Pages, server on Cloudflare's free plan.
+TypeScript, React Router (framework mode), CodeMirror 6, Yjs, y-websocket, Better Auth. One Cloudflare Worker with a Durable Object per document and a D1 database, all on the free plan.

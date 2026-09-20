@@ -1,5 +1,9 @@
 node_modules
+build
 dist
-.claude
-worker-configuration.d.ts
+.react-router
 .wrangler
+.dev.vars*
+worker-configuration.d.ts
+*.tsbuildinfo
+.claude

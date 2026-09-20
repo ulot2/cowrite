@@ -11,30 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24, cache: npm }
       - run: npm ci
       - run: npm run check
       - run: npm test
 
-  # Builds the page with the live server address and publishes it to GitHub Pages.
+  # Ships the app, the sync objects, and any new database migration to Cloudflare. The token is a repo secret.
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions: { pages: write, id-token: write }
-    environment: github-pages
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24, cache: npm }
       - run: npm ci
-      # The sync server: one Durable Object on Cloudflare. The token is a repo secret.
+      - run: npm run build
+      - run: npx wrangler d1 migrations apply cowrite --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - run: npm run build -- --base=/cowrite/
-        env:
-          VITE_WS_URL: ${{ vars.WS_URL }}
-      - uses: actions/upload-pages-artifact@v5
-        with: { path: dist }
-      - uses: actions/deploy-pages@v5
