@@ -1,6 +1,7 @@
 import { Form } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { deleteDocument, listDocuments } from '~/lib/db.server'
+import { deleteDocument, getDocument, listDocuments } from '~/lib/db.server'
+import { logEvent } from '~/lib/events.server'
 import { roleOnDocument } from '~/lib/access.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
@@ -22,6 +23,9 @@ export async function action({ request }: Route.ActionArgs) {
   const id = String(f.get('id'))
   if (f.get('intent') !== 'delete') return null
   if ((await roleOnDocument(user.id, id)) !== 'owner') throw new Response('Only the owner can delete', { status: 403 })
+  // Logged first: the event copies the space id from the row that is about to go.
+  const doc = await getDocument(id)
+  if (doc) await logEvent(id, user.id, 'deleted', `deleted “${doc.title}”`)
   await deleteDocument(id)
   return null
 }

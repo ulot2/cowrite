@@ -9,6 +9,7 @@ export default [
     index('routes/home.tsx'),
     route('documents', 'routes/documents.tsx'),
     route('doc/:id', 'routes/doc.tsx'),
+    route('doc/:id/history', 'routes/history.tsx'),
     route('space/:id', 'routes/space.tsx'),
   ]),
 ] satisfies RouteConfig

@@ -1,10 +1,12 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { getDocument, renameDocument } from '~/lib/db.server'
-import { createShareLink, findUserByEmail, getShareLink, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { logEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
 import { Editor } from '~/components/editor'
+import { Icon } from '~/components/icon'
 import { ShareDialog } from '~/components/share-dialog'
 import type { Route } from './+types/doc'
 
@@ -34,10 +36,15 @@ export async function action({ request, params }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = String(f.get('intent'))
   const role = await roleOnDocument(user.id, params.id)
+  const document = role && await getDocument(params.id)
+  if (!role || !document) throw new Response('Not found', { status: 404 })
   if (intent === 'rename') {
     if (!atLeast(role, 'editor')) throw new Response('Editors can rename', { status: 403 })
     const title = String(f.get('title') ?? '').trim().slice(0, 120)
-    if (title) await renameDocument(params.id, title)
+    if (title && title !== document.title) {
+      await renameDocument(params.id, title)
+      await logEvent(params.id, user.id, 'renamed', `renamed “${document.title}” to “${title}”`)
+    }
     return null
   }
   if (role !== 'owner') throw new Response('Only the owner can share', { status: 403 })
@@ -47,17 +54,30 @@ export async function action({ request, params }: Route.ActionArgs) {
     case 'add': {
       const person = await findUserByEmail(String(f.get('email') ?? ''))
       if (!person) return { error: 'No account has that email. Ask them to sign up first.' }
-      if (person.id !== user.id) await setMember('document', params.id, person.id, granted)
+      if (person.id !== user.id) {
+        await setMember('document', params.id, person.id, granted)
+        await logEvent(params.id, user.id, 'shared', `added ${person.name} as ${granted}`)
+      }
       return null
     }
-    case 'role': await setMember('document', params.id, String(f.get('user_id')), granted); return null
-    case 'remove': await removeMember('document', params.id, String(f.get('user_id'))); return null
-    case 'link-create': await createShareLink('document', params.id, granted, user.id); return null
-    case 'link-revoke': await revokeShareLink('document', params.id); return null
+    case 'role': case 'remove': {
+      const person = await findUser(String(f.get('user_id')))
+      if (!person) return null
+      if (intent === 'role') await setMember('document', params.id, person.id, granted)
+      else await removeMember('document', params.id, person.id)
+      await logEvent(params.id, user.id, 'shared', intent === 'role' ? `made ${person.name} ${granted}` : `removed ${person.name}`)
+      return null
+    }
+    case 'link-create': await createShareLink('document', params.id, granted, user.id); await logEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
+    case 'link-revoke': await revokeShareLink('document', params.id); await logEvent(params.id, user.id, 'shared', 'revoked the link'); return null
     case 'move': {
       const spaceId = String(f.get('space_id') ?? '') || null
       if (spaceId && (await roleOnSpace(user.id, spaceId)) !== 'owner') throw new Response('Not your space', { status: 403 })
+      // Logged before the move, so the old space keeps a trace of the document leaving.
+      const space = spaceId ? await getSpace(spaceId) : null
+      await logEvent(params.id, user.id, 'moved', space ? `moved “${document.title}” to ${space.name}` : `moved “${document.title}” out of its space`)
       await moveDocument(params.id, spaceId)
+      if (space) await logEvent(params.id, user.id, 'moved', `moved “${document.title}” here`)
       return null
     }
   }
@@ -71,7 +91,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
     <article className="document" key={params.id}>
       <nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')}
-        actions={<ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} />}>
+        actions={<><Link className="button" to={`/doc/${params.id}/history`}><Icon name="history" />History</Link><ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} /></>}>
         {canEdit ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.
           <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>

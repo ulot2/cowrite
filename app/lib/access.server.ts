@@ -88,8 +88,12 @@ export const revokeShareLink = (target: 'document' | 'space', id: string) =>
 
 export const findShareLink = (token: string) => env.DB.prepare('SELECT * FROM share_links WHERE token = ?').bind(token).first<ShareLink>()
 
-// Following a link grants its role, unless the person already has a higher one.
+// Following a link grants its role, unless the person already has a higher one. True when it granted.
 export const redeemShareLink = async (link: ShareLink, userId: string) => {
   const current = link.target_type === 'document' ? await roleOnDocument(userId, link.target_id) : await roleOnSpace(userId, link.target_id)
-  if (rank(current) < rank(link.role)) await setMember(link.target_type, link.target_id, userId, link.role)
+  if (rank(current) >= rank(link.role)) return false
+  await setMember(link.target_type, link.target_id, userId, link.role)
+  return true
 }
+
+export const findUser = (id: string) => env.DB.prepare('SELECT id, name FROM "user" WHERE id = ?').bind(id).first<{ id: string; name: string }>()

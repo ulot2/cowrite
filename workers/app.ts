@@ -1,6 +1,7 @@
 import { createRequestHandler } from 'react-router'
 import { getAuth } from '~/lib/auth.server'
 import { roleOnDocument } from '~/lib/access.server'
+import { usersById } from '~/lib/db.server'
 import { atLeast } from '~/lib/roles'
 
 // The Doc class must be exported from the Worker entry, so Cloudflare can find it.
@@ -32,8 +33,7 @@ export default {
       if (!(await getAuth().api.getSession({ headers: request.headers }))) return new Response('Sign in first', { status: 401 })
       const ids = (new URL(request.url).searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50)
       if (ids.length === 0) return Response.json([])
-      const { results } = await env.DB.prepare(`SELECT id, name, image FROM "user" WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<{ id: string; name: string; image: string | null }>()
-      return Response.json(results.map((u) => ({ id: u.id, username: u.name, avatarUrl: u.image ?? '' })))
+      return Response.json((await usersById(ids)).map((u) => ({ id: u.id, username: u.name, avatarUrl: u.image ?? '' })))
     }
 
     // GET /files/<key>: serves an uploaded image. Keys are random, so the URL is the permission.
@@ -56,6 +56,7 @@ export default {
       const canWrite = atLeast(role, match[2] ? 'commenter' : 'editor')
       const headers = new Headers(request.headers)
       headers.set('X-Role', canWrite ? 'editor' : 'viewer')
+      headers.set('X-User', session.user.id) // the object logs who edited
       return env.DOC.get(env.DOC.idFromName(room)).fetch(new Request(request, { headers }))
     }
     return requestHandler(request)

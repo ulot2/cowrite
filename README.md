@@ -1,6 +1,6 @@
 # cowrite
 
-A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Share a document by email or by link with a role (view, comment, review, edit), or group documents in a space with its own members. Select text to comment on it, reply, react, and resolve. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Share a document by email or by link with a role (view, comment, review, edit), or group documents in a space with its own members. Select text to comment on it, reply, react, and resolve. Every document keeps its versions: one is saved automatically while you work, and you can name one, compare two, and restore any of them. A space shows who did what, day by day. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -17,6 +17,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 3. Type in one tab, or press `/` for headings, lists, tables, and images. The other tab follows, and shows your cursor with your name.
 4. Select a few words and use the comment button in the toolbar. The thread shows up in the other tab, in the text and in the Comments panel.
 5. Click "Share", create a link for viewers, and open it in a private window with a second account. That account can read and follow your cursor, but not type.
+6. Click "History". Name the current version, change a paragraph, compare the version to the current document, and restore it. The other tab changes without a reload.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -62,6 +63,10 @@ The editor is [BlockNote](https://www.blocknotejs.org), which stores its blocks 
 
 Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents`, `memberships`, `spaces`, and `space_memberships` tables say who can open what, with one role ladder: viewer, commenter, reviewer, editor, owner. A person's role on a document is the highest of their direct role and their role on the document's space.
 
+Versions live in the object too, in a `versions` table next to the update log. Each row is the whole document at one moment (`Y.encodeStateAsUpdate`). The object saves one by itself three seconds after the first edit, then at most once per half hour of work, and keeps the newest fifty of those; named versions stay. A restore copies the blocks of the old version over the live ones in one Yjs transaction, so it travels the normal update path and every open editor changes in place. The compare view is a block-level diff computed on the server.
+
+Activity is a D1 table `events`, one row per thing that happened (created, renamed, shared, moved, edited, commented, version saved, restored), written by the Worker's actions and by the object's alarm. The Worker calls the object's methods directly (Durable Object RPC), so versions need no public API route.
+
 The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs editor, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word.
 
 ## Run it locally
@@ -80,7 +85,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs five tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs seventeen tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -94,6 +99,10 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - A viewer reads but cannot edit or comment; a commenter comments but cannot edit; a role change applies on the next connect.
 - A share link turns a 403 into a 101 for whoever follows it, and sends signed-out people through login and back.
 - A space shares its documents with its members and hides them from everyone else.
+- The first edit gets an automatic version; a named version, a compare, and a restore work end to end, and the open tab changes without a reload.
+- A viewer can read the history but gets 403 on save and restore.
+- A rename and an edit show up on the space timeline and on the document's history.
+- Deleting a document closes its sockets and wipes its object.
 
 ## Accessibility
 
@@ -105,6 +114,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 - Adding someone by email needs them to have an account already; no invitation email is sent.
 - Mentions in comments come with notifications.
+- The version preview shows headings, paragraphs, and list items as plain text; bold, links, and images inside a block are not drawn.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack

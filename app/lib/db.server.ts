@@ -39,6 +39,16 @@ export const createDocument = async (userId: string, title: string, spaceId: str
 export const renameDocument = (id: string, title: string) =>
   env.DB.prepare('UPDATE documents SET title = ?, updated_at = ? WHERE id = ?').bind(title, Date.now(), id).run()
 
-// Memberships go with it (ON DELETE CASCADE). The Doc object's storage stays until slice 5 adds cleanup.
-export const deleteDocument = (id: string) =>
-  env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(id).run()
+// Memberships go with it (ON DELETE CASCADE). Then both objects (text and comments) drop their storage.
+export const deleteDocument = async (id: string) => {
+  await env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(id).run()
+  for (const room of [id, `${id}:threads`]) await env.DOC.get(env.DOC.idFromName(room)).wipe()
+}
+
+export type UserRow = { id: string; name: string; image: string | null }
+// Names and avatars for a list of ids (at most 50: the comments UI and the version list ask in batches).
+export const usersById = async (ids: string[]): Promise<UserRow[]> => {
+  const some = [...new Set(ids)].slice(0, 50)
+  if (some.length === 0) return []
+  return (await env.DB.prepare(`SELECT id, name, image FROM "user" WHERE id IN (${some.map(() => '?').join(',')})`).bind(...some).all<UserRow>()).results
+}

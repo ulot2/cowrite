@@ -38,6 +38,8 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Share: a native `<dialog>` from the "Share" button in the presence row. Members with a role select, add by email, the link with copy and revoke, the space select. Same on a space page, where the header also holds the public switch and "New document".
 - Sidebar: a "Spaces" group under Documents, one link per space and a small "New space" field.
 - Cards: the space name in the accent color above the preview when the document is in a space.
+- History: a "History" link next to "Share" opens `/doc/:id/history`. Versions on the left (name or "Automatic", who, when; the selected one carries the accent bar), the chosen version on the right with "Compare to" and "Restore". The diff is a list of blocks: removed on the warning wash with a strike, added on the accent wash, each with a text label so color is not the only signal. Stacked on phones.
+- Activity: rows grouped by day (Today, Yesterday, then dates) with the actor's avatar, the sentence, a link to the document, and the relative time. Shown under the cards on a space page and under the versions on a history page.
 
 ## Accessibility
 

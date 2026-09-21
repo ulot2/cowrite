@@ -1,7 +1,9 @@
 import { Form, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createDocument, listSpaceDocuments } from '~/lib/db.server'
-import { createShareLink, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { listSpaceEvents, logEvent, logSpaceEvent } from '~/lib/events.server'
+import { Activity } from '~/components/activity'
 import type { Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
@@ -23,6 +25,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     documents: await listSpaceDocuments(params.id, role),
     members: await listMembers('space', params.id),
     link: isOwner ? await getShareLink('space', params.id) : null,
+    events: await listSpaceEvents(params.id),
   }
 }
 
@@ -35,7 +38,9 @@ export async function action({ request, params }: Route.ActionArgs) {
   const role = await roleOnSpace(user.id, params.id)
   if (intent === 'create') {
     if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
-    throw redirect(`/doc/${await createDocument(user.id, 'Untitled', params.id)}`)
+    const id = await createDocument(user.id, 'Untitled', params.id)
+    await logEvent(id, user.id, 'created', 'created “Untitled”')
+    throw redirect(`/doc/${id}`)
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
   const pick = String(f.get('role'))
@@ -44,20 +49,34 @@ export async function action({ request, params }: Route.ActionArgs) {
     case 'add': {
       const person = await findUserByEmail(String(f.get('email') ?? ''))
       if (!person) return { error: 'No account has that email. Ask them to sign up first.' }
-      if (person.id !== user.id) await setMember('space', params.id, person.id, granted)
+      if (person.id !== user.id) {
+        await setMember('space', params.id, person.id, granted)
+        await logSpaceEvent(params.id, user.id, 'shared', `added ${person.name} as ${granted}`)
+      }
       return null
     }
-    case 'role': await setMember('space', params.id, String(f.get('user_id')), granted); return null
-    case 'remove': await removeMember('space', params.id, String(f.get('user_id'))); return null
-    case 'link-create': await createShareLink('space', params.id, granted, user.id); return null
-    case 'link-revoke': await revokeShareLink('space', params.id); return null
-    case 'visibility': await setSpaceVisibility(params.id, f.get('visibility') === 'public' ? 'public' : 'private'); return null
+    case 'role': case 'remove': {
+      const person = await findUser(String(f.get('user_id')))
+      if (!person) return null
+      if (intent === 'role') await setMember('space', params.id, person.id, granted)
+      else await removeMember('space', params.id, person.id)
+      await logSpaceEvent(params.id, user.id, 'shared', intent === 'role' ? `made ${person.name} ${granted}` : `removed ${person.name}`)
+      return null
+    }
+    case 'link-create': await createShareLink('space', params.id, granted, user.id); await logSpaceEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
+    case 'link-revoke': await revokeShareLink('space', params.id); await logSpaceEvent(params.id, user.id, 'shared', 'revoked the link'); return null
+    case 'visibility': {
+      const visibility = f.get('visibility') === 'public' ? 'public' : 'private'
+      await setSpaceVisibility(params.id, visibility)
+      await logSpaceEvent(params.id, user.id, 'space', `made the space ${visibility}`)
+      return null
+    }
   }
   return null
 }
 
 export default function Space({ loaderData, actionData }: Route.ComponentProps) {
-  const { owner, space, role, isOwner, documents, members, link } = loaderData
+  const { owner, space, role, isOwner, documents, members, link, events } = loaderData
   return (
     <div className="page">
       <header className="page-head">
@@ -85,6 +104,7 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
       ) : (
         <div className="cards">{documents.map((d, i) => <DocCard key={d.id} doc={d} owner={owner} index={i} />)}</div>
       )}
+      <Activity events={events} />
     </div>
   )
 }

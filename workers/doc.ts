@@ -4,17 +4,37 @@ import * as sync from 'y-protocols/sync'
 import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
+import { touchEvent } from '~/lib/events.server'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
 const AWARENESS = 1
 // Rows in the update log before we fold them into one row.
 const COMPACT_AT = 200
+// An automatic version at most this often, and how many unnamed ones we keep.
+const AUTO_VERSION_EVERY = 30 * 60 * 1000
+const AUTO_VERSIONS_KEPT = 50
 
 type AwarenessChange = { added: number[]; updated: number[]; removed: number[] }
 // What we keep on each socket. Memory is gone after hibernation, the socket and its attachment are not.
-type Attachment = { role: string; owned: number[] }
-const attachmentOf = (ws: WebSocket): Attachment => ws.deserializeAttachment() ?? { role: 'viewer', owned: [] }
+type Attachment = { role: string; user: string; owned: number[] }
+const attachmentOf = (ws: WebSocket): Attachment => ws.deserializeAttachment() ?? { role: 'viewer', user: '', owned: [] }
+
+export type Version = { id: number; name: string | null; created_by: string | null; created_at: number; bytes: number }
+export type Block = { type: string; level: number | null; text: string }
+
+// The editor stores blocks as XML: wrappers around content nodes. Flatten to one row per content node.
+const wrappers = new Set(['blockGroup', 'blockContainer', 'columnList', 'column'])
+const blocksOf = (doc: Y.Doc): Block[] => {
+  const out: Block[] = []
+  const walk = (node: Y.XmlElement | Y.XmlText | Y.XmlHook) => {
+    if (!(node instanceof Y.XmlElement)) return
+    if (wrappers.has(node.nodeName)) node.forEach(walk)
+    else out.push({ type: node.nodeName, level: Number(node.getAttribute('level')) || null, text: node.toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() })
+  }
+  doc.getXmlFragment('document-store').forEach(walk)
+  return out
+}
 
 // One Doc per room. It holds the Y.Doc, stores every update, and forwards messages between sockets.
 // Cloudflare runs one copy of it, so all edits for a room pass through one place, in order.
@@ -22,10 +42,15 @@ export class Doc extends DurableObject<Env> {
   doc = new Y.Doc()
   awareness = new awarenessProtocol.Awareness(this.doc)
   rows = 0
+  // Users who changed the document since the last alarm. In memory: a hibernation inside the
+  // 3 s window loses one "edited" event, nothing else. (ponytail: storage.put per edit is not worth it)
+  touched = new Set<string>()
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
     this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, data BLOB NOT NULL)')
+    // A version is the whole document at one moment. `name` is NULL for automatic ones.
+    this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS versions (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT, created_at INTEGER NOT NULL, snapshot BLOB NOT NULL)')
     // Rebuild the document from the log. This runs on every wake, also after hibernation.
     for (const row of this.ctx.storage.sql.exec<{ data: ArrayBuffer }>('SELECT data FROM updates ORDER BY id')) {
       Y.applyUpdate(this.doc, new Uint8Array(row.data))
@@ -40,6 +65,9 @@ export class Doc extends DurableObject<Env> {
     this.doc.on('update', (update: Uint8Array, origin: unknown) => {
       this.ctx.storage.sql.exec('INSERT INTO updates (data) VALUES (?)', update)
       if (++this.rows >= COMPACT_AT) this.compact()
+      // This event fires only for a real change, so the sender counts as an editor.
+      const ws = origin as WebSocket | null
+      if (ws && typeof ws.deserializeAttachment === 'function') this.touched.add(attachmentOf(ws).user)
       // A few seconds after the last edit, alarm() writes the preview and the edit time to D1.
       this.ctx.storage.getAlarm().then((at) => { if (at === null) this.ctx.storage.setAlarm(Date.now() + 3000) })
       const enc = encoding.createEncoder()
@@ -71,15 +99,23 @@ export class Doc extends DurableObject<Env> {
   // comments room. Each room writes its own column, so a comment never bumps the edit time of the text.
   async alarm() {
     const name = this.ctx.id.name ?? ''
+    const editors = [...this.touched].filter(Boolean)
+    this.touched.clear()
     if (name.endsWith(':threads')) {
+      const id = name.slice(0, -8)
       // One Y.Map per thread with a `resolved` flag.
       const open = [...this.doc.getMap<Y.Map<unknown>>('threads').values()].filter((t) => t.get('resolved') !== true).length
-      await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, name.slice(0, -8)).run()
+      await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, id).run()
+      for (const user of editors) await touchEvent(id, user, 'commented', 'commented')
       return
     }
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
     const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
     await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), name).run()
+    // A baseline after the first edit, then at most one automatic version per half hour of work.
+    const last = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MAX(created_at) AS at FROM versions').one().at
+    if (!last || Date.now() - last > AUTO_VERSION_EVERY) this.snapshot(null, null)
+    for (const user of editors) await touchEvent(name, user, 'edited', 'edited the text')
   }
 
   // Replace the log with one row that holds the whole document. Runs without an await, so
@@ -88,6 +124,60 @@ export class Doc extends DurableObject<Env> {
     this.ctx.storage.sql.exec('DELETE FROM updates')
     this.ctx.storage.sql.exec('INSERT INTO updates (data) VALUES (?)', Y.encodeStateAsUpdate(this.doc))
     this.rows = 1
+  }
+
+  // Stores the document as it is now. Unnamed versions are automatic; only the newest 50 stay.
+  snapshot(name: string | null, userId: string | null) {
+    this.ctx.storage.sql.exec('INSERT INTO versions (name, created_by, created_at, snapshot) VALUES (?, ?, ?, ?)', name, userId, Date.now(), Y.encodeStateAsUpdate(this.doc))
+    this.ctx.storage.sql.exec(`DELETE FROM versions WHERE name IS NULL AND id NOT IN (SELECT id FROM versions WHERE name IS NULL ORDER BY id DESC LIMIT ${AUTO_VERSIONS_KEPT})`)
+    return this.ctx.storage.sql.exec<{ id: number }>('SELECT MAX(id) AS id FROM versions').one().id
+  }
+
+  // A separate Y.Doc built from one stored version, or null when the id is unknown.
+  docFrom(id: number) {
+    const row = this.ctx.storage.sql.exec<{ snapshot: ArrayBuffer }>('SELECT snapshot FROM versions WHERE id = ?', id).toArray()[0]
+    if (!row) return null
+    const doc = new Y.Doc()
+    Y.applyUpdate(doc, new Uint8Array(row.snapshot))
+    return doc
+  }
+
+  // The methods below are called by the Worker over RPC (env.DOC.get(id).listVersions()).
+  // They run inside the object, in order with the socket messages, so they see a consistent document.
+  listVersions(): Version[] {
+    return this.ctx.storage.sql.exec<Version>('SELECT id, name, created_by, created_at, length(snapshot) AS bytes FROM versions ORDER BY id DESC').toArray()
+  }
+
+  readVersion(id: number | 'now'): Block[] | null {
+    const doc = id === 'now' ? this.doc : this.docFrom(id)
+    return doc && blocksOf(doc)
+  }
+
+  saveVersion(name: string, userId: string) {
+    return this.snapshot(name, userId)
+  }
+
+  // Copies the blocks of an old version over the live ones, in one transaction. It travels the normal
+  // update path (stored, broadcast), so every open editor changes in place. The state before the
+  // restore is saved first, so a restore can be undone with another restore.
+  restoreVersion(id: number) {
+    const old = this.docFrom(id)
+    if (!old) return false
+    this.snapshot(null, null)
+    const src = old.getXmlFragment('document-store')
+    const dst = this.doc.getXmlFragment('document-store')
+    this.doc.transact(() => {
+      dst.delete(0, dst.length)
+      dst.insert(0, src.toArray().map((node) => node.clone()) as (Y.XmlElement | Y.XmlText)[])
+    }, 'restore')
+    return true
+  }
+
+  // The document was deleted: close everyone, forget the alarm, drop every table.
+  async wipe() {
+    for (const ws of this.ctx.getWebSockets()) ws.close(1000, 'deleted')
+    await this.ctx.storage.deleteAlarm()
+    await this.ctx.storage.deleteAll()
   }
 
   broadcast(msg: Uint8Array, except: unknown) {
@@ -108,7 +198,7 @@ export class Doc extends DurableObject<Env> {
     // and wakes it with webSocketMessage / webSocketClose when something arrives.
     this.ctx.acceptWebSocket(server)
     // The Worker checked the session and the role before it forwarded the request.
-    server.serializeAttachment({ role: request.headers.get('X-Role') ?? 'viewer', owned: [] } satisfies Attachment)
+    server.serializeAttachment({ role: request.headers.get('X-Role') ?? 'viewer', user: request.headers.get('X-User') ?? '', owned: [] } satisfies Attachment)
 
     // Handshake: ask the new client what it has (step 1). It answers with step 2 and its own step 1.
     const enc = encoding.createEncoder()
@@ -159,4 +249,3 @@ export class Doc extends DurableObject<Env> {
     this.webSocketClose(ws)
   }
 }
-

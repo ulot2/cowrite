@@ -2,6 +2,7 @@ import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createDocument, listDocuments } from '~/lib/db.server'
 import { createSpace } from '~/lib/access.server'
+import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
@@ -22,12 +23,17 @@ export async function action({ request }: Route.ActionArgs) {
   const intent = f.get('intent')
   if (intent === 'new-space') {
     const name = String(f.get('name') ?? '').trim().slice(0, 60)
-    if (name) throw redirect(`/space/${await createSpace(user.id, name)}`)
+    if (!name) return null
+    const id = await createSpace(user.id, name)
+    await logSpaceEvent(id, user.id, 'space', `created the space “${name}”`)
+    throw redirect(`/space/${id}`)
     return null
   }
   if (intent !== 'create') return null
   const title = String(f.get('title') ?? '').trim().slice(0, 120)
-  throw redirect(`/doc/${await createDocument(user.id, title || 'Untitled')}`)
+  const id = await createDocument(user.id, title || 'Untitled')
+  await logEvent(id, user.id, 'created', `created “${title || 'Untitled'}”`)
+  throw redirect(`/doc/${id}`)
 }
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
