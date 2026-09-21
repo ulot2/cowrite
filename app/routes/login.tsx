@@ -33,10 +33,14 @@ export default function Login({ loaderData }: Route.ComponentProps) {
   }
 
   return (
-    <main className="page page-narrow">
+    <main className="login">
+      <section className="login-intro">
+        <span className="brand">cowrite</span>
+        <h1>Write together, in the same place, at the same time.</h1>
+        <p className="lead">One document, everyone's cursor, and no lost edits when a connection drops.</p>
+      </section>
       <form className="card" onSubmit={submit}>
-        <h1 className="brand">cowrite</h1>
-        <p className="lead" style={{ margin: 0 }}>{mode === 'in' ? 'Sign in to your documents.' : 'Create an account. It takes ten seconds.'}</p>
+        <h2>{mode === 'in' ? 'Sign in' : 'Create your account'}</h2>
         {loaderData.github && (
           <>
             <button type="button" onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: '/' })}>Continue with GitHub</button>

@@ -1,35 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ConnectionState } from '~/lib/editor.client'
+import type { ConnectionState, Presence } from '~/lib/editor.client'
+import { Avatar } from './avatar'
 
-const labels: Record<ConnectionState, string> = { connected: 'Connected', connecting: 'Connecting…', disconnected: 'Offline' }
+const notes: Record<ConnectionState, string | null> = {
+  connected: null,
+  connecting: 'Connecting…',
+  disconnected: 'Offline. Changes are saved here and sync when you are back.',
+}
 
-export function Editor({ documentId, user, readOnly }: { documentId: string; user: { name: string; color: string }; readOnly: boolean }) {
+export function Editor({ documentId, user, readOnly, children }: { documentId: string; user: Presence; readOnly: boolean; children?: React.ReactNode }) {
   const host = useRef<HTMLDivElement>(null)
-  const handle = useRef<{ toggle: () => void; destroy: () => void }>(null)
-  const [status, setStatus] = useState<{ state: ConnectionState; names: string[]; wants: boolean }>({ state: 'connecting', names: [], wants: true })
+  const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[] }>({ state: 'connecting', others: [] })
 
   useEffect(() => {
+    let destroy: (() => void) | undefined
     let cancelled = false
     // Loaded in the browser only: CodeMirror needs a DOM, and the server has none.
     import('~/lib/editor.client').then(({ mountEditor }) => {
       if (cancelled || !host.current) return
-      handle.current = mountEditor(host.current, {
-        documentId, user, readOnly,
-        onStatus: (state, names, wants) => setStatus({ state, names, wants }),
-      })
+      destroy = mountEditor(host.current, { documentId, user, readOnly, onStatus: (state, others) => setStatus({ state, others }) })
     })
-    return () => { cancelled = true; handle.current?.destroy(); handle.current = null }
+    return () => { cancelled = true; destroy?.() }
   }, [documentId, user.name, user.color, readOnly])
 
+  const note = notes[status.state]
   return (
     <>
-      <div className="editor-bar">
-        <p id="status" role="status" data-state={status.state}>
-          <span className="dot" aria-hidden="true" />
-          <span>{labels[status.state]}{status.names.length ? ` · ${status.names.join(', ')}` : ''}</span>
-        </p>
-        <button type="button" onClick={() => handle.current?.toggle()}>{status.wants ? 'Go offline' : 'Reconnect'}</button>
+      <div className="presence" role="status">
+        {note && <span className="pill" data-state={status.state}>{note}</span>}
+        <span className="avatars" aria-label={`In this document: you${status.others.map((o) => ', ' + o.name).join('')}`}>
+          {status.others.map((o, i) => <Avatar key={o.name + i} name={o.name} color={o.color} />)}
+          <Avatar name={user.name} color={user.color} />
+        </span>
       </div>
+      {children}
       <div id="editor" ref={host} />
     </>
   )

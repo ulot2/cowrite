@@ -1,14 +1,11 @@
-import { Form, Link } from 'react-router'
+import { Form } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { getDocument, renameDocument, roleOf } from '~/lib/db.server'
+import { colorFor } from '~/lib/color'
 import { Editor } from '~/components/editor'
 import type { Route } from './+types/doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }]
-
-// Dark enough that the white name label on top of them passes the contrast rule (4.5:1).
-const colors = ['#c2185b', '#1565c0', '#2e7d32', '#bf360c', '#6a1b9a', '#00695c']
-const colorFor = (id: string) => colors[[...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % colors.length]
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await requireUser(request)
@@ -29,19 +26,18 @@ export async function action({ request, params }: Route.ActionArgs) {
 export default function Doc({ loaderData, params }: Route.ComponentProps) {
   const { user, role, document } = loaderData
   return (
-    <main className="page page-wide">
-      <header className="bar">
-        <Link to="/" aria-label="Back to your documents">← Documents</Link>
+    <article className="document" key={params.id}>
+      <Editor documentId={params.id} user={user} readOnly={role === 'viewer'}>
         {role === 'owner' ? (
-          <Form method="post" className="title-form" onBlur={(e) => e.currentTarget.requestSubmit()}>
-            <input name="title" defaultValue={document.title} aria-label="Document title" maxLength={120} />
+          // The title saves when you leave the field or press Enter. Enter must not add a line break.
+          <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>
+            <input className="title" name="title" defaultValue={document.title} aria-label="Document title" maxLength={120}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }} />
           </Form>
         ) : (
-          <h1 style={{ font: 'inherit', fontWeight: 500, margin: 0, flex: 1 }}>{document.title}</h1>
+          <h1 className="title">{document.title}</h1>
         )}
-        <span className="muted right">{role}</span>
-      </header>
-      <Editor key={params.id} documentId={params.id} user={user} readOnly={role === 'viewer'} />
-    </main>
+      </Editor>
+    </article>
   )
 }

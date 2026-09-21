@@ -1,69 +1,71 @@
-import { Form, Link, redirect, useNavigate } from 'react-router'
+import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { authClient } from '~/lib/auth.client'
-import { createDocument, deleteDocument, listDocuments, renameDocument, roleOf } from '~/lib/db.server'
+import { createDocument, deleteDocument, listDocuments, roleOf } from '~/lib/db.server'
+import { colorFor } from '~/lib/color'
+import { timeAgo } from '~/lib/time'
+import { Avatar } from '~/components/avatar'
 import type { Route } from './+types/home'
 
-export const meta = () => [{ title: 'Your documents · cowrite' }]
+export const meta = () => [{ title: 'Documents · cowrite' }]
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  return { user, documents: await listDocuments(user.id) }
+  const documents = await listDocuments(user.id)
+  return { owner: { name: user.name, color: colorFor(user.id) }, documents }
 }
 
-// One action, three intents. Each one checks the role again: the form is not trusted.
+// One action, two intents. Each one checks the role again: the form is not trusted.
 export async function action({ request }: Route.ActionArgs) {
   const user = await requireUser(request)
   const f = await request.formData()
   const intent = f.get('intent')
-  const title = String(f.get('title') ?? '').trim().slice(0, 120)
   if (intent === 'create') {
-    const id = await createDocument(user.id, title || 'Untitled')
-    throw redirect(`/doc/${id}`)
+    const title = String(f.get('title') ?? '').trim().slice(0, 120)
+    throw redirect(`/doc/${await createDocument(user.id, title || 'Untitled')}`)
   }
   const id = String(f.get('id'))
   if ((await roleOf(id, user.id)) !== 'owner') throw new Response('Only the owner can do that', { status: 403 })
-  if (intent === 'rename' && title) await renameDocument(id, title)
   if (intent === 'delete') await deleteDocument(id)
   return null
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const navigate = useNavigate()
-  const { user, documents } = loaderData
+  const { owner, documents } = loaderData
   return (
-    <main className="page">
-      <header className="bar">
-        <span className="brand">cowrite</span>
-        <div className="right">
-          <span className="muted">{user.name}</span>
-          <button className="quiet" type="button" onClick={async () => { await authClient.signOut(); navigate('/login') }}>Sign out</button>
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1>Documents</h1>
+          <p className="muted">{documents.length === 0 ? 'Nothing here yet.' : `${documents.length} ${documents.length === 1 ? 'document' : 'documents'}`}</p>
         </div>
+        <Form method="post"><button className="primary" name="intent" value="create">New document</button></Form>
       </header>
 
-      <Form method="post" className="new">
-        <input name="title" placeholder="New document title" aria-label="New document title" maxLength={120} />
-        <button className="primary" name="intent" value="create">New document</button>
-      </Form>
-
       {documents.length === 0 ? (
-        <p className="empty">No documents yet. Give one a title above and press New document.</p>
+        <section className="empty">
+          <h2>Start your first document</h2>
+          <p className="muted">Write alone, or open the same document in two places and watch it stay in sync.</p>
+          <Form method="post"><button className="primary" name="intent" value="create">New document</button></Form>
+        </section>
       ) : (
         <ul className="docs">
           {documents.map((d, i) => (
             <li key={d.id} style={{ '--i': i } as React.CSSProperties}>
-              <Link to={`/doc/${d.id}`}>{d.title}</Link>
-              <time dateTime={new Date(d.updated_at).toISOString()}>{new Date(d.updated_at).toLocaleDateString()}</time>
+              <Link to={`/doc/${d.id}`} className="doc-link">
+                <span className="doc-title">{d.title}</span>
+                <span className="doc-meta">Edited {timeAgo(d.updated_at)}</span>
+              </Link>
+              <span className="avatars"><Avatar name={owner.name} color={owner.color} size={24} /></span>
               {d.role === 'owner' && (
                 <Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${d.title}"? This cannot be undone.`)) e.preventDefault() }}>
                   <input type="hidden" name="id" value={d.id} />
-                  <button className="quiet danger" name="intent" value="delete" aria-label={`Delete ${d.title}`}>Delete</button>
+                  <button className="quiet" name="intent" value="delete" aria-label={`Delete ${d.title}`}>Delete</button>
                 </Form>
               )}
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </div>
   )
 }

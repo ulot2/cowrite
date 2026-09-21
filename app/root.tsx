@@ -5,8 +5,8 @@ import './app.css'
 export const links: Route.LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
   { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-  { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap' },
-  { rel: 'icon', href: '/favicon.ico' },
+  { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap' },
+  { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -35,8 +35,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   const notFound = isRouteErrorResponse(error) && error.status === 404
   return (
     <main className="page page-narrow">
-      <h1 className="brand">cowrite</h1>
-      <p className="lead">{notFound ? 'That document does not exist, or you have no access to it.' : 'Something went wrong. Reload the page, or go back.'}</p>
+      <span className="brand">cowrite</span>
+      <h1>{notFound ? 'Not found' : 'Something went wrong'}</h1>
+      <p className="lead">{notFound ? 'That document does not exist, or you have no access to it.' : 'Reload the page, or go back to your documents.'}</p>
       <p><a href="/">Your documents</a></p>
     </main>
   )

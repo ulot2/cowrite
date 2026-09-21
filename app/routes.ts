@@ -1,8 +1,11 @@
-import { type RouteConfig, index, route } from '@react-router/dev/routes'
+import { type RouteConfig, index, layout, route } from '@react-router/dev/routes'
 
 export default [
-  index('routes/home.tsx'),
   route('login', 'routes/login.tsx'),
-  route('doc/:id', 'routes/doc.tsx'),
   route('api/auth/*', 'routes/api.auth.ts'),
+  // Everything behind the sidebar needs a signed-in user. The shell route checks once.
+  layout('routes/shell.tsx', [
+    index('routes/home.tsx'),
+    route('doc/:id', 'routes/doc.tsx'),
+  ]),
 ] satisfies RouteConfig

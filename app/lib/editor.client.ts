@@ -6,14 +6,15 @@ import { standardKeymap } from '@codemirror/commands'
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next'
 
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
+export type Presence = { name: string; color: string }
 export type EditorOptions = {
   documentId: string
-  user: { name: string; color: string }
+  user: Presence
   readOnly: boolean
-  onStatus: (state: ConnectionState, names: string[], wantsConnection: boolean) => void
+  onStatus: (state: ConnectionState, others: Presence[]) => void
 }
 
-// Mounts the shared editor into `parent`. Returns the offline switch and a cleanup function.
+// Mounts the shared editor into `parent`. Returns a cleanup function.
 export function mountEditor(parent: HTMLElement, opts: EditorOptions) {
   // One shared document. Every tab edits the same Y.Text, and Yjs merges the edits.
   const doc = new Y.Doc()
@@ -27,8 +28,9 @@ export function mountEditor(parent: HTMLElement, opts: EditorOptions) {
 
   let state: ConnectionState = 'connecting'
   const report = () => {
-    const names = [...provider.awareness.getStates().values()].map((s) => s.user?.name).filter(Boolean)
-    opts.onStatus(state, names, provider.shouldConnect)
+    // Everyone else in the document. The local user is shown by the page itself.
+    const others = [...provider.awareness.getStates()].filter(([id]) => id !== doc.clientID).map(([, s]) => s.user).filter(Boolean)
+    opts.onStatus(state, others)
   }
   provider.on('status', ({ status }) => { state = status; report() })
   provider.awareness.on('change', report)
@@ -49,12 +51,5 @@ export function mountEditor(parent: HTMLElement, opts: EditorOptions) {
     parent,
   })
 
-  return {
-    // Offline switch for the demo: the document keeps working, and syncs again on reconnect.
-    toggle() {
-      if (provider.shouldConnect) provider.disconnect(); else provider.connect()
-      report()
-    },
-    destroy() { view.destroy(); provider.destroy(); doc.destroy() },
-  }
+  return () => { view.destroy(); provider.destroy(); doc.destroy() }
 }
