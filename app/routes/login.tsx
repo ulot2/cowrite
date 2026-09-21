@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { redirect, useNavigate } from 'react-router'
+import { redirect, useNavigate, useSearchParams } from 'react-router'
 import { env } from 'cloudflare:workers'
 import { getAuth } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
@@ -16,6 +16,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Login({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = params.get('next') ?? '/'
+  const target = next.startsWith('/') && !next.startsWith('//') ? next : '/' // only paths on this site
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -30,7 +33,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
       : await authClient.signIn.email({ email, password })
     setBusy(false)
     if (result.error) setError(result.error.message ?? 'That did not work. Check the email and the password.')
-    else navigate('/')
+    else navigate(target)
   }
 
   return (
@@ -44,7 +47,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
         <h2>{mode === 'in' ? 'Sign in' : 'Create your account'}</h2>
         {loaderData.github && (
           <>
-            <button type="button" onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: '/' })}>Continue with GitHub</button>
+            <button type="button" onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: target })}>Continue with GitHub</button>
             <div className="divider">or with email</div>
           </>
         )}

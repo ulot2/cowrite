@@ -1,6 +1,7 @@
 import { Form } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { deleteDocument, listDocuments, roleOf } from '~/lib/db.server'
+import { deleteDocument, listDocuments } from '~/lib/db.server'
+import { roleOnDocument } from '~/lib/access.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
@@ -20,7 +21,7 @@ export async function action({ request }: Route.ActionArgs) {
   const f = await request.formData()
   const id = String(f.get('id'))
   if (f.get('intent') !== 'delete') return null
-  if ((await roleOf(id, user.id)) !== 'owner') throw new Response('Only the owner can delete', { status: 403 })
+  if ((await roleOnDocument(user.id, id)) !== 'owner') throw new Response('Only the owner can delete', { status: 403 })
   await deleteDocument(id)
   return null
 }

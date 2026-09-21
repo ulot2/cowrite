@@ -8,6 +8,7 @@ export function DocCard({ doc, owner, index = 0 }: { doc: DocumentRow; owner: { 
   return (
     <Link to={`/doc/${doc.id}`} className="card" style={{ '--i': index } as React.CSSProperties}>
       <span className="card-title">{doc.title}</span>
+      {doc.space_name && <span className="card-space">{doc.space_name}</span>}
       <span className="card-preview">{doc.preview || 'Nothing written yet.'}</span>
       <span className="card-meta">
         <span>Edited {timeAgo(doc.updated_at)}{doc.open_comments > 0 && ` · ${doc.open_comments} open ${doc.open_comments === 1 ? 'comment' : 'comments'}`}</span>

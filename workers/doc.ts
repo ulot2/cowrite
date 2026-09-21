@@ -67,13 +67,19 @@ export class Doc extends DurableObject<Env> {
     })
   }
 
-  // Runs once, 3 s after an edit. The object's name is the document id.
+  // Runs once, 3 s after a change. The object's name is the document id, or "<id>:threads" for the
+  // comments room. Each room writes its own column, so a comment never bumps the edit time of the text.
   async alarm() {
+    const name = this.ctx.id.name ?? ''
+    if (name.endsWith(':threads')) {
+      // One Y.Map per thread with a `resolved` flag.
+      const open = [...this.doc.getMap<Y.Map<unknown>>('threads').values()].filter((t) => t.get('resolved') !== true).length
+      await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, name.slice(0, -8)).run()
+      return
+    }
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
     const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
-    // Comment threads live in the 'threads' map, one Y.Map per thread with a `resolved` flag.
-    const open = [...this.doc.getMap<Y.Map<unknown>>('threads').values()].filter((t) => t.get('resolved') !== true).length
-    await this.env.DB.prepare('UPDATE documents SET preview = ?, open_comments = ?, updated_at = ? WHERE id = ?').bind(preview, open, Date.now(), this.ctx.id.name ?? '').run()
+    await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), name).run()
   }
 
   // Replace the log with one row that holds the whole document. Runs without an await, so

@@ -14,7 +14,7 @@ const RichEditor = lazy(() => import('./rich-editor.client').then((m) => ({ defa
 
 type Panel = 'none' | 'open' | 'resolved'
 
-export function Editor({ documentId, user, readOnly, children }: { documentId: string; user: { id: string; name: string; color: string }; readOnly: boolean; children?: React.ReactNode }) {
+export function Editor({ documentId, user, canEdit, canComment, children, actions }: { documentId: string; user: { id: string; name: string; color: string }; canEdit: boolean; canComment: boolean; children?: React.ReactNode; actions?: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
   const [panel, setPanel] = useState<Panel>('none')
@@ -30,6 +30,7 @@ export function Editor({ documentId, user, readOnly, children }: { documentId: s
           {status.others.map((o, i) => <span key={o.name + i} className="who-is" data-editing={o.editing}><Avatar name={o.name} color={o.color} /></span>)}
           <Avatar name={user.name} color={user.color} />
         </span>
+        {actions}
         <div className="panel-switch" role="group" aria-label="Comments panel">
           <button type="button" className={panel === 'open' ? 'ghost on' : 'ghost'} aria-pressed={panel === 'open'} onClick={() => setPanel(panel === 'open' ? 'none' : 'open')}>
             <Icon name="comment" />Comments{status.open > 0 && <span className="count">{status.open}</span>}
@@ -45,7 +46,7 @@ export function Editor({ documentId, user, readOnly, children }: { documentId: s
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            <RichEditor documentId={documentId} user={user} readOnly={readOnly} panel={panel} onStatus={onStatus} />
+            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} panel={panel} onStatus={onStatus} />
           </Suspense>
         )}
       </div>

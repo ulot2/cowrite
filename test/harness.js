@@ -38,15 +38,21 @@ export const startApp = async () => {
     setTimeout(() => reject(new Error('wrangler dev did not start in 60 s')), 60000).unref()
   })
 
-  // Signs up a user through the real auth API. Returns the session cookie.
-  const signUp = async (name) => {
+  // Signs up a user through the real auth API. Returns the session cookie and the email.
+  const signUpUser = async (name) => {
+    const email = `${name.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.test`
     const res = await fetch(`${base}/api/auth/sign-up/email`, {
       method: 'POST', headers: { 'content-type': 'application/json', origin: base },
-      body: JSON.stringify({ name, email: `${name.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.test`, password: 'a-test-password' }),
+      body: JSON.stringify({ name, email, password: 'a-test-password' }),
     })
     assert.equal(res.status, 200, 'sign-up ' + name)
-    return res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ')
+    return { cookie: res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; '), email }
   }
+  const signUp = async (name) => (await signUpUser(name)).cookie
+
+  // Posts a form to a page's action as `cookie`. Returns the response (redirects are not followed).
+  const post = (path, cookie, fields) =>
+    fetch(base + path, { method: 'POST', body: new URLSearchParams(fields), headers: { cookie }, redirect: 'manual' })
 
   // Creates a document through the home page's action. Returns its id from the redirect.
   const createDocument = async (cookie, title) => {
@@ -57,11 +63,13 @@ export const startApp = async () => {
   }
 
   // A "tab": one doc and one connection, signed in as `cookie`. The polyfill adds the cookie the browser would send.
-  const openTab = (documentId, cookie) => {
+  // `room` is 'text' (the document) or 'threads' (its comments).
+  const openTab = (documentId, cookie, room = 'text') => {
     const WebSocketPolyfill = class extends NodeWebSocket { constructor(url) { super(url, { headers: { cookie } }) } }
     const doc = new Y.Doc()
-    const provider = new WebsocketProvider(base.replace('http', 'ws') + '/ws', documentId, doc, { disableBc: true, WebSocketPolyfill })
-    return { doc, text: doc.getText('content'), provider, close: () => { provider.destroy(); doc.destroy() } }
+    const name = room === 'threads' ? `${documentId}/threads` : documentId
+    const provider = new WebsocketProvider(base.replace('http', 'ws') + '/ws', name, doc, { disableBc: true, WebSocketPolyfill })
+    return { doc, text: doc.getText('content'), threads: doc.getMap('threads'), provider, close: () => { provider.destroy(); doc.destroy() } }
   }
 
   // Tries the WebSocket handshake and returns the HTTP status the server answered with.
@@ -79,5 +87,5 @@ export const startApp = async () => {
     try { rmSync(persist, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }) } catch { /* Windows keeps a file open a little longer; the temp folder is harmless */ }
   }
 
-  return { base, signUp, createDocument, openTab, handshakeStatus, stop }
+  return { base, signUp, signUpUser, post, createDocument, openTab, handshakeStatus, stop }
 }

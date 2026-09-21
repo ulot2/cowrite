@@ -3,6 +3,7 @@ import { Form, NavLink, Outlet, useNavigate, useSearchParams } from 'react-route
 import { requireUser } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
 import { colorFor } from '~/lib/color'
+import { listSpaces } from '~/lib/access.server'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { Mark } from '~/components/logo'
@@ -13,7 +14,7 @@ export type ShellUser = { id: string; name: string; email: string; color: string
 // Runs for every page inside the shell: who is signed in.
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  return { user: { id: user.id, name: user.name, email: user.email, color: colorFor(user.id) } satisfies ShellUser }
+  return { user: { id: user.id, name: user.name, email: user.email, color: colorFor(user.id) } satisfies ShellUser, spaces: await listSpaces(user.id) }
 }
 
 type Theme = 'system' | 'light' | 'dark'
@@ -26,7 +27,7 @@ const pref = {
 }
 
 export default function Shell({ loaderData }: Route.ComponentProps) {
-  const { user } = loaderData
+  const { user, spaces } = loaderData
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [open, setOpen] = useState(false) // phone drawer
@@ -84,6 +85,13 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
         </div>
         <NavLink to="/" end onClick={() => setOpen(false)}><Icon name="home" /><span>Home</span></NavLink>
         <NavLink to="/documents" onClick={() => setOpen(false)}><Icon name="docs" /><span>Documents</span></NavLink>
+        <p className="side-heading"><span>Spaces</span></p>
+        {spaces.map((s) => <NavLink key={s.id} to={`/space/${s.id}`} onClick={() => setOpen(false)}><Icon name="space" /><span>{s.name}</span></NavLink>)}
+        <Form method="post" action="/?index" className="new-space">
+          <input type="hidden" name="intent" value="new-space" />
+          <input name="name" placeholder="New space" aria-label="New space name" maxLength={60} required />
+          <button className="ghost" aria-label="Create space"><Icon name="plus" /></button>
+        </Form>
       </nav>
       <div className="backdrop" hidden={!open} onClick={() => setOpen(false)} />
 

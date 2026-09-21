@@ -1,6 +1,6 @@
 # cowrite
 
-A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Select text to comment on it, reply, react, and resolve. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Share a document by email or by link with a role (view, comment, review, edit), or group documents in a space with its own members. Select text to comment on it, reply, react, and resolve. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -16,6 +16,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 2. Create a document and open it in two tabs.
 3. Type in one tab, or press `/` for headings, lists, tables, and images. The other tab follows, and shows your cursor with your name.
 4. Select a few words and use the comment button in the toolbar. The thread shows up in the other tab, in the text and in the Comments panel.
+5. Click "Share", create a link for viewers, and open it in a private window with a second account. That account can read and follow your cursor, but not type.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -59,7 +60,9 @@ Every update is one row in the object's database. On wake, the object replays th
 
 The editor is [BlockNote](https://www.blocknotejs.org), which stores its blocks as a Yjs XML fragment, so the same merge rules cover rich text. Comment threads are a Yjs map in the same document, so they sync live and survive offline like the text. The object counts open threads for the document cards. Images go through the Worker to R2 (Cloudflare's file storage) under a random key, and the image block keeps the URL.
 
-Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents` and `memberships` tables in D1 say who can open which document. The Worker checks the session and the role before it hands a WebSocket to the object, and the object ignores edits from a viewer.
+Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents`, `memberships`, `spaces`, and `space_memberships` tables say who can open what, with one role ladder: viewer, commenter, reviewer, editor, owner. A person's role on a document is the highest of their direct role and their role on the document's space.
+
+The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs editor, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word.
 
 ## Run it locally
 
@@ -88,6 +91,9 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 - A comment thread made in one tab appears in the other, and a resolve travels back.
 - The document card shows the open comment count that the object writes after a change.
 - The users route (names for comment authors) needs a session.
+- A viewer reads but cannot edit or comment; a commenter comments but cannot edit; a role change applies on the next connect.
+- A share link turns a 403 into a 101 for whoever follows it, and sends signed-out people through login and back.
+- A space shares its documents with its members and hides them from everyone else.
 
 ## Accessibility
 
@@ -97,7 +103,7 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 
 ## Limits
 
-- No sharing yet: only the owner can open a document. Sharing and roles are next.
+- Adding someone by email needs them to have an account already; no invitation email is sent.
 - Mentions in comments come with notifications.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 

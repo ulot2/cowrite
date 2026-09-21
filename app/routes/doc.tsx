@@ -1,37 +1,81 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { getDocument, renameDocument, roleOf } from '~/lib/db.server'
+import { getDocument, renameDocument } from '~/lib/db.server'
+import { createShareLink, findUserByEmail, getShareLink, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
 import { Editor } from '~/components/editor'
+import { ShareDialog } from '~/components/share-dialog'
 import type { Route } from './+types/doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }]
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  const role = await roleOf(params.id, user.id)
+  const role = await roleOnDocument(user.id, params.id)
   const document = role && await getDocument(params.id)
   if (!role || !document) throw new Response('Not found', { status: 404 })
-  return { user: { id: user.id, name: user.name, color: colorFor(user.id) }, role, document }
+  const isOwner = role === 'owner'
+  return {
+    user: { id: user.id, name: user.name, color: colorFor(user.id) },
+    role, document, isOwner,
+    members: await listMembers('document', params.id),
+    link: isOwner ? await getShareLink('document', params.id) : null,
+    spaces: isOwner ? (await listSpaces(user.id)).filter((s) => s.owner_id === user.id) : [],
+    error: new URL(request.url).searchParams.get('error'),
+  }
 }
 
+const grantable: Role[] = ['viewer', 'commenter', 'reviewer', 'editor']
+
+// Every intent checks the role again: the form is not trusted.
 export async function action({ request, params }: Route.ActionArgs) {
   const user = await requireUser(request)
-  if ((await roleOf(params.id, user.id)) !== 'owner') throw new Response('Only the owner can rename', { status: 403 })
-  const title = String((await request.formData()).get('title') ?? '').trim().slice(0, 120)
-  if (title) await renameDocument(params.id, title)
+  const f = await request.formData()
+  const intent = String(f.get('intent'))
+  const role = await roleOnDocument(user.id, params.id)
+  if (intent === 'rename') {
+    if (!atLeast(role, 'editor')) throw new Response('Editors can rename', { status: 403 })
+    const title = String(f.get('title') ?? '').trim().slice(0, 120)
+    if (title) await renameDocument(params.id, title)
+    return null
+  }
+  if (role !== 'owner') throw new Response('Only the owner can share', { status: 403 })
+  const pick = String(f.get('role'))
+  const granted = grantable.includes(pick as Role) ? (pick as Role) : 'viewer'
+  switch (intent) {
+    case 'add': {
+      const person = await findUserByEmail(String(f.get('email') ?? ''))
+      if (!person) return { error: 'No account has that email. Ask them to sign up first.' }
+      if (person.id !== user.id) await setMember('document', params.id, person.id, granted)
+      return null
+    }
+    case 'role': await setMember('document', params.id, String(f.get('user_id')), granted); return null
+    case 'remove': await removeMember('document', params.id, String(f.get('user_id'))); return null
+    case 'link-create': await createShareLink('document', params.id, granted, user.id); return null
+    case 'link-revoke': await revokeShareLink('document', params.id); return null
+    case 'move': {
+      const spaceId = String(f.get('space_id') ?? '') || null
+      if (spaceId && (await roleOnSpace(user.id, spaceId)) !== 'owner') throw new Response('Not your space', { status: 403 })
+      await moveDocument(params.id, spaceId)
+      return null
+    }
+  }
   return null
 }
 
-export default function Doc({ loaderData, params }: Route.ComponentProps) {
-  const { user, role, document } = loaderData
+export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
+  const { user, role, document, isOwner, members, link, spaces } = loaderData
+  const canEdit = atLeast(role, 'editor')
   return (
     <article className="document" key={params.id}>
       <nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>
-      <Editor documentId={params.id} user={user} readOnly={role === 'viewer'}>
-        {role === 'owner' ? (
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')}
+        actions={<ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} />}>
+        {canEdit ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.
           <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>
+            <input type="hidden" name="intent" value="rename" />
             <input className="title" name="title" defaultValue={document.title} aria-label="Document title" maxLength={120}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }} />
           </Form>

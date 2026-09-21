@@ -35,6 +35,10 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Comments: a "Comments" button with the open count in the presence row opens a panel beside the text (a sheet from the bottom on phones) with an Open / Resolved switch. Commented text carries the accent wash; the selected thread's text the warning wash. The library's icon-only actions get accessible names from a small observer.
 - Login: a two-column page, statement left, tinted form card right.
 
+- Share: a native `<dialog>` from the "Share" button in the presence row. Members with a role select, add by email, the link with copy and revoke, the space select. Same on a space page, where the header also holds the public switch and "New document".
+- Sidebar: a "Spaces" group under Documents, one link per space and a small "New space" field.
+- Cards: the space name in the accent color above the preview when the document is in a space.
+
 ## Accessibility
 
 Every control has a visible focus ring. Icons are decorative; the label next to them carries the meaning, also in the collapsed rail (`aria-label`). Names on cursors are text. The status pill has `role="status"`. The Tab key moves focus and never gets trapped in the editor.

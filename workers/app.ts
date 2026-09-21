@@ -1,6 +1,7 @@
 import { createRequestHandler } from 'react-router'
 import { getAuth } from '~/lib/auth.server'
-import { roleOf } from '~/lib/db.server'
+import { roleOnDocument } from '~/lib/access.server'
+import { atLeast } from '~/lib/roles'
 
 // The Doc class must be exported from the Worker entry, so Cloudflare can find it.
 export { Doc } from './doc'
@@ -42,17 +43,20 @@ export default {
       return new Response(object.body, { headers: { 'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream', etag: object.httpEtag, 'cache-control': 'public, max-age=31536000, immutable' } })
     }
 
-    // /ws/<id>: the editor's WebSocket. Checked once here, then handed to the document's object.
-    const match = pathname.match(/^\/ws\/([\w-]+)$/)
+    // /ws/<id> is the text, /ws/<id>/threads the comments. Each is its own object with its own
+    // write rule: text needs editor, comments need commenter. Below that, the socket can only read.
+    const match = pathname.match(/^\/ws\/([\w-]+)(\/threads)?$/)
     if (match) {
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
       const session = await getAuth().api.getSession({ headers: request.headers })
       if (!session) return new Response('Sign in first', { status: 401 })
-      const role = await roleOf(match[1], session.user.id)
+      const role = await roleOnDocument(session.user.id, match[1])
       if (!role) return new Response('No access to this document', { status: 403 })
+      const room = match[2] ? `${match[1]}:threads` : match[1]
+      const canWrite = atLeast(role, match[2] ? 'commenter' : 'editor')
       const headers = new Headers(request.headers)
-      headers.set('X-Role', role)
-      return env.DOC.get(env.DOC.idFromName(match[1])).fetch(new Request(request, { headers }))
+      headers.set('X-Role', canWrite ? 'editor' : 'viewer')
+      return env.DOC.get(env.DOC.idFromName(room)).fetch(new Request(request, { headers }))
     }
     return requestHandler(request)
   },

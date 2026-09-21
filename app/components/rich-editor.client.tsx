@@ -12,7 +12,8 @@ export type Presence = { name: string; color: string; editing?: boolean }
 type Props = {
   documentId: string
   user: { id: string; name: string; color: string }
-  readOnly: boolean
+  canEdit: boolean
+  canComment: boolean
   panel: 'none' | 'open' | 'resolved'
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
 }
@@ -62,19 +63,22 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, readOnly, panel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, panel, onStatus }: Props) {
   const [sync] = useState(() => {
-    const doc = new Y.Doc()
-    // Same origin, /ws/<id>. disableBc: tabs must not relay presence to each other; the server owns it.
-    const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+    // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
+    // server can let a commenter write comments and still refuse their edits to the text.
+    // disableBc: tabs must not relay presence to each other; the server owns it.
     // connect: false. React (in development) runs this initializer twice and keeps one result;
     // a socket opened here would leak. The effect below connects, and disconnects on unmount.
+    const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+    const doc = new Y.Doc()
     const provider = new WebsocketProvider(url, documentId, doc, { disableBc: true, connect: false })
     provider.awareness.setLocalStateField('user', { name: user.name, color: user.color })
-    // Comment threads live in the document too, so they sync and survive offline like the text.
-    const threads = doc.getMap('threads')
-    const threadStore = new YjsThreadStore(user.id, threads, new DefaultThreadStoreAuth(user.id, 'editor'))
-    return { doc, provider, threads, threadStore }
+    const threadsDoc = new Y.Doc()
+    const threadsProvider = new WebsocketProvider(url, `${documentId}/threads`, threadsDoc, { disableBc: true, connect: false })
+    const threads = threadsDoc.getMap('threads')
+    const threadStore = new YjsThreadStore(user.id, threads, new DefaultThreadStoreAuth(user.id, canComment ? 'editor' : 'comment'))
+    return { doc, provider, threadsDoc, threadsProvider, threads, threadStore }
   })
 
   // The destroy waits one tick: a real unmount still frees everything, and the development
@@ -82,8 +86,9 @@ export function RichEditor({ documentId, user, readOnly, panel, onStatus }: Prop
   const destroyTimer = useRef<number>(undefined)
   useEffect(() => {
     clearTimeout(destroyTimer.current)
-    const { doc, provider, threads } = sync
+    const { doc, provider, threadsDoc, threadsProvider, threads } = sync
     provider.connect()
+    threadsProvider.connect()
     const report = () => {
       // Read the state, do not track events: the socket can open before this listener exists.
       const state: ConnectionState = provider.wsconnected ? 'connected' : provider.shouldConnect ? 'connecting' : 'disconnected'
@@ -102,7 +107,8 @@ export function RichEditor({ documentId, user, readOnly, panel, onStatus }: Prop
       provider.awareness.off('change', report)
       threads.unobserveDeep(report)
       provider.disconnect()
-      destroyTimer.current = window.setTimeout(() => { provider.destroy(); doc.destroy() }, 0)
+      threadsProvider.disconnect()
+      destroyTimer.current = window.setTimeout(() => { provider.destroy(); doc.destroy(); threadsProvider.destroy(); threadsDoc.destroy() }, 0)
     }
   }, [sync, onStatus])
 
@@ -122,7 +128,7 @@ export function RichEditor({ documentId, user, readOnly, panel, onStatus }: Prop
   useActionLabels(root)
 
   return (
-    <BlockNoteView editor={editor} editable={!readOnly} comments={!readOnly} theme={useTheme()} renderEditor={false}>
+    <BlockNoteView editor={editor} editable={canEdit} comments={canComment} theme={useTheme()} renderEditor={false}>
       <div className="editor-layout" data-panel={panel} ref={root}>
         <div className="editor-column"><BlockNoteViewEditor /></div>
         {panel !== 'none' && (

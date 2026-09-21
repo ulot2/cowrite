@@ -16,12 +16,12 @@ before(async () => {
 })
 after(() => app.stop())
 
-// The same store the editor uses, on a tab's doc. Threads are a Y.Map, so they travel with the document.
+// The same store the editor uses, on a threads-room tab. Threads are a Y.Map in the document's comments room.
 const storeFor = (tab) => new YjsThreadStore(adaId, tab.doc.getMap('threads'), new DefaultThreadStoreAuth(adaId, 'editor'))
 
 test('a thread made in one tab appears in the other, and a resolve travels back', async () => {
-  const a = app.openTab(docId, ada)
-  const b = app.openTab(docId, ada)
+  const a = app.openTab(docId, ada, 'threads')
+  const b = app.openTab(docId, ada, 'threads')
   const thread = await storeFor(a).createThread({ initialComment: comment('Is Friday realistic?') })
   await until(() => b.doc.getMap('threads').has(thread.id), 'b receives the thread')
   assert.equal(b.doc.getMap('threads').get(thread.id).get('resolved'), false)
@@ -33,7 +33,7 @@ test('a thread made in one tab appears in the other, and a resolve travels back'
 
 test('the document card counts open comments, written by the object after the change', async () => {
   const id = await app.createDocument(ada, 'Counted')
-  const a = app.openTab(id, ada)
+  const a = app.openTab(id, ada, 'threads')
   const store = storeFor(a)
   const thread = await store.createThread({ initialComment: comment('One open thread') })
   await sleep(3800) // the object writes to D1 three seconds after an edit

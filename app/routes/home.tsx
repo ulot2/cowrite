@@ -1,6 +1,7 @@
 import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createDocument, listDocuments } from '~/lib/db.server'
+import { createSpace } from '~/lib/access.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
@@ -18,7 +19,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const user = await requireUser(request)
   const f = await request.formData()
-  if (f.get('intent') !== 'create') return null
+  const intent = f.get('intent')
+  if (intent === 'new-space') {
+    const name = String(f.get('name') ?? '').trim().slice(0, 60)
+    if (name) throw redirect(`/space/${await createSpace(user.id, name)}`)
+    return null
+  }
+  if (intent !== 'create') return null
   const title = String(f.get('title') ?? '').trim().slice(0, 120)
   throw redirect(`/doc/${await createDocument(user.id, title || 'Untitled')}`)
 }
