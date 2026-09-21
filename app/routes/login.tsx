@@ -3,6 +3,7 @@ import { redirect, useNavigate } from 'react-router'
 import { env } from 'cloudflare:workers'
 import { getAuth } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
+import { Mark } from '~/components/logo'
 import type { Route } from './+types/login'
 
 export const meta = () => [{ title: 'Sign in · cowrite' }]
@@ -35,7 +36,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
   return (
     <main className="login">
       <section className="login-intro">
-        <span className="brand">cowrite</span>
+        <span className="brand"><Mark size={32} /><span>cowrite</span></span>
         <h1>Write together, in the same place, at the same time.</h1>
         <p className="lead">One document, everyone's cursor, and no lost edits when a connection drops.</p>
       </section>
@@ -52,7 +53,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
         <label>Password<input name="password" type="password" required minLength={8} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} /></label>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={busy}>{mode === 'in' ? 'Sign in' : 'Create account'}</button>
-        <button className="quiet" type="button" onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setError('') }}>
+        <button className="ghost" type="button" onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setError('') }}>
           {mode === 'in' ? 'New here? Create an account' : 'Have an account? Sign in'}
         </button>
       </form>

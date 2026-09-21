@@ -5,6 +5,7 @@ import { authClient } from '~/lib/auth.client'
 import { colorFor } from '~/lib/color'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
+import { Mark } from '~/components/logo'
 import type { Route } from './+types/shell'
 
 export type ShellUser = { id: string; name: string; email: string; color: string }
@@ -52,7 +53,6 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
     <div className="shell">
       <header className="topbar">
         <button className="ghost menu" type="button" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(!open)}><Icon name="menu" /><span className="sr-only">Menu</span></button>
-        <NavLink to="/" className="brand">cowrite</NavLink>
         <Form method="get" action="/documents" className="search" role="search">
           <Icon name="search" />
           <input name="q" type="search" placeholder="Search documents" aria-label="Search documents" defaultValue={params.get('q') ?? ''} />
@@ -76,11 +76,14 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
       </header>
 
       <nav id="sidebar" className="sidebar" data-open={open} aria-label="Main">
+        <div className="side-head">
+          <NavLink to="/" className="brand" onClick={() => setOpen(false)}><Mark /><span>cowrite</span></NavLink>
+          <button className="ghost collapse" type="button" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand' : 'Collapse'}>
+            <Icon name={collapsed ? 'expand' : 'collapse'} />
+          </button>
+        </div>
         <NavLink to="/" end onClick={() => setOpen(false)}><Icon name="home" /><span>Home</span></NavLink>
         <NavLink to="/documents" onClick={() => setOpen(false)}><Icon name="docs" /><span>Documents</span></NavLink>
-        <button className="ghost collapse" type="button" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-          <Icon name={collapsed ? 'expand' : 'collapse'} /><span>Collapse</span>
-        </button>
       </nav>
       <div className="backdrop" hidden={!open} onClick={() => setOpen(false)} />
 
