@@ -6,6 +6,7 @@ import { colorFor } from '~/lib/color'
 import { listSpaces } from '~/lib/access.server'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
+import { Inbox } from '~/components/inbox'
 import { Mark } from '~/components/logo'
 import type { Route } from './+types/shell'
 
@@ -60,6 +61,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
         </Form>
         <div className="topbar-right">
           <Form method="post" action="/?index"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>
+          <Inbox />
           <details className="account">
             <summary aria-label="Account menu"><Avatar name={user.name} color={user.color} size={32} /></summary>
             <div className="popover">

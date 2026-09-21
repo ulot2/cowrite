@@ -1,9 +1,10 @@
 import { env } from 'cloudflare:workers'
 import type { Role } from './roles'
 
-export type DocumentRow = { id: string; title: string; preview: string; open_comments: number; updated_at: number; space_id: string | null; space_name: string | null; role: Role }
+export type Status = 'draft' | 'review' | 'approved'
+export type DocumentRow = { id: string; title: string; preview: string; open_comments: number; updated_at: number; space_id: string | null; space_name: string | null; status: Status; role: Role }
 
-const columns = 'd.id, d.title, d.preview, d.open_comments, d.updated_at, d.space_id, s.name AS space_name'
+const columns = 'd.id, d.title, d.preview, d.open_comments, d.updated_at, d.space_id, d.status, s.name AS space_name'
 
 // Documents this user can open: shared with them directly, or through a space they belong to.
 // `role` is their direct role, else their space role. `q` narrows by title or text, `limit` caps the list.
@@ -23,7 +24,7 @@ export const listSpaceDocuments = async (spaceId: string, role: Role) =>
     .bind(spaceId, role).all<DocumentRow>()).results
 
 export const getDocument = async (id: string) =>
-  env.DB.prepare('SELECT id, title, updated_at, space_id FROM documents WHERE id = ?').bind(id).first<{ id: string; title: string; updated_at: number; space_id: string | null }>()
+  env.DB.prepare('SELECT id, title, updated_at, space_id, status FROM documents WHERE id = ?').bind(id).first<{ id: string; title: string; updated_at: number; space_id: string | null; status: Status }>()
 
 // One batch = one transaction: the document and its owner row appear together or not at all.
 export const createDocument = async (userId: string, title: string, spaceId: string | null = null) => {
@@ -35,6 +36,9 @@ export const createDocument = async (userId: string, title: string, spaceId: str
   ])
   return id
 }
+
+export const setStatus = (id: string, status: Status) =>
+  env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind(status, id).run()
 
 export const renameDocument = (id: string, title: string) =>
   env.DB.prepare('UPDATE documents SET title = ?, updated_at = ? WHERE id = ?').bind(title, Date.now(), id).run()

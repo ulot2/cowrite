@@ -19,6 +19,10 @@ type Props = {
   user: { id: string; name: string; color: string }
   canEdit: boolean
   canComment: boolean
+  // A reviewer must suggest; an editor may. Only editors accept or reject.
+  canSuggest: boolean
+  mustSuggest: boolean
+  canResolve: boolean
   crumbs: React.ReactNode
   actions?: React.ReactNode
   children?: React.ReactNode
@@ -26,10 +30,11 @@ type Props = {
 
 // One header row: where you are on the left, who is here and the tools on the right.
 // On phones the tools keep only their icons; the label stays for screen readers.
-export function Editor({ documentId, user, canEdit, canComment, crumbs, actions, children }: Props) {
+export function Editor({ documentId, user, canEdit, canComment, canSuggest, mustSuggest, canResolve, crumbs, actions, children }: Props) {
   const [mounted, setMounted] = useState(false)
   const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
   const [panel, setPanel] = useState<Panel>('none')
+  const [suggesting, setSuggesting] = useState(mustSuggest)
   useEffect(() => setMounted(true), [])
   const onStatus = useCallback((state: ConnectionState, others: Presence[], open: number) => setStatus({ state, others, open }), [])
 
@@ -46,6 +51,11 @@ export function Editor({ documentId, user, canEdit, canComment, crumbs, actions,
               <Avatar name={user.name} color={user.color} />
             </span>
           </span>
+          {canSuggest && (
+            <button type="button" className="tool" aria-pressed={suggesting} disabled={mustSuggest} title={mustSuggest ? 'As a reviewer, your edits are suggestions' : undefined} onClick={() => setSuggesting(!suggesting)}>
+              <Icon name="suggest" /><span className="tool-label">Suggest</span>
+            </button>
+          )}
           <button type="button" className="tool" aria-pressed={panel !== 'none'} onClick={() => setPanel(panel === 'none' ? 'open' : 'none')}>
             <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
           </button>
@@ -56,7 +66,7 @@ export function Editor({ documentId, user, canEdit, canComment, crumbs, actions,
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} panel={panel} onPanel={setPanel} onStatus={onStatus} />
+            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} suggesting={suggesting} canResolve={canResolve} panel={panel} onPanel={setPanel} onStatus={onStatus} />
           </Suspense>
         )}
       </div>

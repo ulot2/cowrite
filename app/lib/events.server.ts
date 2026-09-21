@@ -31,3 +31,20 @@ export const listSpaceEvents = async (spaceId: string) =>
 
 export const listDocumentEvents = async (documentId: string) =>
   (await env.DB.prepare(`SELECT ${columns} ${joins} WHERE e.document_id = ? ORDER BY e.at DESC LIMIT 100`).bind(documentId).all<EventRow>()).results
+
+// The inbox: events by other people on documents and spaces this user belongs to, newest first.
+// Nothing is written per event; "unseen" is everything after the time the bell was last opened.
+const mine = `e.actor_id != ?1 AND (e.document_id IN (SELECT document_id FROM memberships WHERE user_id = ?1)
+  OR e.space_id IN (SELECT space_id FROM space_memberships WHERE user_id = ?1))`
+
+export const seenAt = async (userId: string) =>
+  (await env.DB.prepare('SELECT seen_at FROM inbox_seen WHERE user_id = ?').bind(userId).first<{ seen_at: number }>())?.seen_at ?? 0
+
+export const markSeen = (userId: string) =>
+  env.DB.prepare('INSERT INTO inbox_seen (user_id, seen_at) VALUES (?1, ?2) ON CONFLICT DO UPDATE SET seen_at = ?2').bind(userId, Date.now()).run()
+
+export const listInbox = async (userId: string) =>
+  (await env.DB.prepare(`SELECT ${columns} ${joins} WHERE ${mine} ORDER BY e.at DESC LIMIT 20`).bind(userId).all<EventRow>()).results
+
+export const countUnseen = async (userId: string, since: number) =>
+  (await env.DB.prepare(`SELECT COUNT(*) AS n FROM events e WHERE ${mine} AND e.at > ?2`).bind(userId, since).first<{ n: number }>())?.n ?? 0

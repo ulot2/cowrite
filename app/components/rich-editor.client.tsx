@@ -6,6 +6,7 @@ import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comme
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
+import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, readSuggestions, revertSuggestion, revertSuggestions, SuggestionsExtension, type SuggestionInfo } from './suggestions.client'
 
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
 export type Presence = { name: string; color: string; editing?: boolean }
@@ -14,6 +15,9 @@ type Props = {
   user: { id: string; name: string; color: string }
   canEdit: boolean
   canComment: boolean
+  // Suggest mode: edits become suggestions. `canResolve` is who may accept or reject.
+  suggesting: boolean
+  canResolve: boolean
   panel: 'none' | 'open' | 'resolved'
   onPanel: (panel: 'none' | 'open' | 'resolved') => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
@@ -64,7 +68,7 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, panel, onPanel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, panel, onPanel, onStatus }: Props) {
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
     // server can let a commenter write comments and still refuse their edits to the text.
@@ -119,7 +123,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, panel, onPan
   const editor = useCreateBlockNote(withCollaboration({
     uploadFile,
     domAttributes: { editor: { 'aria-label': 'Document text' } },
-    extensions: [CommentsExtension({ threadStore: sync.threadStore, resolveUsers: users })],
+    extensions: [CommentsExtension({ threadStore: sync.threadStore, resolveUsers: users }), SuggestionsExtension(user.id)],
     collaboration: {
       provider: sync.provider,
       fragment: sync.doc.getXmlFragment('document-store'),
@@ -131,10 +135,58 @@ export function RichEditor({ documentId, user, canEdit, canComment, panel, onPan
   const root = useRef<HTMLDivElement>(null)
   useActionLabels(root)
 
+  // Suggest mode follows the prop. The plugin state lives in ProseMirror, so set it through its commands.
+  useEffect(() => {
+    const view = editor.prosemirrorView
+    if (!view) return
+    ;(suggesting ? enableSuggestChanges : disableSuggestChanges)(view.state, view.dispatch)
+  }, [editor, suggesting])
+
+  // What the bar shows: every suggestion in the text, and the one under the cursor.
+  const [found, setFound] = useState<{ all: SuggestionInfo[]; atCursor: SuggestionInfo | null }>({ all: [], atCursor: null })
+  useEffect(() => {
+    const update = () => setFound(readSuggestions(editor.prosemirrorState))
+    const offChange = editor.onChange(update)
+    const offSelect = editor.onSelectionChange(update)
+    update()
+    return () => { offChange(); offSelect() }
+  }, [editor])
+  const run = (command: (state: import('prosemirror-state').EditorState, dispatch: (tr: import('prosemirror-state').Transaction) => void) => boolean) => {
+    const view = editor.prosemirrorView
+    if (view) command(view.state, view.dispatch)
+  }
+  const [names, setNames] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const missing = [...new Set(found.all.map((s) => s.author))].filter((id) => !(id in names))
+    if (missing.length) users.loadUsers(missing).then(() => setNames((n) => ({ ...n, ...Object.fromEntries(missing.map((id) => [id, users.getUser(id)?.username ?? 'someone'])) })))
+  }, [found, names])
+
   return (
     <BlockNoteView editor={editor} editable={canEdit} comments={canComment} theme={useTheme()} renderEditor={false}>
       <div className="editor-layout" data-panel={panel} ref={root}>
-        <div className="editor-column"><BlockNoteViewEditor /></div>
+        <div className="editor-column">
+          {found.all.length > 0 && (
+            <div className="suggestion-bar" role="status">
+              <span>{found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}{found.atCursor && <> · by <strong>{found.atCursor.author === user.id ? 'you' : names[found.atCursor.author] ?? '…'}</strong></>}</span>
+              {canResolve && (
+                <span className="suggestion-actions">
+                  {found.atCursor ? (
+                    <>
+                      <button type="button" className="ghost" onClick={() => run(applySuggestion(found.atCursor!.id))}>Accept</button>
+                      <button type="button" className="ghost" onClick={() => run(revertSuggestion(found.atCursor!.id))}>Reject</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="ghost" onClick={() => run(applySuggestions)}>Accept all</button>
+                      <button type="button" className="ghost" onClick={() => run(revertSuggestions)}>Reject all</button>
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
+          <BlockNoteViewEditor />
+        </div>
         {panel !== 'none' && (
           <aside className="comments-panel" aria-label="Comments">
             <div className="panel-head">

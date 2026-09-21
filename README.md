@@ -1,6 +1,6 @@
 # cowrite
 
-A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Share a document by email or by link with a role (view, comment, review, edit), or group documents in a space with its own members. Select text to comment on it, reply, react, and resolve. Every document keeps its versions: one is saved automatically while you work, and you can name one, compare two, and restore any of them. A space shows who did what, day by day. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Share a document by email or by link with a role (view, comment, review, edit), or group documents in a space with its own members. Select text to comment on it, reply, react, and resolve. Every document keeps its versions: one is saved automatically while you work, and you can name one, compare two, and restore any of them. A space shows who did what, day by day. Turn on "Suggest" and your edits become suggestions that an editor accepts or rejects; a reviewer always works that way. A document is a draft, in review, or approved, and a bell shows what other people did in your documents. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -18,6 +18,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 4. Select a few words and use the comment button in the toolbar. The thread shows up in the other tab, in the text and in the Comments panel.
 5. Click "Share", create a link for viewers, and open it in a private window with a second account. That account can read and follow your cursor, but not type.
 6. Click "History". Name the current version, change a paragraph, compare the version to the current document, and restore it. The other tab changes without a reload.
+7. Share the document with the second account as a reviewer. In that window, type a sentence: it shows as a suggestion in both windows. Accept it from the first window. Use the status pill to submit the document for review and approve it from the second window; the bell in the first window lists the approval.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -67,7 +68,11 @@ Versions live in the object too, in a `versions` table next to the update log. E
 
 Activity is a D1 table `events`, one row per thing that happened (created, renamed, shared, moved, edited, commented, version saved, restored), written by the Worker's actions and by the object's alarm. The Worker calls the object's methods directly (Durable Object RPC), so versions need no public API route.
 
-The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs editor, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word.
+Suggestions are marks on the text (`insertion`, `deletion`, `modification`, from [prosemirror-suggest-changes](https://github.com/handlewithcarecollective/prosemirror-suggest-changes)). While suggest mode is on, the editor turns every local edit into marks instead of a change; remote edits pass through untouched. Marks are ordinary Yjs formatting, so suggestions sync live and survive offline like the text, and the server does not know about them. A suggestion id starts with its author's user id, which is how the bar can say who suggested. Accept and reject turn the marks into real edits.
+
+Status is a column on the document row with four moves (submit, request changes, approve, reopen), each checked against the role and the current status. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
+
+The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs reviewer, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word. A reviewer can write to the text; their editor makes every edit a suggestion, but the server cannot tell a suggestion from an edit, so that rule holds only for the real app.
 
 ## Run it locally
 
@@ -85,7 +90,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs seventeen tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -103,6 +108,9 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - A viewer can read the history but gets 403 on save and restore.
 - A rename and an edit show up on the space timeline and on the document's history.
 - Deleting a document closes its sockets and wipes its object.
+- A reviewer's text update arrives; a commenter's still does not.
+- Status moves follow the ladder and the roles (403 otherwise), and each one is logged.
+- The bell counts what other people did since it was last opened, and never your own actions.
 
 ## Accessibility
 
@@ -113,10 +121,11 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 ## Limits
 
 - Adding someone by email needs them to have an account already; no invitation email is sent.
-- Mentions in comments come with notifications.
+- No mentions in comments yet; the bell shows edits, comments, shares, status moves, and versions.
+- A reviewer's suggest-only mode is enforced by the editor, not the server.
 - The version preview shows headings, paragraphs, and list items as plain text; bold, links, and images inside a block are not drawn.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack
 
-TypeScript, React Router (framework mode), BlockNote, Yjs, y-websocket, Better Auth. One Cloudflare Worker with a Durable Object per document, a D1 database, and an R2 bucket for images.
+TypeScript, React Router (framework mode), BlockNote, prosemirror-suggest-changes, Yjs, y-websocket, Better Auth. One Cloudflare Worker with a Durable Object per document, a D1 database, and an R2 bucket for images.

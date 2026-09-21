@@ -44,7 +44,8 @@ export default {
     }
 
     // /ws/<id> is the text, /ws/<id>/threads the comments. Each is its own object with its own
-    // write rule: text needs editor, comments need commenter. Below that, the socket can only read.
+    // write rule: text needs reviewer (their edits are suggestions, which the editor enforces),
+    // comments need commenter. Below that, the socket can only read.
     const match = pathname.match(/^\/ws\/([\w-]+)(\/threads)?$/)
     if (match) {
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
@@ -53,7 +54,7 @@ export default {
       const role = await roleOnDocument(session.user.id, match[1])
       if (!role) return new Response('No access to this document', { status: 403 })
       const room = match[2] ? `${match[1]}:threads` : match[1]
-      const canWrite = atLeast(role, match[2] ? 'commenter' : 'editor')
+      const canWrite = atLeast(role, match[2] ? 'commenter' : 'reviewer')
       const headers = new Headers(request.headers)
       headers.set('X-Role', canWrite ? 'editor' : 'viewer')
       headers.set('X-User', session.user.id) // the object logs who edited

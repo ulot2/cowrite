@@ -3,6 +3,7 @@ import { type RouteConfig, index, layout, route } from '@react-router/dev/routes
 export default [
   route('login', 'routes/login.tsx'),
   route('api/auth/*', 'routes/api.auth.ts'),
+  route('api/inbox', 'routes/api.inbox.ts'),
   route('s/:token', 'routes/share.tsx'),
   // Everything behind the shell needs a signed-in user. The shell route checks once.
   layout('routes/shell.tsx', [

@@ -1,6 +1,7 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { getDocument, renameDocument } from '~/lib/db.server'
+import { getDocument, renameDocument, setStatus } from '~/lib/db.server'
+import { moves, statusLabel, type Move } from '~/lib/status'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
@@ -8,6 +9,7 @@ import { colorFor } from '~/lib/color'
 import { Editor } from '~/components/editor'
 import { Icon } from '~/components/icon'
 import { ShareDialog } from '~/components/share-dialog'
+import { StatusMenu } from '~/components/status-menu'
 import type { Route } from './+types/doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }]
@@ -38,6 +40,15 @@ export async function action({ request, params }: Route.ActionArgs) {
   const role = await roleOnDocument(user.id, params.id)
   const document = role && await getDocument(params.id)
   if (!role || !document) throw new Response('Not found', { status: 404 })
+  if (intent === 'status') {
+    // One move at a time, from the status the document has now, by a role that may make it.
+    const move = moves[String(f.get('move')) as Move]
+    if (!move || !atLeast(role, move.need)) throw new Response('You cannot make this change', { status: 403 })
+    if (document.status !== move.from) return { error: `The document is not ${statusLabel[move.from].toLowerCase()} any more.` }
+    await setStatus(params.id, move.to)
+    await logEvent(params.id, user.id, 'status', move.text)
+    return null
+  }
   if (intent === 'rename') {
     if (!atLeast(role, 'editor')) throw new Response('Editors can rename', { status: 403 })
     const title = String(f.get('title') ?? '').trim().slice(0, 120)
@@ -86,16 +97,17 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
   const { user, role, document, isOwner, members, link, spaces } = loaderData
-  const canEdit = atLeast(role, 'editor')
+  // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
+  const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')}
-        crumbs={<nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')}
+        crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <Link className="tool" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
           <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} className="tool" />
         </>}>
-        {canEdit ? (
+        {atLeast(role, 'editor') ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.
           <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>
             <input type="hidden" name="intent" value="rename" />

@@ -669,11 +669,18 @@ html[data-sidebar="collapsed"] .sidebar a {
 }
 
 /* Document page: the document is the page. */
+/* The header row spans the wide column; the title and the text sit centered at the measure. */
 .document {
-  max-width: var(--measure);
+  max-width: 64rem;
   margin: 0 auto;
   padding: 1.5rem 2rem 6rem;
   animation: fade var(--t-base) var(--ease-out);
+}
+.document > form,
+.document > .title,
+.editor-layout {
+  max-width: var(--measure);
+  margin-inline: auto;
 }
 .crumbs {
   display: flex;
@@ -708,6 +715,20 @@ html[data-sidebar="collapsed"] .sidebar a {
 .doc-bar .crumbs {
   margin: 0;
   min-width: 0;
+  flex: 1;
+}
+.doc-bar .crumbs span:last-child {
+  min-width: 4ch;
+}
+.doc-where {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+.doc-where .crumbs {
+  flex: 0 1 auto;
 }
 .doc-tools {
   display: flex;
@@ -768,7 +789,7 @@ input.title:focus-visible {
   box-shadow: none;
   border-radius: 0;
 }
-#editor {
+.editor-column {
   margin-left: -3.25rem;
 } /* room for the block handle and the + button in the gutter */
 .panel-head {
@@ -816,6 +837,7 @@ input.title:focus-visible {
 .editor-layout[data-panel="open"],
 .editor-layout[data-panel="resolved"] {
   grid-template-columns: minmax(0, 1fr) 20rem;
+  max-width: calc(var(--measure) + 22rem);
 }
 .comments-panel {
   min-width: 0;
@@ -836,14 +858,6 @@ input.title:focus-visible {
 }
 .bn-thread-mark .bn-thread-mark-selected {
   background: var(--warn-soft);
-}
-@media (max-width: 1100px) {
-  .document:has(
-    .editor-layout[data-panel="open"],
-    .editor-layout[data-panel="resolved"]
-  ) {
-    max-width: 64rem;
-  }
 }
 @media (max-width: 767px) {
   .doc-bar {
@@ -1067,6 +1081,179 @@ select:focus-visible {
 }
 .share-row form {
   display: contents;
+}
+
+/* Status pill and its menu of moves. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg-muted);
+  background: var(--tint);
+  white-space: nowrap;
+}
+.status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status[data-status="review"] {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.status[data-status="approved"] {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.status-menu {
+  position: relative;
+}
+.status-menu summary {
+  list-style: none;
+  cursor: pointer;
+}
+.status-menu summary::-webkit-details-marker {
+  display: none;
+}
+.status-menu .popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 12rem;
+  padding: 0.375rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 0.125rem;
+  z-index: 5;
+  animation: drop var(--t-fast) var(--ease-out);
+}
+.status-menu .popover .ghost {
+  justify-content: flex-start;
+}
+.card-title .status {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* The bell: same popover as the account menu, with a list. */
+.inbox summary.tool {
+  position: relative;
+  border-radius: var(--radius);
+  line-height: normal;
+}
+.inbox summary .count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 1rem;
+  height: 1rem;
+  font-size: 0.6875rem;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.account .inbox-list {
+  width: 22rem;
+  max-width: calc(100vw - 2rem);
+}
+.inbox-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 24rem;
+  overflow: auto;
+}
+.inbox-list li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  position: relative;
+  border-radius: var(--radius);
+}
+.inbox-list li[data-new="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 0.95rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.inbox-text {
+  flex: 1;
+  min-width: 0;
+}
+.inbox-text a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.inbox-list time {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.inbox-empty {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Suggestions: insertions on the accent wash, deletions struck on the warning wash. */
+.bn-editor ins[data-suggestion] {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  background: var(--accent-soft);
+  color: inherit;
+}
+.bn-editor del[data-suggestion] {
+  text-decoration: line-through;
+  text-decoration-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.bn-editor span[data-suggestion="modification"] {
+  text-decoration: underline dotted var(--fg-muted);
+}
+/* A mark around a whole block wraps its div; keep it in flow. */
+.bn-editor :is(ins, del, span)[data-suggestion]:has(> div) {
+  display: block;
+}
+.bn-editor [data-node-deletion="true"] {
+  opacity: 0.75;
+}
+.suggestion-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem 3.25rem;
+  padding: 0.375rem 0.375rem 0.375rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  background: var(--tint);
+  border-radius: var(--radius);
+  animation: rise var(--t-base) var(--ease-out);
+}
+.suggestion-bar strong {
+  color: var(--fg);
+}
+.suggestion-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.tool:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 /* History: a timeline of versions on the left, the chosen version on a sheet on the right.
