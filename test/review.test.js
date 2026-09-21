@@ -72,3 +72,24 @@ test('the inbox counts what other people did since the bell was last opened', as
   assert.match(inbox.events[0].text, /renamed/)
   assert.equal((await fetch(`${app.base}/api/inbox`, { redirect: 'manual' })).status, 302, 'signed out: sent to login')
 })
+
+test('accepting a suggestion is logged for its author; only editors may log one', async () => {
+  assert.equal((await app.post(`/doc/${docId}`, bea.cookie, { intent: 'suggestion', outcome: 'accepted', author: beaId })).status, 403)
+  assert.equal((await app.post(`/doc/${docId}`, ada.cookie, { intent: 'suggestion', outcome: 'rejected', author: beaId })).status, 200)
+  const inbox = await json('/api/inbox', bea.cookie)
+  assert.equal(inbox.events[0].text, 'rejected a suggestion by Bea')
+})
+
+test('a mention in a comment becomes an event for the mentioned person', async () => {
+  const { YjsThreadStore } = await import('@blocknote/core/yjs')
+  const { DefaultThreadStoreAuth } = await import('@blocknote/core/comments')
+  const adaId = (await json('/api/auth/get-session', ada.cookie)).user.id
+  const tab = app.openTab(docId, bea.cookie, 'threads')
+  await until(() => tab.provider.synced, 'threads synced')
+  const store = new YjsThreadStore(beaId, tab.doc.getMap('threads'), new DefaultThreadStoreAuth(beaId, 'comment'))
+  await store.createThread({ initialComment: { body: [{ type: 'paragraph', content: [{ type: 'text', text: 'Look ', styles: {} }, { type: 'mention', props: { user: adaId, name: 'Ada' } }] }] } })
+  await sleep(3800) // the threads object scans new comments when its alarm runs
+  tab.close()
+  const inbox = await json('/api/inbox', ada.cookie)
+  assert.ok(inbox.events.some((e) => e.actor === 'Bea' && e.text === 'mentioned Ada in a comment'), JSON.stringify(inbox.events.map((e) => e.text)))
+})

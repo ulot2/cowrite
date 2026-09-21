@@ -68,7 +68,9 @@ Versions live in the object too, in a `versions` table next to the update log. E
 
 Activity is a D1 table `events`, one row per thing that happened (created, renamed, shared, moved, edited, commented, version saved, restored), written by the Worker's actions and by the object's alarm. The Worker calls the object's methods directly (Durable Object RPC), so versions need no public API route.
 
-Suggestions are marks on the text (`insertion`, `deletion`, `modification`, from [prosemirror-suggest-changes](https://github.com/handlewithcarecollective/prosemirror-suggest-changes)). While suggest mode is on, the editor turns every local edit into marks instead of a change; remote edits pass through untouched. Marks are ordinary Yjs formatting, so suggestions sync live and survive offline like the text, and the server does not know about them. A suggestion id starts with its author's user id, which is how the bar can say who suggested. Accept and reject turn the marks into real edits.
+Suggestions are marks on the text (`insertion`, `deletion`, `modification`, from [prosemirror-suggest-changes](https://github.com/handlewithcarecollective/prosemirror-suggest-changes)). While suggest mode is on, the editor turns every local edit into marks instead of a change; remote edits pass through untouched. Marks are ordinary Yjs formatting, so suggestions sync live and survive offline like the text, and the server does not know about them. A suggestion id starts with its author's user id, which is how the bar can say who suggested. Accept and reject turn the marks into real edits, and each one is logged, so the author hears about it through the bell. Hover a suggestion for a small card with the author and the two buttons; the bar above the text does the same for the keyboard.
+
+Comments can mention a member: type `@` in a comment and pick a name. The comment editor has its own schema with a `mention` inline item, and the threads object scans new comments when its alarm runs and logs "mentioned Bea", which reaches her bell.
 
 Status is a column on the document row with four moves (submit, request changes, approve, reopen), each checked against the role and the current status. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
 
@@ -90,7 +92,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty-two tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -111,6 +113,8 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - A reviewer's text update arrives; a commenter's still does not.
 - Status moves follow the ladder and the roles (403 otherwise), and each one is logged.
 - The bell counts what other people did since it was last opened, and never your own actions.
+- Accepting or rejecting a suggestion is logged for its author; only editors may log one.
+- A mention in a comment becomes an event for the mentioned person.
 
 ## Accessibility
 
@@ -121,7 +125,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 ## Limits
 
 - Adding someone by email needs them to have an account already; no invitation email is sent.
-- No mentions in comments yet; the bell shows edits, comments, shares, status moves, and versions.
+- A mention is found by the comment's creation time on the writer's clock; a comment edited later to add a mention is not logged.
 - A reviewer's suggest-only mode is enforced by the editor, not the server.
 - The version preview shows headings, paragraphs, and list items as plain text; bold, links, and images inside a block are not drawn.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.

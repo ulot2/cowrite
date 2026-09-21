@@ -4,7 +4,7 @@ import * as sync from 'y-protocols/sync'
 import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
-import { touchEvent } from '~/lib/events.server'
+import { logEvent, touchEvent } from '~/lib/events.server'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -107,6 +107,7 @@ export class Doc extends DurableObject<Env> {
       const open = [...this.doc.getMap<Y.Map<unknown>>('threads').values()].filter((t) => t.get('resolved') !== true).length
       await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, id).run()
       for (const user of editors) await touchEvent(id, user, 'commented', 'commented')
+      await this.logMentions(id)
       return
     }
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
@@ -116,6 +117,30 @@ export class Doc extends DurableObject<Env> {
     const last = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MAX(created_at) AS at FROM versions').one().at
     if (!last || Date.now() - last > AUTO_VERSION_EVERY) this.snapshot(null, null)
     for (const user of editors) await touchEvent(name, user, 'edited', 'edited the text')
+  }
+
+  // Comments written since the last scan that mention someone become "mentioned Bea" events.
+  // A mention is inline content of type "mention" with the person's id and name in its props.
+  async logMentions(documentId: string) {
+    const since = (await this.ctx.storage.get<number>('mentionsScannedAt')) ?? 0
+    const now = Date.now()
+    for (const thread of this.doc.getMap<Y.Map<unknown>>('threads').values()) {
+      for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) {
+        if (((comment.get('createdAt') as number) ?? 0) <= since) continue
+        const author = comment.get('userId') as string
+        const mentioned = new Map<string, string>()
+        const walk = (node: unknown) => {
+          if (Array.isArray(node)) return node.forEach(walk)
+          if (!node || typeof node !== 'object') return
+          const n = node as { type?: string; props?: { user?: string; name?: string }; content?: unknown; children?: unknown }
+          if (n.type === 'mention' && n.props?.user) mentioned.set(n.props.user, n.props.name ?? 'someone')
+          walk(n.content); walk(n.children)
+        }
+        walk(comment.get('body'))
+        for (const [id, name] of mentioned) if (id !== author) await logEvent(documentId, author, 'mention', `mentioned ${name} in a comment`)
+      }
+    }
+    await this.ctx.storage.put('mentionsScannedAt', now)
   }
 
   // Replace the log with one row that holds the whole document. Runs without an await, so

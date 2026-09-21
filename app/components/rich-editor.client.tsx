@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFetcher } from 'react-router'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { createUserStore } from '@blocknote/core'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
-import { BlockNoteViewEditor, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
+import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
+import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
 import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, readSuggestions, revertSuggestion, revertSuggestions, SuggestionsExtension, type SuggestionInfo } from './suggestions.client'
 
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
@@ -18,6 +20,7 @@ type Props = {
   // Suggest mode: edits become suggestions. `canResolve` is who may accept or reject.
   suggesting: boolean
   canResolve: boolean
+  people: Person[] // members, for @mentions in comments
   panel: 'none' | 'open' | 'resolved'
   onPanel: (panel: 'none' | 'open' | 'resolved') => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
@@ -68,7 +71,7 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, panel, onPanel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, people, panel, onPanel, onStatus }: Props) {
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
     // server can let a commenter write comments and still refuse their edits to the text.
@@ -123,7 +126,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   const editor = useCreateBlockNote(withCollaboration({
     uploadFile,
     domAttributes: { editor: { 'aria-label': 'Document text' } },
-    extensions: [CommentsExtension({ threadStore: sync.threadStore, resolveUsers: users }), SuggestionsExtension(user.id)],
+    extensions: [CommentsExtension({ threadStore: sync.threadStore, resolveUsers: users, schema: commentSchema }), SuggestionsExtension(user.id)],
     collaboration: {
       provider: sync.provider,
       fragment: sync.doc.getXmlFragment('document-store'),
@@ -134,6 +137,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
 
   const root = useRef<HTMLDivElement>(null)
   useActionLabels(root)
+  if (import.meta.env.DEV) (window as unknown as { __editor: unknown }).__editor = editor // for poking at it in the console
 
   // Suggest mode follows the prop. The plugin state lives in ProseMirror, so set it through its commands.
   useEffect(() => {
@@ -155,6 +159,40 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     const view = editor.prosemirrorView
     if (view) command(view.state, view.dispatch)
   }
+  // Accepting or rejecting is logged, so the author hears about it through the bell.
+  const log = useFetcher()
+  const resolve = (outcome: 'accepted' | 'rejected', s: SuggestionInfo | null) => {
+    if (s) run(outcome === 'accepted' ? applySuggestion(s.id) : revertSuggestion(s.id))
+    else run(outcome === 'accepted' ? applySuggestions : revertSuggestions)
+    log.submit({ intent: 'suggestion', outcome, author: s?.author ?? '' }, { method: 'post' })
+    setHover(null)
+  }
+
+  // A small card at the mark under the mouse: who, and Accept / Reject. The bar does the same
+  // for the keyboard. A short delay on leaving lets the mouse travel into the card.
+  const [hover, setHover] = useState<(SuggestionInfo & { top: number; left: number }) | null>(null)
+  const leaveTimer = useRef<number>(undefined)
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const over = (e: MouseEvent) => {
+      const mark = (e.target as HTMLElement).closest<HTMLElement>('[data-suggestion][data-id]')
+      if (!mark) return
+      clearTimeout(leaveTimer.current)
+      const box = el.getBoundingClientRect(), r = mark.getBoundingClientRect()
+      const id = mark.dataset.id!
+      setHover((h) => (h?.id === id ? h : { id, author: id.split('~')[0], top: r.bottom - box.top + 6, left: Math.max(0, r.left - box.left) }))
+    }
+    const out = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('[data-suggestion], .suggestion-pop')) leaveTimer.current = window.setTimeout(() => setHover(null), 250)
+    }
+    el.addEventListener('mouseover', over)
+    el.addEventListener('mouseout', out)
+    return () => { el.removeEventListener('mouseover', over); el.removeEventListener('mouseout', out); clearTimeout(leaveTimer.current) }
+  }, [])
+  useEffect(() => { if (hover && !found.all.some((s) => s.id === hover.id)) setHover(null) }, [found, hover])
+  const nameOf = (author: string) => (author === user.id ? 'you' : names[author] ?? '…')
+  const uiComponents = useMemo(() => componentsWithMentions(people), [people])
   const [names, setNames] = useState<Record<string, string>>({})
   useEffect(() => {
     const missing = [...new Set(found.all.map((s) => s.author))].filter((id) => !(id in names))
@@ -162,23 +200,27 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   }, [found, names])
 
   return (
-    <BlockNoteView editor={editor} editable={canEdit} comments={canComment} theme={useTheme()} renderEditor={false}>
+    <BlockNoteView editor={editor} editable={canEdit} comments={false} theme={useTheme()} renderEditor={false}>
+      {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
+          floating composer and thread are rendered here instead of by the view. */}
+      <ComponentsContext.Provider value={uiComponents}>
+      {canComment && <><FloatingComposerController /><FloatingThreadController /></>}
       <div className="editor-layout" data-panel={panel} ref={root}>
         <div className="editor-column">
           {found.all.length > 0 && (
             <div className="suggestion-bar" role="status">
-              <span>{found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}{found.atCursor && <> · by <strong>{found.atCursor.author === user.id ? 'you' : names[found.atCursor.author] ?? '…'}</strong></>}</span>
+              <span>{found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}{found.atCursor && <> · by <strong>{nameOf(found.atCursor.author)}</strong></>}</span>
               {canResolve && (
                 <span className="suggestion-actions">
                   {found.atCursor ? (
                     <>
-                      <button type="button" className="ghost" onClick={() => run(applySuggestion(found.atCursor!.id))}>Accept</button>
-                      <button type="button" className="ghost" onClick={() => run(revertSuggestion(found.atCursor!.id))}>Reject</button>
+                      <button type="button" className="ghost" onClick={() => resolve('accepted', found.atCursor)}>Accept</button>
+                      <button type="button" className="ghost" onClick={() => resolve('rejected', found.atCursor)}>Reject</button>
                     </>
                   ) : (
                     <>
-                      <button type="button" className="ghost" onClick={() => run(applySuggestions)}>Accept all</button>
-                      <button type="button" className="ghost" onClick={() => run(revertSuggestions)}>Reject all</button>
+                      <button type="button" className="ghost" onClick={() => resolve('accepted', null)}>Accept all</button>
+                      <button type="button" className="ghost" onClick={() => resolve('rejected', null)}>Reject all</button>
                     </>
                   )}
                 </span>
@@ -186,6 +228,12 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
             </div>
           )}
           <BlockNoteViewEditor />
+          {hover && (
+            <div className="suggestion-pop" style={{ top: hover.top, left: hover.left }} onMouseEnter={() => clearTimeout(leaveTimer.current)} onMouseLeave={() => setHover(null)}>
+              <span>Suggested by <strong>{nameOf(hover.author)}</strong></span>
+              {canResolve && <span className="suggestion-actions"><button type="button" className="ghost" onClick={() => resolve('accepted', hover)}>Accept</button><button type="button" className="ghost" onClick={() => resolve('rejected', hover)}>Reject</button></span>}
+            </div>
+          )}
         </div>
         {panel !== 'none' && (
           <aside className="comments-panel" aria-label="Comments">
@@ -201,6 +249,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
           </aside>
         )}
       </div>
+      </ComponentsContext.Provider>
     </BlockNoteView>
   )
 }

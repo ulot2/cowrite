@@ -23,6 +23,7 @@ type Props = {
   canSuggest: boolean
   mustSuggest: boolean
   canResolve: boolean
+  people: { id: string; name: string }[]
   crumbs: React.ReactNode
   actions?: React.ReactNode
   children?: React.ReactNode
@@ -30,7 +31,7 @@ type Props = {
 
 // One header row: where you are on the left, who is here and the tools on the right.
 // On phones the tools keep only their icons; the label stays for screen readers.
-export function Editor({ documentId, user, canEdit, canComment, canSuggest, mustSuggest, canResolve, crumbs, actions, children }: Props) {
+export function Editor({ documentId, user, canEdit, canComment, canSuggest, mustSuggest, canResolve, people, crumbs, actions, children }: Props) {
   const [mounted, setMounted] = useState(false)
   const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
   const [panel, setPanel] = useState<Panel>('none')
@@ -66,7 +67,7 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} suggesting={suggesting} canResolve={canResolve} panel={panel} onPanel={setPanel} onStatus={onStatus} />
+            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} suggesting={suggesting} canResolve={canResolve} people={people} panel={panel} onPanel={setPanel} onStatus={onStatus} />
           </Suspense>
         )}
       </div>

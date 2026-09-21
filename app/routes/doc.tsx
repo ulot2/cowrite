@@ -49,6 +49,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     await logEvent(params.id, user.id, 'status', move.text)
     return null
   }
+  if (intent === 'suggestion') {
+    // The editor already applied it; this is the trace, so the author hears about it.
+    if (!atLeast(role, 'editor')) throw new Response('Editors resolve suggestions', { status: 403 })
+    const outcome = f.get('outcome') === 'rejected' ? 'rejected' : 'accepted'
+    const author = await findUser(String(f.get('author') ?? ''))
+    await logEvent(params.id, user.id, 'suggestion', author ? `${outcome} a suggestion by ${author.id === user.id ? 'themselves' : author.name}` : `${outcome} all suggestions`)
+    return null
+  }
   if (intent === 'rename') {
     if (!atLeast(role, 'editor')) throw new Response('Editors can rename', { status: 403 })
     const title = String(f.get('title') ?? '').trim().slice(0, 120)
@@ -101,7 +109,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <Link className="tool" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
