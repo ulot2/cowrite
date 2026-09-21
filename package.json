@@ -9,7 +9,7 @@
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types && react-router typegen",
     "check": "npm run types && tsc -b",
-    "test": "node --test",
+    "test": "react-router build && node --test --test-concurrency=1 \"test/*.test.js\"",
     "postinstall": "wrangler types"
   },
   "dependencies": {

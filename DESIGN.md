@@ -32,6 +32,7 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Cards: title, the first lines of the text (written by the document object a few seconds after an edit), when it changed, who is on it.
 - Document page: breadcrumb, presence avatars top right (a green dot means that person has a cursor in the text), a quiet pill only while connecting or offline, the title in Manrope at 2.5rem, the text on the page itself.
 - Editor: BlockNote with its colors mapped to our tokens (`.bn-container` in `app.css`), so menus and the toolbar match both themes. The other user's cursor label stays visible; the library only shows it on hover.
+- Comments: a "Comments" button with the open count in the presence row opens a panel beside the text (a sheet from the bottom on phones) with an Open / Resolved switch. Commented text carries the accent wash; the selected thread's text the warning wash. The library's icon-only actions get accessible names from a small observer.
 - Login: a two-column page, statement left, tinted form card right.
 
 ## Accessibility

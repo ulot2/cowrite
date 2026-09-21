@@ -1,6 +1,6 @@
 # cowrite
 
-A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Select text to comment on it, reply, react, and resolve. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -15,7 +15,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 1. Create an account with an email and a password, or continue with GitHub.
 2. Create a document and open it in two tabs.
 3. Type in one tab, or press `/` for headings, lists, tables, and images. The other tab follows, and shows your cursor with your name.
-4. Click "Go offline" in one tab, type in both, then click "Reconnect". Both tabs end with the same text.
+4. Select a few words and use the comment button in the toolbar. The thread shows up in the other tab, in the text and in the Comments panel.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -57,7 +57,7 @@ When a tab reconnects, the two sides exchange "state vectors" (a list of how man
 
 Every update is one row in the object's database. On wake, the object replays the rows. After 200 rows it folds them into one row that holds the whole document. Three seconds after an edit, the object writes the first lines of the text to D1 for the document cards.
 
-The editor is [BlockNote](https://www.blocknotejs.org), which stores its blocks as a Yjs XML fragment, so the same merge rules cover rich text. Images go through the Worker to R2 (Cloudflare's file storage) under a random key, and the image block keeps the URL.
+The editor is [BlockNote](https://www.blocknotejs.org), which stores its blocks as a Yjs XML fragment, so the same merge rules cover rich text. Comment threads are a Yjs map in the same document, so they sync live and survive offline like the text. The object counts open threads for the document cards. Images go through the Worker to R2 (Cloudflare's file storage) under a random key, and the image block keeps the URL.
 
 Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents` and `memberships` tables in D1 say who can open which document. The Worker checks the session and the role before it hands a WebSocket to the object, and the object ignores edits from a viewer.
 
@@ -85,6 +85,9 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 - A document written by one tab is still there for a new tab after every tab closed.
 - A socket without a session gets 401, a socket for a document you cannot open gets 403.
 - An image upload without a session gets 401; with one, the file comes back byte for byte.
+- A comment thread made in one tab appears in the other, and a resolve travels back.
+- The document card shows the open comment count that the object writes after a change.
+- The users route (names for comment authors) needs a session.
 
 ## Accessibility
 
@@ -94,7 +97,8 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 
 ## Limits
 
-- No sharing yet: only the owner can open a document. Sharing and roles come after comments.
+- No sharing yet: only the owner can open a document. Sharing and roles are next.
+- Mentions in comments come with notifications.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack

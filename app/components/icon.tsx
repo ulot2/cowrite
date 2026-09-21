@@ -7,6 +7,7 @@ const paths: Record<string, string> = {
   expand: 'M9 6l6 6-6 6',
   plus: 'M12 5v14M5 12h14',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  comment: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2z',
 }
 
 export function Icon({ name }: { name: keyof typeof paths }) {

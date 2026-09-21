@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { ConnectionState, Presence } from './rich-editor.client'
 import { Avatar } from './avatar'
+import { Icon } from './icon'
 
 const notes: Record<ConnectionState, string | null> = {
   connected: null,
@@ -11,11 +12,14 @@ const notes: Record<ConnectionState, string | null> = {
 // The editor needs a DOM, so it loads in the browser only, after the first paint.
 const RichEditor = lazy(() => import('./rich-editor.client').then((m) => ({ default: m.RichEditor })))
 
-export function Editor({ documentId, user, readOnly, children }: { documentId: string; user: { name: string; color: string }; readOnly: boolean; children?: React.ReactNode }) {
+type Panel = 'none' | 'open' | 'resolved'
+
+export function Editor({ documentId, user, readOnly, children }: { documentId: string; user: { id: string; name: string; color: string }; readOnly: boolean; children?: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
-  const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[] }>({ state: 'connecting', others: [] })
+  const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
+  const [panel, setPanel] = useState<Panel>('none')
   useEffect(() => setMounted(true), [])
-  const onStatus = useCallback((state: ConnectionState, others: Presence[]) => setStatus({ state, others }), [])
+  const onStatus = useCallback((state: ConnectionState, others: Presence[], open: number) => setStatus({ state, others, open }), [])
 
   const note = notes[status.state]
   return (
@@ -26,12 +30,22 @@ export function Editor({ documentId, user, readOnly, children }: { documentId: s
           {status.others.map((o, i) => <span key={o.name + i} className="who-is" data-editing={o.editing}><Avatar name={o.name} color={o.color} /></span>)}
           <Avatar name={user.name} color={user.color} />
         </span>
+        <div className="panel-switch" role="group" aria-label="Comments panel">
+          <button type="button" className={panel === 'open' ? 'ghost on' : 'ghost'} aria-pressed={panel === 'open'} onClick={() => setPanel(panel === 'open' ? 'none' : 'open')}>
+            <Icon name="comment" />Comments{status.open > 0 && <span className="count">{status.open}</span>}
+          </button>
+          {panel !== 'none' && (
+            <button type="button" className="ghost" onClick={() => setPanel(panel === 'open' ? 'resolved' : 'open')}>
+              {panel === 'open' ? 'Show resolved' : 'Show open'}
+            </button>
+          )}
+        </div>
       </div>
       {children}
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            <RichEditor documentId={documentId} user={user} readOnly={readOnly} onStatus={onStatus} />
+            <RichEditor documentId={documentId} user={user} readOnly={readOnly} panel={panel} onStatus={onStatus} />
           </Suspense>
         )}
       </div>

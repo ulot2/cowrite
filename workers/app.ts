@@ -26,6 +26,15 @@ export default {
       return Response.json({ url: `/files/${key}` })
     }
 
+    // GET /api/users?ids=a,b: names and avatars for the comments UI. Session required.
+    if (pathname === '/api/users' && request.method === 'GET') {
+      if (!(await getAuth().api.getSession({ headers: request.headers }))) return new Response('Sign in first', { status: 401 })
+      const ids = (new URL(request.url).searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50)
+      if (ids.length === 0) return Response.json([])
+      const { results } = await env.DB.prepare(`SELECT id, name, image FROM "user" WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<{ id: string; name: string; image: string | null }>()
+      return Response.json(results.map((u) => ({ id: u.id, username: u.name, avatarUrl: u.image ?? '' })))
+    }
+
     // GET /files/<key>: serves an uploaded image. Keys are random, so the URL is the permission.
     if (pathname.startsWith('/files/') && request.method === 'GET') {
       const object = await env.FILES.get(pathname.slice(7))

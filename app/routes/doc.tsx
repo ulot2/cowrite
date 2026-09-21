@@ -12,7 +12,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const role = await roleOf(params.id, user.id)
   const document = role && await getDocument(params.id)
   if (!role || !document) throw new Response('Not found', { status: 404 })
-  return { user: { name: user.name, color: colorFor(user.id) }, role, document }
+  return { user: { id: user.id, name: user.name, color: colorFor(user.id) }, role, document }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
