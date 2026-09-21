@@ -6,6 +6,8 @@ A shared writing tool. Sign in, create a document, and edit it live with other p
 
 ![Two editors side by side. Text typed in one appears in the other, with a named cursor.](docs/demo.gif)
 
+*The recording shows the v1.0 demo page. The app now has accounts and a document list; the editor is the same.*
+
 ## Try it
 
 Live: **https://cowrite.cowrite.workers.dev**
