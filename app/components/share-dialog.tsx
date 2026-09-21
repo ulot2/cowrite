@@ -4,6 +4,7 @@ import type { Member, ShareLink, SpaceRow } from '~/lib/access.server'
 import type { Role } from '~/lib/roles'
 import { Avatar } from './avatar'
 import { colorFor } from '~/lib/color'
+import { Icon } from './icon'
 
 const grantable: Role[] = ['viewer', 'commenter', 'reviewer', 'editor']
 const describe: Record<Role, string> = { owner: 'Owner', editor: 'Can edit', reviewer: 'Can review', commenter: 'Can comment', viewer: 'Can view' }
@@ -16,10 +17,11 @@ type Props = {
   spaces?: SpaceRow[]
   spaceId?: string | null
   error?: string | null
+  className?: string // "tool" on the document page: icon plus label, icon only on phones
 }
 
 // A native <dialog>: the browser handles focus, Escape, and the backdrop.
-export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, error }: Props) {
+export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, error, className }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const [copied, setCopied] = useState(false)
   // The server renders the path; the browser adds its origin after mount, so both render the same HTML.
@@ -30,7 +32,7 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, e
 
   return (
     <>
-      <button type="button" onClick={() => ref.current?.showModal()}>Share</button>
+      <button type="button" className={className} onClick={() => ref.current?.showModal()}>{className === 'tool' ? <><Icon name="share" /><span className="tool-label">Share</span></> : 'Share'}</button>
       <dialog ref={ref} className="share" aria-labelledby="share-title">
         <div className="share-head"><h2 id="share-title">Share this {target}</h2><button className="ghost" type="button" onClick={() => ref.current?.close()} aria-label="Close">✕</button></div>
         {error && <p className="error" role="alert">{error}</p>}

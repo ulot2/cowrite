@@ -171,7 +171,8 @@ h2 {
 /* Controls */
 input,
 button,
-.button {
+.button,
+.tool {
   font: inherit;
   color: var(--fg);
   text-decoration: none;
@@ -189,7 +190,8 @@ input {
   width: 100%;
 }
 button,
-.button {
+.button,
+.tool {
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -686,18 +688,54 @@ html[data-sidebar="collapsed"] .sidebar a {
 .crumbs a:hover {
   color: var(--accent);
 }
+.crumbs a {
+  white-space: nowrap;
+}
 .crumbs span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.presence {
+/* One row above the title: breadcrumb left, presence and tools right. */
+.doc-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  min-height: 2.25rem;
-  margin-bottom: 1.25rem;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+.doc-bar .crumbs {
+  margin: 0;
+  min-width: 0;
+}
+.doc-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+}
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+}
+.tool {
+  padding: 0.4rem 0.625rem;
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+.tool:hover {
+  color: var(--fg);
+  background: var(--tint);
+  border-color: transparent;
+}
+.tool[aria-pressed="true"] {
+  color: var(--fg);
+  background: var(--tint);
 }
 .pill {
   font-size: 0.8125rem;
@@ -733,16 +771,30 @@ input.title:focus-visible {
 #editor {
   margin-left: -3.25rem;
 } /* room for the block handle and the + button in the gutter */
-.panel-switch {
+.panel-head {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-right: auto;
-  order: -1;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
-.panel-switch .ghost.on {
-  color: var(--fg);
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius);
   background: var(--tint);
+}
+.segmented button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  background: transparent;
+  border-color: transparent;
+}
+.segmented button.on {
+  color: var(--fg);
+  background: var(--bg);
+  box-shadow: var(--shadow);
 }
 .count {
   display: inline-grid;
@@ -794,6 +846,23 @@ input.title:focus-visible {
   }
 }
 @media (max-width: 767px) {
+  .doc-bar {
+    gap: 0.5rem;
+  }
+  .tool .tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tool {
+    padding: 0.4rem 0.5rem;
+  }
+  .presence {
+    margin-right: 0.25rem;
+  }
   .editor-layout[data-panel="open"],
   .editor-layout[data-panel="resolved"] {
     grid-template-columns: minmax(0, 1fr);

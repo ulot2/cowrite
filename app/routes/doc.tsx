@@ -89,9 +89,12 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
   const canEdit = atLeast(role, 'editor')
   return (
     <article className="document" key={params.id}>
-      <nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')}
-        actions={<><Link className="button" to={`/doc/${params.id}/history`}><Icon name="history" />History</Link><ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} /></>}>
+        crumbs={<nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>}
+        actions={<>
+          <Link className="tool" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
+          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} className="tool" />
+        </>}>
         {canEdit ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.
           <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>

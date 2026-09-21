@@ -14,7 +14,19 @@ const RichEditor = lazy(() => import('./rich-editor.client').then((m) => ({ defa
 
 type Panel = 'none' | 'open' | 'resolved'
 
-export function Editor({ documentId, user, canEdit, canComment, children, actions }: { documentId: string; user: { id: string; name: string; color: string }; canEdit: boolean; canComment: boolean; children?: React.ReactNode; actions?: React.ReactNode }) {
+type Props = {
+  documentId: string
+  user: { id: string; name: string; color: string }
+  canEdit: boolean
+  canComment: boolean
+  crumbs: React.ReactNode
+  actions?: React.ReactNode
+  children?: React.ReactNode
+}
+
+// One header row: where you are on the left, who is here and the tools on the right.
+// On phones the tools keep only their icons; the label stays for screen readers.
+export function Editor({ documentId, user, canEdit, canComment, crumbs, actions, children }: Props) {
   const [mounted, setMounted] = useState(false)
   const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
   const [panel, setPanel] = useState<Panel>('none')
@@ -24,29 +36,27 @@ export function Editor({ documentId, user, canEdit, canComment, children, action
   const note = notes[status.state]
   return (
     <>
-      <div className="presence" role="status">
-        {note && <span className="pill" data-state={status.state}>{note}</span>}
-        <span className="avatars" aria-label={`In this document: you${status.others.map((o) => `, ${o.name}${o.editing ? ' (editing)' : ''}`).join('')}`}>
-          {status.others.map((o, i) => <span key={o.name + i} className="who-is" data-editing={o.editing}><Avatar name={o.name} color={o.color} /></span>)}
-          <Avatar name={user.name} color={user.color} />
-        </span>
-        {actions}
-        <div className="panel-switch" role="group" aria-label="Comments panel">
-          <button type="button" className={panel === 'open' ? 'ghost on' : 'ghost'} aria-pressed={panel === 'open'} onClick={() => setPanel(panel === 'open' ? 'none' : 'open')}>
-            <Icon name="comment" />Comments{status.open > 0 && <span className="count">{status.open}</span>}
+      <div className="doc-bar">
+        {crumbs}
+        <div className="doc-tools">
+          <span role="status" className="presence">
+            {note && <span className="pill" data-state={status.state}>{note}</span>}
+            <span className="avatars" aria-label={`In this document: you${status.others.map((o) => `, ${o.name}${o.editing ? ' (editing)' : ''}`).join('')}`}>
+              {status.others.map((o, i) => <span key={o.name + i} className="who-is" data-editing={o.editing}><Avatar name={o.name} color={o.color} /></span>)}
+              <Avatar name={user.name} color={user.color} />
+            </span>
+          </span>
+          <button type="button" className="tool" aria-pressed={panel !== 'none'} onClick={() => setPanel(panel === 'none' ? 'open' : 'none')}>
+            <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
           </button>
-          {panel !== 'none' && (
-            <button type="button" className="ghost" onClick={() => setPanel(panel === 'open' ? 'resolved' : 'open')}>
-              {panel === 'open' ? 'Show resolved' : 'Show open'}
-            </button>
-          )}
+          {actions}
         </div>
       </div>
       {children}
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} panel={panel} onStatus={onStatus} />
+            <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} panel={panel} onPanel={setPanel} onStatus={onStatus} />
           </Suspense>
         )}
       </div>

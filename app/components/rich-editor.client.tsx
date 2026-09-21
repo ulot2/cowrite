@@ -15,6 +15,7 @@ type Props = {
   canEdit: boolean
   canComment: boolean
   panel: 'none' | 'open' | 'resolved'
+  onPanel: (panel: 'none' | 'open' | 'resolved') => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
 }
 
@@ -63,7 +64,7 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, panel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, panel, onPanel, onStatus }: Props) {
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
     // server can let a commenter write comments and still refuse their edits to the text.
@@ -84,6 +85,8 @@ export function RichEditor({ documentId, user, canEdit, canComment, panel, onSta
   // The destroy waits one tick: a real unmount still frees everything, and the development
   // mount-unmount-mount does not kill the provider we keep.
   const destroyTimer = useRef<number>(undefined)
+  // Open and resolved counts, for the empty line in the panel.
+  const [counts, setCounts] = useState({ open: 0, resolved: 0 })
   useEffect(() => {
     clearTimeout(destroyTimer.current)
     const { doc, provider, threadsDoc, threadsProvider, threads } = sync
@@ -96,6 +99,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, panel, onSta
       const others = [...provider.awareness.getStates()].filter(([id]) => id !== doc.clientID)
         .map(([, s]) => s.user && { ...s.user, editing: s.cursor != null }).filter(Boolean)
       const open = [...threads.values()].filter((t) => (t as Y.Map<unknown>).get('resolved') !== true).length
+      setCounts({ open, resolved: threads.size - open })
       onStatus(state, others, open)
     }
     provider.on('status', report)
@@ -132,7 +136,15 @@ export function RichEditor({ documentId, user, canEdit, canComment, panel, onSta
       <div className="editor-layout" data-panel={panel} ref={root}>
         <div className="editor-column"><BlockNoteViewEditor /></div>
         {panel !== 'none' && (
-          <aside className="comments-panel" aria-label={panel === 'open' ? 'Open comments' : 'Resolved comments'}>
+          <aside className="comments-panel" aria-label="Comments">
+            <div className="panel-head">
+              <div className="segmented" role="group" aria-label="Which comments">
+                <button type="button" className={panel === 'open' ? 'on' : ''} aria-pressed={panel === 'open'} onClick={() => onPanel('open')}>Open</button>
+                <button type="button" className={panel === 'resolved' ? 'on' : ''} aria-pressed={panel === 'resolved'} onClick={() => onPanel('resolved')}>Resolved</button>
+              </div>
+              <button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close comments">✕</button>
+            </div>
+            {counts[panel] === 0 && <p className="muted small">{panel === 'open' ? (canComment ? 'No open comments. Select some text and use the comment button in the toolbar.' : 'No open comments.') : 'Nothing resolved yet.'}</p>}
             <ThreadsSidebar filter={panel} sort="position" />
           </aside>
         )}
