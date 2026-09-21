@@ -1,4 +1,4 @@
-import { Form, redirect } from 'react-router'
+import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createDocument, listSpaceDocuments } from '~/lib/db.server'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
@@ -6,6 +6,7 @@ import { listSpaceEvents, logEvent, logSpaceEvent } from '~/lib/events.server'
 import { Activity } from '~/components/activity'
 import type { Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
+import { Avatar } from '~/components/avatar'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
 import { ShareDialog } from '~/components/share-dialog'
@@ -79,21 +80,26 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
   const { owner, space, role, isOwner, documents, members, link, events } = loaderData
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>{space.name}</h1>
-          <p className="muted">{members.length} {members.length === 1 ? 'member' : 'members'} · {space.visibility === 'public' ? 'Anyone with the link can view' : 'Private'}</p>
-        </div>
-        <div className="head-actions">
-          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} error={actionData?.error} />
+      <div className="doc-bar">
+        <nav className="crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span aria-hidden="true">/</span><span>{space.name}</span></nav>
+        <div className="doc-tools">
           {isOwner && (
             <Form method="post">
               <input type="hidden" name="intent" value="visibility" />
               <input type="hidden" name="visibility" value={space.visibility === 'public' ? 'private' : 'public'} />
-              <button>{space.visibility === 'public' ? 'Make private' : 'Make public'}</button>
+              <button className="tool"><Icon name={space.visibility === 'public' ? 'lock' : 'globe'} /><span className="tool-label">{space.visibility === 'public' ? 'Make private' : 'Make public'}</span></button>
             </Form>
           )}
-          {(role === 'owner' || role === 'editor') && <Form method="post"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>}
+          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} error={actionData?.error} className="tool" />
+        </div>
+      </div>
+      <header className="page-title">
+        <p className="eyebrow">{space.visibility === 'public' ? 'Public space' : 'Private space'}</p>
+        <h1>{space.name}</h1>
+        <div className="title-meta">
+          <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id)} size={26} />)}</span>
+          <p className="muted">{members.length} {members.length === 1 ? 'member' : 'members'} · {space.visibility === 'public' ? 'anyone with the link can view' : 'only members can open it'}</p>
+          {(role === 'owner' || role === 'editor') && <Form method="post" className="title-action"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>}
         </div>
       </header>
       {documents.length === 0 ? (

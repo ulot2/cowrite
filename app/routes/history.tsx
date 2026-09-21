@@ -79,7 +79,7 @@ export default function History({ loaderData, params }: Route.ComponentProps) {
         <nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><Link to={`/doc/${params.id}`}>{document.title}</Link><span aria-hidden="true">/</span><span>History</span></nav>
         <div className="doc-tools"><Link className="tool" to={`/doc/${params.id}`}><Icon name="back" /><span className="tool-label">Open the document</span></Link></div>
       </div>
-      <header className="history-head">
+      <header className="page-title">
         <p className="eyebrow">Version history</p>
         <h1>{document.title}</h1>
         <p className="muted">{n === 0 ? 'No versions yet' : n === 1 ? '1 version' : `${n} versions`} · a version is saved by itself every 30 minutes of editing</p>

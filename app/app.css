@@ -1071,7 +1071,8 @@ select:focus-visible {
 
 /* History: a timeline of versions on the left, the chosen version on a sheet on the right.
    On phones the timeline becomes a strip of chips, so the text stays near the top. */
-.history-head {
+/* Page title block, shared by the history and space pages: eyebrow, name, meta line. */
+.page-title {
   margin: 0.25rem 0 1.75rem;
 }
 .eyebrow {
@@ -1082,15 +1083,28 @@ select:focus-visible {
   text-transform: uppercase;
   color: var(--accent);
 }
-.history-head h1 {
+.page-title h1 {
   margin: 0;
   font-size: 2rem;
   letter-spacing: -0.02em;
   line-height: 1.15;
   text-wrap: balance;
 }
-.history-head p.muted {
+.page-title p.muted {
   margin: 0.375rem 0 0;
+}
+.title-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.title-meta p.muted {
+  margin: 0;
+}
+.title-action {
+  margin-left: auto;
 }
 .history-layout {
   display: grid;
@@ -1334,6 +1348,10 @@ h3.vb, h4.vb, h5.vb {
   }
   .versions {
     position: static;
+  }
+  .title-action,
+  .title-action button {
+    width: 100%;
   }
   .version-list {
     display: flex;
