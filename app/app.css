@@ -111,7 +111,7 @@ label { display: grid; gap: 0.25rem; color: var(--fg-muted); font-size: 0.875rem
 /* Shell: a top bar, a sidebar that collapses to an icon rail, and the content. */
 .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; grid-template-rows: var(--topbar) 1fr; min-height: 100%; transition: grid-template-columns var(--t-base) var(--ease-out); }
 html[data-sidebar="collapsed"] .shell { grid-template-columns: var(--rail) 1fr; }
-.topbar { grid-column: 1 / -1; position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 1rem; padding: 0 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+.topbar { grid-column: 2; grid-row: 1; position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 1rem; padding: 0 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border); }
 .search { flex: 1; max-width: 26rem; display: flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.75rem; border-radius: var(--radius); background: var(--tint); color: var(--fg-muted); transition: box-shadow var(--t-fast), background var(--t-fast); }
 .search:focus-within { background: var(--bg); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
 .search input { border: 0; background: none; padding: 0; height: 100%; color: var(--fg); }
@@ -133,7 +133,7 @@ html[data-sidebar="collapsed"] .shell { grid-template-columns: var(--rail) 1fr; 
 .theme input { width: auto; accent-color: var(--accent); margin: 0; }
 .account .popover .ghost { justify-content: flex-start; width: 100%; }
 
-.sidebar { grid-row: 2; position: sticky; top: var(--topbar); height: calc(100vh - var(--topbar)); display: flex; flex-direction: column; gap: 2px; padding: 0.75rem 0.5rem; background: var(--bg); border-right: 1px solid var(--border); overflow: hidden; }
+.sidebar { grid-column: 1; grid-row: 1 / -1; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 2px; padding: 0.75rem 0.5rem; background: var(--bg); border-right: 1px solid var(--border); overflow: hidden; }
 .sidebar a, .sidebar .collapse { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.625rem; border-radius: var(--radius); text-decoration: none; color: var(--fg-muted); font-weight: 500; white-space: nowrap; transition: background var(--t-fast), color var(--t-fast); }
 .sidebar a:hover { background: var(--tint); color: var(--fg); }
 .sidebar a.active { background: var(--tint); color: var(--fg); }
@@ -146,19 +146,20 @@ html[data-sidebar="collapsed"] .sidebar span { display: none; }
 html[data-sidebar="collapsed"] .side-head { flex-direction: column; gap: 0.5rem; padding: 0.125rem 0 0.75rem; }
 html[data-sidebar="collapsed"] .sidebar a { justify-content: center; padding: 0.5rem; }
 .backdrop { display: none; }
-.content { grid-row: 2; min-width: 0; }
+.content { grid-column: 2; grid-row: 2; min-width: 0; }
 
 @media (max-width: 767px) {
   .shell, html[data-sidebar="collapsed"] .shell { grid-template-columns: 1fr; }
   .topbar { padding: 0 0.75rem; gap: 0.5rem; }
   .topbar-right .primary span { display: none; }
   .menu { display: inline-flex; }
-  .sidebar { position: fixed; top: var(--topbar); left: 0; z-index: 4; width: min(var(--sidebar), 85vw); height: calc(100vh - var(--topbar)); transform: translateX(-100%); transition: transform var(--t-base) var(--ease-out); box-shadow: var(--shadow); }
+  .topbar, .content { grid-column: 1; }
+  .sidebar { position: fixed; top: 0; left: 0; z-index: 6; width: min(var(--sidebar), 85vw); height: 100vh; transform: translateX(-100%); transition: transform var(--t-base) var(--ease-out); box-shadow: var(--shadow); }
   .sidebar[data-open="true"] { transform: none; }
   html[data-sidebar="collapsed"] .sidebar span { display: inline; }
   html[data-sidebar="collapsed"] .side-head { flex-direction: row; }
   .collapse { display: none; }
-  .backdrop:not([hidden]) { display: block; position: fixed; inset: var(--topbar) 0 0 0; z-index: 3; background: rgba(0, 0, 0, 0.3); animation: fade var(--t-base); }
+  .backdrop:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.3); animation: fade var(--t-base); }
 }
 
 /* Pages */
