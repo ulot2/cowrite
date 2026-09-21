@@ -12,6 +12,8 @@
     "bindings": [{ "name": "DOC", "class_name": "Doc" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }],
+  // env.FILES: object storage for uploaded images. 10 GB free, no download fees.
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "cowrite-files" }],
   // env.DB: the SQL database for users, documents, and roles. Tables come from migrations/.
   "d1_databases": [
     { "binding": "DB", "database_name": "cowrite", "database_id": "3b3ebdce-3385-4130-bcb0-0b1fea2f2b86", "migrations_dir": "migrations" }

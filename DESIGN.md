@@ -30,7 +30,8 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Sidebar: Home and Documents with line icons, and a collapse control at the bottom. Collapsed, it is an icon rail. The state is saved per browser and applied before the first paint. On phones it is a drawer behind a menu button.
 - Home: a greeting and the six most recent documents. Documents: all of them, with search and delete.
 - Cards: title, the first lines of the text (written by the document object a few seconds after an edit), when it changed, who is on it.
-- Document page: breadcrumb, presence avatars top right, a quiet pill only while connecting or offline, the title in Manrope at 2.5rem, the text on the page itself.
+- Document page: breadcrumb, presence avatars top right (a green dot means that person has a cursor in the text), a quiet pill only while connecting or offline, the title in Manrope at 2.5rem, the text on the page itself.
+- Editor: BlockNote with its colors mapped to our tokens (`.bn-container` in `app.css`), so menus and the toolbar match both themes. The other user's cursor label stays visible; the library only shows it on hover.
 - Login: a two-column page, statement left, tinted form card right.
 
 ## Accessibility

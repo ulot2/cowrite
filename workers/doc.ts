@@ -69,7 +69,8 @@ export class Doc extends DurableObject<Env> {
 
   // Runs once, 3 s after an edit. The object's name is the document id.
   async alarm() {
-    const preview = this.doc.getText('content').toString().slice(0, 240).replace(/\s+/g, ' ').trim()
+    // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
+    const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
     await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), this.ctx.id.name ?? '').run()
   }
 

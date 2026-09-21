@@ -1,6 +1,6 @@
 # cowrite
 
-A shared writing tool. Sign in, create a document, and edit it live with other people. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
+A shared writing tool. Sign in, create a document, and write it live with other people: headings, lists, quotes, code, tables, links, and images. Each person sees the others' cursors with their names. A tab that goes offline keeps working and merges cleanly when it returns.
 
 [![CI](https://github.com/ulot2/cowrite/actions/workflows/ci.yml/badge.svg)](https://github.com/ulot2/cowrite/actions/workflows/ci.yml)
 
@@ -14,7 +14,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 
 1. Create an account with an email and a password, or continue with GitHub.
 2. Create a document and open it in two tabs.
-3. Type in one tab. The other tab follows, and shows your cursor with your name.
+3. Type in one tab, or press `/` for headings, lists, tables, and images. The other tab follows, and shows your cursor with your name.
 4. Click "Go offline" in one tab, type in both, then click "Reconnect". Both tabs end with the same text.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
@@ -55,7 +55,9 @@ Two channels flow through the server:
 
 When a tab reconnects, the two sides exchange "state vectors" (a list of how many changes each side has seen from each client) and send only the missing updates. That is why the time offline does not matter.
 
-Every update is one row in the object's database. On wake, the object replays the rows. After 200 rows it folds them into one row that holds the whole document.
+Every update is one row in the object's database. On wake, the object replays the rows. After 200 rows it folds them into one row that holds the whole document. Three seconds after an edit, the object writes the first lines of the text to D1 for the document cards.
+
+The editor is [BlockNote](https://www.blocknotejs.org), which stores its blocks as a Yjs XML fragment, so the same merge rules cover rich text. Images go through the Worker to R2 (Cloudflare's file storage) under a random key, and the image block keeps the URL.
 
 Around the objects sits one Cloudflare Worker that serves the React Router app. Accounts and sessions come from Better Auth on D1 (Cloudflare's SQL database). The `documents` and `memberships` tables in D1 say who can open which document. The Worker checks the session and the role before it hands a WebSocket to the object, and the object ignores edits from a viewer.
 
@@ -82,6 +84,7 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 - A tab that closes disappears from the other tab's presence list.
 - A document written by one tab is still there for a new tab after every tab closed.
 - A socket without a session gets 401, a socket for a document you cannot open gets 403.
+- An image upload without a session gets 401; with one, the file comes back byte for byte.
 
 ## Accessibility
 
@@ -91,9 +94,9 @@ Around the objects sits one Cloudflare Worker that serves the React Router app. 
 
 ## Limits
 
-- Plain text, and no sharing yet: only the owner can open a document. Rich text is next, then sharing and roles.
+- No sharing yet: only the owner can open a document. Sharing and roles come after comments.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack
 
-TypeScript, React Router (framework mode), CodeMirror 6, Yjs, y-websocket, Better Auth. One Cloudflare Worker with a Durable Object per document and a D1 database, all on the free plan.
+TypeScript, React Router (framework mode), BlockNote, Yjs, y-websocket, Better Auth. One Cloudflare Worker with a Durable Object per document, a D1 database, and an R2 bucket for images.

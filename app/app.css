@@ -200,13 +200,33 @@ html[data-sidebar="collapsed"] .sidebar a { justify-content: center; padding: 0.
 .title { display: block; width: 100%; margin: 0 0 0.75rem; padding: 0.25rem 0; background: none; border: 0; border-radius: 0; font: 600 2.5rem/1.15 var(--font); letter-spacing: -0.03em; color: var(--fg); }
 input.title:hover { background: none; }
 input.title:focus-visible { box-shadow: none; border-radius: 0; }
-#editor .cm-editor { min-height: 50vh; outline: none; }
-#editor .cm-scroller { font: 400 17px/1.7 var(--font); overflow-x: hidden; }
-#editor .cm-content { padding: 1.25rem 0 0; caret-color: var(--fg); }
-#editor .cm-line { padding: 0; }
-#editor .cm-placeholder { color: var(--fg-muted); }
-#editor .cm-content ::selection { background: var(--accent-soft); }
-#editor .cm-ySelectionInfo { opacity: 1; transition: none; font: 600 0.75rem/1.4 var(--font); padding: 0 0.375rem; border-radius: 4px; animation: rise var(--t-base) var(--ease-out); }
+#editor { margin-left: -3.25rem; } /* room for the block handle and the + button in the gutter */
+.who-is { position: relative; display: inline-flex; }
+.who-is[data-editing="true"]::after { content: ""; position: absolute; right: 0; bottom: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); border: 2px solid var(--bg); }
+/* BlockNote's colors follow our tokens, so the editor, its menus, and the cursors match both themes. */
+.bn-container {
+  --bn-colors-editor-text: var(--fg);
+  --bn-colors-editor-background: var(--bg);
+  --bn-colors-menu-text: var(--fg);
+  --bn-colors-menu-background: var(--bg);
+  --bn-colors-tooltip-text: var(--fg);
+  --bn-colors-tooltip-background: var(--tint);
+  --bn-colors-hovered-text: var(--fg);
+  --bn-colors-hovered-background: var(--tint);
+  --bn-colors-selected-text: var(--accent-fg);
+  --bn-colors-selected-background: var(--accent);
+  --bn-colors-disabled-text: var(--fg-muted);
+  --bn-colors-disabled-background: var(--tint);
+  --bn-colors-shadow: var(--border);
+  --bn-colors-border: var(--border);
+  --bn-colors-side-menu: var(--fg-muted);
+  --bn-font-family: var(--font);
+  --bn-border-radius: var(--radius);
+}
+.bn-editor { padding-inline: 3.25rem 0; font-size: 17px; line-height: 1.7; }
+.bn-editor [data-content-type="heading"] { letter-spacing: -0.02em; }
+/* The library shows the name only on hover. Keep it visible: the cursor must carry a name, not only a color. */
+#editor .bn-editor .bn-collaboration-cursor__base .bn-collaboration-cursor__label { max-width: 20rem; max-height: 1.25rem; padding: 0.05rem 0.375rem; top: -18px; border-radius: 4px 4px 4px 0; font: 600 0.75rem/1.25 var(--font); transition: none; animation: rise var(--t-base) var(--ease-out); }
 
 /* Login: statement on the left, form on the right. Stacked on phones. */
 .login { min-height: 100%; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 3rem; max-width: 60rem; margin: 0 auto; padding: 3rem 1.5rem; }

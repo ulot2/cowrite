@@ -46,7 +46,7 @@ after(() => {
   // On Windows, kill the whole tree, or the runtime keeps running after node exits.
   if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
   else proc.kill()
-  rmSync(persist, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 })
+  try { rmSync(persist, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }) } catch { /* Windows keeps a file open a little longer; the temp folder is harmless */ }
 })
 
 // Signs up a user through the real auth API. Returns the session cookie.
@@ -146,4 +146,21 @@ test('a socket without a session is refused, and one for a document you cannot o
   const grace = await signUp('Grace')
   assert.equal(await handshakeStatus(docId, grace), 403)
   assert.equal(await handshakeStatus(docId, ada), 101)
+})
+
+test('an image upload needs a session, and the file comes back byte for byte', async () => {
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex') // the start of a PNG, enough for this test
+  const headers = { 'content-type': 'image/png', 'x-file-name': 'dot.png' }
+  const anonymous = await fetch(`${base}/upload`, { method: 'POST', body: png, headers })
+  assert.equal(anonymous.status, 401)
+
+  const upload = await fetch(`${base}/upload`, { method: 'POST', body: png, headers: { ...headers, cookie: ada } })
+  assert.equal(upload.status, 200)
+  const { url } = await upload.json()
+  assert.match(url, /^\/files\/[0-9a-f-]{36}\/dot\.png$/)
+
+  const served = await fetch(base + url)
+  assert.equal(served.status, 200)
+  assert.equal(served.headers.get('content-type'), 'image/png')
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), png)
 })
