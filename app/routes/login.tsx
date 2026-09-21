@@ -39,7 +39,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
         <h1>Write together, in the same place, at the same time.</h1>
         <p className="lead">One document, everyone's cursor, and no lost edits when a connection drops.</p>
       </section>
-      <form className="card" onSubmit={submit}>
+      <form className="card-form" onSubmit={submit}>
         <h2>{mode === 'in' ? 'Sign in' : 'Create your account'}</h2>
         {loaderData.github && (
           <>

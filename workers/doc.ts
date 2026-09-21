@@ -40,6 +40,8 @@ export class Doc extends DurableObject<Env> {
     this.doc.on('update', (update: Uint8Array, origin: unknown) => {
       this.ctx.storage.sql.exec('INSERT INTO updates (data) VALUES (?)', update)
       if (++this.rows >= COMPACT_AT) this.compact()
+      // A few seconds after the last edit, alarm() writes the preview and the edit time to D1.
+      this.ctx.storage.getAlarm().then((at) => { if (at === null) this.ctx.storage.setAlarm(Date.now() + 3000) })
       const enc = encoding.createEncoder()
       encoding.writeVarUint(enc, SYNC)
       sync.writeUpdate(enc, update)
@@ -63,6 +65,12 @@ export class Doc extends DurableObject<Env> {
       encoding.writeVarUint8Array(enc, awarenessProtocol.encodeAwarenessUpdate(this.awareness, [...added, ...updated, ...removed]))
       this.broadcast(encoding.toUint8Array(enc), null)
     })
+  }
+
+  // Runs once, 3 s after an edit. The object's name is the document id.
+  async alarm() {
+    const preview = this.doc.getText('content').toString().slice(0, 240).replace(/\s+/g, ' ').trim()
+    await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), this.ctx.id.name ?? '').run()
   }
 
   // Replace the log with one row that holds the whole document. Runs without an await, so

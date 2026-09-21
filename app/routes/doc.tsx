@@ -1,4 +1,4 @@
-import { Form } from 'react-router'
+import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { getDocument, renameDocument, roleOf } from '~/lib/db.server'
 import { colorFor } from '~/lib/color'
@@ -27,6 +27,7 @@ export default function Doc({ loaderData, params }: Route.ComponentProps) {
   const { user, role, document } = loaderData
   return (
     <article className="document" key={params.id}>
+      <nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav>
       <Editor documentId={params.id} user={user} readOnly={role === 'viewer'}>
         {role === 'owner' ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.

@@ -1,42 +1,89 @@
-import { useState } from 'react'
-import { Form, NavLink, Outlet, useNavigate } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Form, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
-import { listDocuments } from '~/lib/db.server'
 import { colorFor } from '~/lib/color'
 import { Avatar } from '~/components/avatar'
+import { Icon } from '~/components/icon'
 import type { Route } from './+types/shell'
 
-// Runs for every page inside the shell: who is signed in, and their documents for the sidebar.
+export type ShellUser = { id: string; name: string; email: string; color: string }
+
+// Runs for every page inside the shell: who is signed in.
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  return { user: { id: user.id, name: user.name, color: colorFor(user.id) }, documents: await listDocuments(user.id) }
+  return { user: { id: user.id, name: user.name, email: user.email, color: colorFor(user.id) } satisfies ShellUser }
+}
+
+type Theme = 'system' | 'light' | 'dark'
+const themes: Theme[] = ['system', 'light', 'dark']
+
+// Reads and writes the two per-browser preferences. Both are conveniences, so failures are ignored.
+const pref = {
+  get: (key: string) => { try { return localStorage.getItem(key) } catch { return null } },
+  set: (key: string, value: string) => { try { localStorage.setItem(key, value) } catch { /* private window */ } },
 }
 
 export default function Shell({ loaderData }: Route.ComponentProps) {
-  const { user, documents } = loaderData
+  const { user } = loaderData
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const [params] = useSearchParams()
+  const [open, setOpen] = useState(false) // phone drawer
+  const [collapsed, setCollapsed] = useState(false) // desktop rail
+  const [theme, setTheme] = useState<Theme>('system')
+
+  // Preferences load after the first paint, so the server and the browser render the same HTML.
+  useEffect(() => {
+    setCollapsed(document.documentElement.dataset.sidebar === 'collapsed')
+    setTheme((pref.get('theme') as Theme) || 'system')
+  }, [])
+  const chooseTheme = (t: Theme) => {
+    setTheme(t); pref.set('theme', t)
+    if (t === 'system') delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = t
+  }
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    setCollapsed(next); pref.set('sidebar', next ? 'collapsed' : 'open')
+    if (next) document.documentElement.dataset.sidebar = 'collapsed'; else delete document.documentElement.dataset.sidebar
+  }
+
   return (
     <div className="shell">
-      <button className="menu quiet" type="button" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(!open)}>Menu</button>
-      <nav id="sidebar" className="sidebar" data-open={open} aria-label="Main">
-        <NavLink to="/" className="brand" onClick={() => setOpen(false)}>cowrite</NavLink>
-        <Form method="post" action="/?index">
-          <button className="wide" name="intent" value="create">New document</button>
+      <header className="topbar">
+        <button className="ghost menu" type="button" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen(!open)}><Icon name="menu" /><span className="sr-only">Menu</span></button>
+        <NavLink to="/" className="brand">cowrite</NavLink>
+        <Form method="get" action="/documents" className="search" role="search">
+          <Icon name="search" />
+          <input name="q" type="search" placeholder="Search documents" aria-label="Search documents" defaultValue={params.get('q') ?? ''} />
         </Form>
-        <p className="side-heading">Documents</p>
-        <ul className="side-list">
-          {documents.map((d) => (
-            <li key={d.id}><NavLink to={`/doc/${d.id}`} onClick={() => setOpen(false)}>{d.title}</NavLink></li>
-          ))}
-        </ul>
-        <details className="account">
-          <summary><Avatar name={user.name} color={user.color} size={26} /><span className="truncate">{user.name}</span></summary>
-          <button className="quiet wide" type="button" onClick={async () => { await authClient.signOut(); navigate('/login') }}>Sign out</button>
-        </details>
+        <div className="topbar-right">
+          <Form method="post" action="/?index"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>
+          <details className="account">
+            <summary aria-label="Account menu"><Avatar name={user.name} color={user.color} size={32} /></summary>
+            <div className="popover">
+              <p className="who"><strong>{user.name}</strong><span>{user.email}</span></p>
+              <fieldset className="theme">
+                <legend>Theme</legend>
+                {themes.map((t) => (
+                  <label key={t}><input type="radio" name="theme" value={t} checked={theme === t} onChange={() => chooseTheme(t)} />{t[0].toUpperCase() + t.slice(1)}</label>
+                ))}
+              </fieldset>
+              <button className="ghost" type="button" onClick={async () => { await authClient.signOut(); navigate('/login') }}>Sign out</button>
+            </div>
+          </details>
+        </div>
+      </header>
+
+      <nav id="sidebar" className="sidebar" data-open={open} aria-label="Main">
+        <NavLink to="/" end onClick={() => setOpen(false)}><Icon name="home" /><span>Home</span></NavLink>
+        <NavLink to="/documents" onClick={() => setOpen(false)}><Icon name="docs" /><span>Documents</span></NavLink>
+        <button className="ghost collapse" type="button" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <Icon name={collapsed ? 'expand' : 'collapse'} /><span>Collapse</span>
+        </button>
       </nav>
       <div className="backdrop" hidden={!open} onClick={() => setOpen(false)} />
+
       <main className="content">
         <Outlet context={user} />
       </main>
