@@ -4,6 +4,7 @@ export default [
   route('login', 'routes/login.tsx'),
   route('api/auth/*', 'routes/api.auth.ts'),
   route('api/inbox', 'routes/api.inbox.ts'),
+  route('api/ai', 'routes/api.ai.ts'),
   route('s/:token', 'routes/share.tsx'),
   route('p/:slug', 'routes/public.tsx'),
   // Outside the shell: a download, a print page, and full-screen slides.

@@ -24,6 +24,7 @@ const paths: Record<string, string> = {
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   outline: 'M4 6h16M8 12h12M12 18h8',
+  sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
   suggest: 'M4 20h4l10-10-4-4L4 16zM13 7l4 4M15 5l4 4',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v9H5z',

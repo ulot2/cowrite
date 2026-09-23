@@ -61,6 +61,7 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
               <Icon name="suggest" /><span className="tool-label">Suggest</span>
             </button>
           )}
+          {!board && canEdit && <button type="button" className="tool" title="AI" aria-pressed={panel === 'ai'} onClick={() => setPanel(panel === 'ai' ? 'none' : 'ai')}><Icon name="sparkle" /><span className="tool-label">AI</span></button>}
           {!board && <><button type="button" className="tool" title="Outline" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
             <Icon name="outline" /><span className="tool-label">Outline</span>
           </button>

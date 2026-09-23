@@ -33,7 +33,8 @@ export default {
       if (!(await getAuth().api.getSession({ headers: request.headers }))) return new Response('Sign in first', { status: 401 })
       const ids = (new URL(request.url).searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50)
       if (ids.length === 0) return Response.json([])
-      return Response.json((await usersById(ids)).map((u) => ({ id: u.id, username: u.name, avatarUrl: u.image ?? '' })))
+      const ai = ids.includes('ai') ? [{ id: 'ai', username: 'CoWrite AI', avatarUrl: '' }] : []
+      return Response.json([...ai, ...(await usersById(ids)).map((u) => ({ id: u.id, username: u.name, avatarUrl: u.image ?? '' }))])
     }
 
     // GET /files/<key>: serves an uploaded image. Keys are random, so the URL is the permission.

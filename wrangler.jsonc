@@ -13,6 +13,8 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }],
   // env.FILES: object storage for uploaded images. 10 GB free, no download fees.
+  // env.AI: Workers AI. The free daily allowance is the only cap; calls fail, never bill, past it.
+  "ai": { "binding": "AI" },
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "cowrite-files" }],
   // env.DB: the SQL database for users, documents, and roles. Tables come from migrations/.
   "d1_databases": [

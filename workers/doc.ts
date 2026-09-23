@@ -7,6 +7,7 @@ import * as decoding from 'lib0/decoding'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { indexBody, indexComments } from '~/lib/search.server'
 import { syncWork, type WorkItem } from '~/lib/work.server'
+import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 
 // Message types of the y-websocket protocol. The first byte of every message.
@@ -17,6 +18,18 @@ const COMPACT_AT = 200
 // An automatic version at most this often, and how many unnamed ones we keep.
 const AUTO_VERSION_EVERY = 30 * 60 * 1000
 const AUTO_VERSIONS_KEPT = 50
+// The user id of the AI in comments and suggestions.
+const AI = 'ai'
+
+// The words of a comment body (BlockNote blocks), mentions as "@name".
+const plainOf = (node: unknown): string => {
+  if (Array.isArray(node)) return node.map(plainOf).join(' ')
+  if (!node || typeof node !== 'object') return ''
+  const n = node as { text?: string; type?: string; props?: { name?: string }; content?: unknown; children?: unknown }
+  if (typeof n.text === 'string') return n.text
+  if (n.type === 'mention') return '@' + (n.props?.name ?? '')
+  return [plainOf(n.content), plainOf(n.children)].join(' ').trim()
+}
 
 type AwarenessChange = { added: number[]; updated: number[]; removed: number[] }
 // What we keep on each socket. Memory is gone after hibernation, the socket and its attachment are not.
@@ -238,10 +251,29 @@ export class Doc extends DurableObject<Env> {
           walk(n.content); walk(n.children)
         }
         walk(comment.get('body'))
-        for (const [id, name] of mentioned) if (id !== author) await logEvent(documentId, author, 'mention', `mentioned ${name} in a comment`)
+        for (const [id, name] of mentioned) if (id !== author && id !== AI) await logEvent(documentId, author, 'mention', `mentioned ${name} in a comment`)
+        if (mentioned.has(AI) && author !== AI) await this.aiReply(documentId, thread).catch((e) => console.error('AI reply failed', e))
       }
     }
     await this.ctx.storage.put('mentionsScannedAt', now)
+  }
+
+  // "@AI" in a comment: the model reads the thread and the document, and its answer becomes a reply
+  // by the user "ai", in the shape BlockNote's thread store writes (so every open tab shows it).
+  async aiReply(documentId: string, thread: Y.Map<unknown>) {
+    const comments = (thread.get('comments') as Y.Array<Y.Map<unknown>>).toArray()
+    const said = comments.map((c) => `${c.get('userId') === AI ? 'AI' : 'Person'}: ${plainOf(c.get('body'))}`).join('\n')
+    const doc = toText((await this.env.DOC.get(this.env.DOC.idFromName(documentId)).readRich('now')) ?? [])
+    let answer: string
+    try { answer = await ask('reply', said, doc) } catch { answer = 'The AI is out of free uses for today. Try again tomorrow.' }
+    const now = Date.now()
+    const reply = new Y.Map<unknown>()
+    this.doc.transact(() => {
+      reply.set('id', crypto.randomUUID()); reply.set('userId', AI); reply.set('createdAt', now); reply.set('updatedAt', now)
+      reply.set('body', [{ id: crypto.randomUUID(), type: 'paragraph', props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' }, content: [{ type: 'text', text: answer || 'I have no answer.', styles: {} }], children: [] }])
+      reply.set('reactionsByUser', new Y.Map()); reply.set('metadata', undefined)
+      ;(thread.get('comments') as Y.Array<Y.Map<unknown>>).push([reply])
+    }, 'ai')
   }
 
   // Replace the log with one row that holds the whole document. Runs without an await, so

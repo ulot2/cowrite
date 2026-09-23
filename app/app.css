@@ -3043,3 +3043,43 @@ input.board-column-name:focus-visible {
     padding: 1rem 1rem 4rem;
   }
 }
+
+/* AI panel: two short groups of commands. Answers land in the text as suggestions by AI. */
+.ai-panel h3 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.ai-command {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.ai-command + .ai-command {
+  margin-top: 0.375rem;
+}
+.ai-command:not(:disabled):hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.ai-command > span[aria-hidden] {
+  color: var(--accent);
+}
+.ai-command:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.ai-error {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}

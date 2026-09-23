@@ -31,7 +31,7 @@ export const startApp = async () => {
   const port = await freePort()
   const base = `http://localhost:${port}`
   const proc = wrangler(['dev', '--port', String(port), '--inspector-port', String(await freePort()), '--persist-to', persist,
-    '--var', 'BETTER_AUTH_SECRET:test-secret-test-secret-test-secret', '--var', `BETTER_AUTH_URL:${base}`])
+    '--var', 'BETTER_AUTH_SECRET:test-secret-test-secret-test-secret', '--var', `BETTER_AUTH_URL:${base}`, '--var', 'AI_FAKE:1'])
   await new Promise((resolve, reject) => {
     proc.stdout.on('data', (d) => { if (d.toString().includes('Ready on')) resolve() })
     proc.on('exit', (code) => reject(new Error('wrangler dev exited with ' + code)))

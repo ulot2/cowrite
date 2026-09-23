@@ -5,13 +5,26 @@ import {
   revertSuggestion, revertSuggestions, suggestChanges, suggestChangesKey, transformToSuggestionTransaction,
 } from '@handlewithcare/prosemirror-suggest-changes'
 import type { EditorState } from 'prosemirror-state'
+import type { EditorView } from 'prosemirror-view'
 
 export { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, isSuggestChangesEnabled, revertSuggestion, revertSuggestions }
 
 // A suggestion id names its author: "<user id>~<random>". Ids from two people can never collide,
 // and the bar can say who suggested without another attribute.
 export const suggestionAuthor = (id: unknown) => String(id).split('~')[0]
-const idFor = (userId: string) => () => `${userId}~${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+let author: string | null = null // set by `suggestAs` while it runs
+const idFor = (userId: string) => () => `${author ?? userId}~${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+
+// Runs `edit` (synchronous editor calls) as suggestions by `by`, with suggest mode on or off.
+export const suggestAs = (view: EditorView, by: string, edit: () => void) => {
+  const was = isSuggestChangesEnabled(view.state)
+  if (!was) enableSuggestChanges(view.state, view.dispatch)
+  author = by
+  try { edit() } finally {
+    author = null
+    if (!was) disableSuggestChanges(view.state, view.dispatch)
+  }
+}
 
 // The three marks the library looks up by name. Two BlockNote groups: `annotation` keeps them out of
 // its content model (they are not formatting, like the comment mark), `blockLevelSuggestion` lets a
