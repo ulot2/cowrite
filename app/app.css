@@ -1413,6 +1413,40 @@ button:disabled[aria-busy="true"] {
   background: var(--accent);
   color: var(--accent-fg);
 }
+/* Phones: the document header takes two rows. Where you are (breadcrumb, status) on top, the people
+   and tools below, spread across the width, so nothing is squeezed or overlaps. */
+@media (max-width: 600px) {
+  .doc-bar {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .doc-where {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .doc-where .crumbs {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .doc-where .crumbs a:first-child,
+  .doc-where .crumbs a:first-child + span {
+    display: none; /* the sidebar already has Documents; keep the title */
+  }
+  .doc-where .status-menu,
+  .doc-where > .status {
+    flex: none;
+  }
+  .doc-tools {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .doc-tools .presence {
+    margin-right: auto;
+  }
+}
 /* On phones the bell sits away from the screen edge, so a popover anchored to it spills off the left.
    Pin the top-bar menus to the screen instead: full width under the bar, with the page gutter. */
 @media (max-width: 600px) {
