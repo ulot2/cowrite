@@ -90,7 +90,7 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
               <button className="tool"><Icon name={space.visibility === 'public' ? 'lock' : 'globe'} /><span className="tool-label">{space.visibility === 'public' ? 'Make private' : 'Make public'}</span></button>
             </Form>
           )}
-          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} error={actionData?.error} className="tool" />
+          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} className="tool" />
         </div>
       </div>
       <header className="page-title">

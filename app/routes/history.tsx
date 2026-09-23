@@ -8,6 +8,7 @@ import { atLeast } from '~/lib/roles'
 import { timeAgo } from '~/lib/time'
 import { Activity } from '~/components/activity'
 import { ReadView } from '~/components/read-view'
+import { Select } from '~/components/select'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { colorFor } from '~/lib/color'
@@ -125,11 +126,11 @@ export default function History({ loaderData, params }: Route.ComponentProps) {
               <div className="version-actions">
                 <Form method="get" className="compare">
                   <input type="hidden" name="v" value={selected.id} />
-                  <select name="against" defaultValue={against ?? ''} aria-label="Compare to">
-                    <option value="">Compare to…</option>
-                    <option value="now">Current document</option>
-                    {versions.filter((v) => v.id !== selected.id).map((v) => <option key={v.id} value={v.id}>{v.name ?? 'Automatic'} · {timeAgo(v.created_at)}</option>)}
-                  </select>
+                  <Select name="against" label="Compare to" defaultValue={against === null ? '' : String(against)} options={[
+                    { value: '', label: 'Compare to…' },
+                    { value: 'now', label: 'Current document' },
+                    ...versions.filter((v) => v.id !== selected.id).map((v) => ({ value: String(v.id), label: v.name ?? 'Automatic', hint: timeAgo(v.created_at) })),
+                  ]} />
                   <button>Compare</button>
                 </Form>
                 {canEdit && (
