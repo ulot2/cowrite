@@ -24,6 +24,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 10. Meet Nib, the writing assistant. Select a sentence and click "Ask Nib" in the toolbar that appears, then choose "Make shorter" or type your own instruction, such as "translate to French". On an empty line, type `@nib write an intro for this plan` and press Enter. Each answer shows as a suggestion by Nib that you accept or reject. In a comment, type `@Nib` and a question: Nib replies in the thread a few seconds later.
 11. Open Settings from the account menu. Upload a photo or pick an avatar color, and your cursor and comments change for everyone. Turn off the kinds of notifications you do not want, switch Nib off, or change the theme and the text size for this browser.
 12. Make a space and open its Discussions tab. Ask "Launch in October or November?", pick who decides and a date: it shows under Open questions on the space home and in the other members' bells. Reply, turn a reply into a task for someone (it lands on their Tasks page), then mark the question answered.
+13. Open the answered question's "Recorded as D-1" link: the decision has its own page with what was decided, who decided and when, and the whole discussion under "Why". Add a decision block to a document in the space (it becomes D-2), open it, and set "This replaces" to D-1. D-1 now says it was replaced, and the space's decision log shows only what is in force.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -93,6 +94,8 @@ Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: 
 
 A space has its own room, a third kind of object next to a document's text and comments rooms: `<space id>:space`, at `/ws/space/<id>`. It holds the space's discussions (each a Y.Map with its posts) and the tasks made from posts, so they sync live and merge offline like everything else. Commenters and up write; viewers read. The room's alarm writes an index to D1 (`discussions`, and task rows with `space_id` and `discussion_id`) for the space home, the Tasks page, and the bell. A question is a discussion with an owner and a "decide by" date; the space home lists open questions first, late ones in red.
 
+Decisions are records (`/decision/<id>`). A space has one numbered log fed from two places: decision blocks in its documents, and questions answered in its discussions (row id `q:<discussion id>`). Both alarms number them from the same sequence and write the number back into their source. A record keeps its outcome, who decided and when, where it came from, and what it replaces; "replaced by" is read back from the newer record, so the chain is stored once. The page reads the source discussion from the space's room over RPC, so the reason for a decision is always the original conversation.
+
 ## Run it locally
 
 1. Install the dependencies with `npm install`.
@@ -109,7 +112,7 @@ A space has its own room, a third kind of object next to a document's text and c
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-six tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-nine tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -152,6 +155,9 @@ A space has its own room, a third kind of object next to a document's text and c
 - An open question shows on the space home with who decides and the date, and reaches other members' bells.
 - A task made from a message reaches the Tasks page, and ticking it there ticks it in the room.
 - Deleting a space takes its discussions and their tasks.
+- An answered question becomes D-1, numbered back into the room, and its page shows the outcome and the discussion; a stranger gets 404.
+- A decision block in the same space takes the next number.
+- A newer decision can replace an older one: the older page says so and the log in force hides it; a viewer's link gets 403 and a cycle is refused.
 
 ## Accessibility
 

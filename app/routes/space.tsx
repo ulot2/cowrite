@@ -107,19 +107,29 @@ export default function Space({ loaderData }: Route.ComponentProps) {
   const people = members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
-  const count: Partial<Record<Tab, number>> = { discussions: questions.length, documents: documents.length, decisions: decisions.length, tasks: tasks.length }
+  const count: Partial<Record<Tab, number>> = { discussions: questions.length, documents: documents.length, decisions: decisions.filter((d) => !d.replaced_by).length, tasks: tasks.length }
 
+  // Each decision links to its record. Replaced ones read struck through, with what replaced them.
   const decisionList = (list: typeof decisions) => (
     <ol className="decision-rows">
       {list.map((d) => (
-        <li key={d.id} data-status={d.status}>
-          <span className="decision-number">{`D-${d.number}`}</span>
-          <span className="decision-log-text">{d.text || 'Untitled decision'} <Link to={`/doc/${d.document_id}`}>{d.title}</Link></span>
-          <span className="status" data-status={d.status === 'decided' ? 'approved' : d.status === 'dropped' ? 'draft' : 'review'}>{d.status[0].toUpperCase() + d.status.slice(1)}</span>
+        <li key={d.id} data-status={d.status} data-replaced={d.replaced_by ? true : undefined}>
+          <Link className="decision-number" to={`/decision/${d.id}`}>{`D-${d.number}`}</Link>
+          <span className="decision-log-text">
+            <Link to={`/decision/${d.id}`}>{d.text || 'Untitled decision'}</Link>
+            {d.outcome && <span className="decision-outcome">{d.outcome}</span>}
+            <span className="decision-source">
+              {d.source_type === 'discussion' ? <><Icon name="comment" />From a discussion</> : <><Icon name="docs" />{d.title}</>}
+              {d.replaced_by && <> · replaced by <Link to={`/decision/${d.replaced_by}`}>{`D-${d.replaced_by_number}`}</Link></>}
+            </span>
+          </span>
+          <span className="status" data-status={d.replaced_by ? 'draft' : d.status === 'decided' ? 'approved' : d.status === 'proposed' ? 'review' : 'draft'}>{d.replaced_by ? 'Replaced' : d.status[0].toUpperCase() + d.status.slice(1)}</span>
         </li>
       ))}
     </ol>
   )
+  const [allDecisions, setAllDecisions] = useState(false)
+  const inForce = decisions.filter((d) => !d.replaced_by)
   const taskList = (list: typeof tasks) => (
     <ul className="space-tasks">
       {list.map((t) => (
@@ -215,7 +225,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
             </section>
             <section className="overview-block" aria-labelledby="dec-title">
               <div className="block-head"><h2 id="dec-title">Latest decisions</h2><button type="button" className="link-button" onClick={() => go('decisions')}>All</button></div>
-              {decisions.length === 0 ? <p className="muted">No decisions yet. Type /decision in a document to record one.</p> : decisionList(decisions.slice(0, 3))}
+              {decisions.length === 0 ? <p className="muted">No decisions yet. Answer a question, or type /decision in a document.</p> : decisionList(inForce.slice(0, 3))}
             </section>
             <section className="overview-block" aria-labelledby="doc-title">
               <div className="block-head"><h2 id="doc-title">Documents</h2><button type="button" className="link-button" onClick={() => go('documents')}>All</button></div>
@@ -240,8 +250,19 @@ export default function Space({ loaderData }: Route.ComponentProps) {
       ) : <div className="cards">{documents.map((d, i) => <DocCard key={d.id} doc={d} owner={owner} index={i} />)}</div>)}
 
       {tab === 'decisions' && (decisions.length === 0
-        ? <p className="muted">No decisions yet. Type /decision in a document in this space to record one; it gets the next number here.</p>
-        : <section className="decision-log" aria-label="Decisions">{decisionList(decisions)}</section>)}
+        ? <p className="muted">No decisions yet. Answer a question in Discussions, or type /decision in a document in this space; each gets the next number here.</p>
+        : (
+          <section className="decision-log" aria-label="Decisions">
+            <div className="room-bar">
+              <div className="segmented" role="group" aria-label="Which decisions">
+                <button type="button" className={allDecisions ? '' : 'on'} aria-pressed={!allDecisions} onClick={() => setAllDecisions(false)}>In force</button>
+                <button type="button" className={allDecisions ? 'on' : ''} aria-pressed={allDecisions} onClick={() => setAllDecisions(true)}>All</button>
+              </div>
+              <span className="muted small">{inForce.length} in force{decisions.length > inForce.length && ` · ${decisions.length - inForce.length} replaced`}</span>
+            </div>
+            {decisionList(allDecisions ? decisions : inForce)}
+          </section>
+        ))}
 
       {tab === 'tasks' && (tasks.length === 0
         ? <p className="muted">No open tasks in this space.</p>

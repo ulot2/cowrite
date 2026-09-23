@@ -82,7 +82,7 @@ const Decision = createReactBlockSpec(
       <div className="decision-block" data-status={block.props.status}>
         <span className="decision-head" contentEditable={false}>
           <span className="decision-mark" aria-hidden="true">◆</span>
-          <span className="decision-label">{block.props.number ? `Decision D-${block.props.number}` : 'Decision'}</span>
+          {block.props.number ? <a className="decision-label" href={`/decision/${block.props.decisionId}`} title="Open the decision record">{`Decision D-${block.props.number}`}</a> : <span className="decision-label">Decision</span>}
           <span className="decision-status">
             <Select key={block.props.status} name="status" label="Decision status" className="quiet" disabled={!editor.isEditable} defaultValue={block.props.status} options={statuses}
               onChange={(v) => editor.updateBlock(block, { props: { status: v } })} />

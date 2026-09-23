@@ -11,7 +11,7 @@ type Post = { id: string; userId: string; text: string; createdAt: number; taskI
 type Task = { text: string; assignee: string; assigneeName: string; due: string; done: boolean; discussionId: string; postId: string; createdBy: string }
 type Discussion = {
   id: string; title: string; kind: 'talk' | 'question'; status: 'open' | 'answered' | 'closed'
-  owner: string; due: string; answer: string; answeredBy: string; createdBy: string; createdAt: number; posts: Post[]; lastAt: number
+  owner: string; due: string; answer: string; answeredBy: string; createdBy: string; createdAt: number; posts: Post[]; lastAt: number; decisionNumber: number
 }
 
 type Props = {
@@ -54,7 +54,7 @@ export function SpaceRoom({ spaceId, user, canWrite, people, open, onOpen }: Pro
         return {
           id, title: String(d.get('title') ?? ''), kind: d.get('kind') === 'question' ? 'question' : 'talk', status: (d.get('status') as Discussion['status']) ?? 'open',
           owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: String(d.get('answeredBy') ?? ''),
-          createdBy: String(d.get('createdBy') ?? ''), createdAt, posts, lastAt: posts.at(-1)?.createdAt ?? createdAt,
+          createdBy: String(d.get('createdBy') ?? ''), createdAt, posts, lastAt: posts.at(-1)?.createdAt ?? createdAt, decisionNumber: Number(d.get('decisionNumber') ?? 0),
         } satisfies Discussion
       }).sort((a, b) => b.lastAt - a.lastAt))
       setTasks(Object.fromEntries(tasks.entries()))
@@ -115,7 +115,7 @@ type PersonOf = (id: string) => Member
 
 function QuestionBadge({ d, person }: { d: Discussion; person: PersonOf }) {
   if (d.kind !== 'question') return d.status === 'closed' ? <span className="pill">Closed</span> : null
-  if (d.status === 'answered') return <span className="pill ok-pill"><Icon name="check" />Answered</span>
+  if (d.status === 'answered') return <span className="pill ok-pill"><Icon name="check" />{d.decisionNumber ? `Decided · D-${d.decisionNumber}` : 'Answered'}</span>
   if (d.status === 'closed') return <span className="pill">Closed</span>
   const late = d.due && d.due < today()
   return (
@@ -224,7 +224,7 @@ function Thread({ d, tasks, canWrite, people, person, user, onBack, onReply, onS
             <span><span className="muted">Decide by</span>{d.due ? day(d.due) : 'No date'}</span>
             <span><span className="muted">Status</span>{d.status === 'answered' ? 'Answered' : d.status === 'closed' ? 'Closed' : d.due && d.due < today() ? 'Overdue' : 'Waiting for a decision'}</span>
           </div>
-          {d.status === 'answered' && <blockquote className="answer"><strong>Answer</strong>{d.answer}<small>{person(d.answeredBy).name}</small></blockquote>}
+          {d.status === 'answered' && <blockquote className="answer"><strong>Answer</strong>{d.answer}<small>{person(d.answeredBy).name}{d.decisionNumber > 0 && <> · <a href={`/decision/q:${d.id}`}>Recorded as D-{d.decisionNumber} →</a></>}{d.decisionNumber === 0 && ' · becoming a decision…'}</small></blockquote>}
           {canWrite && d.status === 'open' && (answering ? (
             <form className="answer-form" onSubmit={(e) => { e.preventDefault(); const a = String(new FormData(e.currentTarget).get('answer')).trim(); if (a) { onSet({ status: 'answered', answer: a, answeredBy: user.id }); setAnswering(false) } }}>
               <textarea name="answer" rows={2} required maxLength={1000} placeholder="What was decided?" aria-label="The answer" autoFocus />

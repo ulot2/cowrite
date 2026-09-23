@@ -1,11 +1,12 @@
 import { env } from 'cloudflare:workers'
 import { logSpaceEvent } from './events.server'
+import { nextDecisionNumber } from './work.server'
 
 // What a space room's alarm reads out of its Yjs data. The room is the source; these go to D1.
 export type DiscussionItem = {
   id: string; title: string; kind: 'talk' | 'question'; status: 'open' | 'answered' | 'closed'
   owner: string | null; due: string | null; posts: number; lastAt: number; lastBy: string | null
-  createdBy: string; answer: string; answeredBy: string | null
+  createdBy: string; answer: string; answeredBy: string | null; decisionNumber: number
 }
 export type SpaceTaskItem = { id: string; text: string; assignee: string | null; assigneeName: string; due: string | null; done: boolean; discussionId: string; createdBy: string }
 
@@ -23,9 +24,11 @@ const touchSpaceEvent = async (spaceId: string, actorId: string, text: string) =
 }
 
 // Rewrites this space's rows and logs what changed since the last run: new discussions and
-// questions, replies, answers, closes, and task assignments.
+// questions, replies, decisions, and task assignments. An answered question becomes a decision
+// record ("q:<id>") in the space's log; the numbers it gets are returned, to write into the room.
 export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], tasks: SpaceTaskItem[]) => {
-  if (!(await env.DB.prepare('SELECT 1 FROM spaces WHERE id = ?').bind(spaceId).first())) return
+  const space = await env.DB.prepare('SELECT owner_id FROM spaces WHERE id = ?').bind(spaceId).first<{ owner_id: string }>()
+  if (!space) return []
   const before = new Map((await env.DB.prepare('SELECT id, status, posts FROM discussions WHERE space_id = ?').bind(spaceId).all<{ id: string; status: string; posts: number }>()).results.map((r) => [r.id, r]))
   const assigned = new Map((await env.DB.prepare('SELECT id, assignee_id FROM tasks WHERE space_id = ? AND discussion_id IS NOT NULL').bind(spaceId).all<{ id: string; assignee_id: string | null }>()).results.map((r) => [r.id, r.assignee_id]))
   await env.DB.batch([
@@ -45,14 +48,36 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
     const was = before.get(d.id)
     if (!was) await logSpaceEvent(spaceId, d.createdBy, 'discussion', d.kind === 'question' ? `asked ${quote(d.title)}${d.due ? ` (decide by ${day(d.due)})` : ''}` : `started a discussion: ${quote(d.title)}`)
     else if (d.posts > was.posts && d.lastBy) await touchSpaceEvent(spaceId, d.lastBy, `replied in ${quote(d.title)}`)
-    if (was && was.status !== d.status && d.status === 'answered' && d.answeredBy) await logSpaceEvent(spaceId, d.answeredBy, 'discussion', `answered ${quote(d.title)}: ${quote(d.answer)}`)
+  }
+
+  // Decisions from questions. Once numbered, a record stays (reopened, if the question reopens).
+  const questions = items.filter((d) => d.kind === 'question')
+  const known = new Map((await env.DB.prepare("SELECT source_id, number FROM decisions WHERE space_id = ? AND source_type = 'discussion'").bind(spaceId).all<{ source_id: string; number: number }>()).results.map((r) => [r.source_id, r.number]))
+  let next = await nextDecisionNumber(spaceId, space.owner_id)
+  const numbered: { id: string; number: number }[] = []
+  const now = Date.now()
+  for (const d of questions) {
+    const number = known.get(d.id)
+    if (!number && d.status !== 'answered') continue
+    const n = number ?? next++
+    if (n !== d.decisionNumber) numbered.push({ id: d.id, number: n })
+    const decided = d.status === 'answered'
+    await env.DB.prepare(
+      `INSERT INTO decisions (id, document_id, space_id, owner_id, number, text, outcome, status, source_type, source_id, decided_by, decided_at, updated_at)
+       VALUES (?1, '', ?2, ?3, ?4, ?5, ?6, ?7, 'discussion', ?8, ?9, ?10, ?10)
+       ON CONFLICT(id) DO UPDATE SET text = ?5, outcome = ?6, status = ?7, updated_at = ?10,
+         decided_by = CASE WHEN ?7 = 'decided' THEN ?9 ELSE decided_by END, decided_at = CASE WHEN ?7 = 'decided' THEN COALESCE(decided_at, ?10) ELSE decided_at END`,
+    ).bind(`q:${d.id}`, spaceId, space.owner_id, n, d.title, d.answer, decided ? 'decided' : 'reopened', d.id, d.answeredBy, now).run()
+    if (!number && d.answeredBy) await logSpaceEvent(spaceId, d.answeredBy, 'decision', `decided ${quote(d.title)} as D-${n}: ${quote(d.answer)}`)
   }
   for (const t of tasks) if (t.assignee && t.assignee !== assigned.get(t.id) && t.assignee !== t.createdBy)
     await logSpaceEvent(spaceId, t.createdBy, 'task', `assigned ${t.assigneeName || 'someone'} a task: ${quote(t.text)}`)
+  return numbered
 }
 
 export const unindexSpace = (spaceId: string) => env.DB.batch([
   env.DB.prepare('DELETE FROM discussions WHERE space_id = ?').bind(spaceId),
+  env.DB.prepare("DELETE FROM decisions WHERE space_id = ? AND source_type = 'discussion'").bind(spaceId),
   env.DB.prepare('DELETE FROM tasks WHERE space_id = ? AND discussion_id IS NOT NULL').bind(spaceId),
 ])
 

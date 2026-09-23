@@ -222,13 +222,15 @@ export class Doc extends DurableObject<Env> {
           owner: str(d.get('owner')), due: str(d.get('due')), posts: posts.length,
           lastAt: Number(last?.get('createdAt') ?? d.get('createdAt') ?? Date.now()), lastBy: str(last?.get('userId')),
           createdBy: String(d.get('createdBy') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: str(d.get('answeredBy')),
+          decisionNumber: Number(d.get('decisionNumber') ?? 0),
         }
       })
       const tasks: SpaceTaskItem[] = [...this.doc.getMap<Record<string, unknown>>('tasks').entries()].map(([id, t]) => ({
         id, text: String(t.text ?? '').slice(0, 500), assignee: str(t.assignee), assigneeName: String(t.assigneeName ?? ''),
         due: str(t.due), done: t.done === true, discussionId: String(t.discussionId ?? ''), createdBy: String(t.createdBy ?? ''),
       }))
-      await syncDiscussions(name.slice(0, -6), items, tasks)
+      const numbered = await syncDiscussions(name.slice(0, -6), items, tasks)
+      if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) this.doc.getMap<Y.Map<unknown>>('discussions').get(id)?.set('decisionNumber', number) }, 'index')
       return
     }
     if (name.endsWith(':threads')) {
@@ -342,6 +344,14 @@ export class Doc extends DurableObject<Env> {
     for (const thread of this.doc.getMap<Y.Map<unknown>>('threads').values())
       for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) walk(comment.get('body'))
     return words.join(' ')
+  }
+
+  // A space room's discussion, for a decision's page: the question and every message, as plain data.
+  readDiscussion(id: string) {
+    const d = this.doc.getMap<Y.Map<unknown>>('discussions').get(id)
+    if (!d) return null
+    const posts = ((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => ({ userId: String(p.get('userId') ?? ''), text: String(p.get('text') ?? ''), createdAt: Number(p.get('createdAt') ?? 0) }))
+    return { title: String(d.get('title') ?? ''), owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), posts }
   }
 
   readRich(id: number | 'now'): RichBlock[] | null {
