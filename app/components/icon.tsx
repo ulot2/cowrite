@@ -14,6 +14,7 @@ const paths: Record<string, string> = {
   close: 'M6 6l12 12M18 6L6 18',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   open: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   outline: 'M4 6h16M8 12h12M12 18h8',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',

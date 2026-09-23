@@ -51,14 +51,14 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
             </span>
           </span>
           {canSuggest && (
-            <button type="button" className="tool" aria-pressed={suggesting} disabled={mustSuggest} title={mustSuggest ? 'As a reviewer, your edits are suggestions' : undefined} onClick={() => setSuggesting(!suggesting)}>
+            <button type="button" className="tool" aria-pressed={suggesting} disabled={mustSuggest} title={mustSuggest ? 'As a reviewer, your edits are suggestions' : 'Suggest changes'} onClick={() => setSuggesting(!suggesting)}>
               <Icon name="suggest" /><span className="tool-label">Suggest</span>
             </button>
           )}
-          <button type="button" className="tool" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
+          <button type="button" className="tool" title="Outline" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
             <Icon name="outline" /><span className="tool-label">Outline</span>
           </button>
-          <button type="button" className="tool" aria-pressed={panel === 'open' || panel === 'resolved'} onClick={() => setPanel(panel === 'open' || panel === 'resolved' ? 'none' : 'open')}>
+          <button type="button" className="tool" title="Comments" aria-pressed={panel === 'open' || panel === 'resolved'} onClick={() => setPanel(panel === 'open' || panel === 'resolved' ? 'none' : 'open')}>
             <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
           </button>
           {actions}

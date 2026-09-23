@@ -859,6 +859,17 @@ input.title:focus-visible {
 .bn-thread-mark .bn-thread-mark-selected {
   background: var(--warn-soft);
 }
+/* Seven tools do not fit beside the breadcrumb on a laptop: icons only, names on hover. */
+@media (max-width: 1180px) {
+  .doc-tools .tool .tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
 @media (max-width: 767px) {
   .doc-bar {
     gap: 0.5rem;

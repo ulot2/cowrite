@@ -92,7 +92,7 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, p
 
   return (
     <>
-      <button type="button" className={className} onClick={() => ref.current?.showModal()}>{className === 'tool' ? <><Icon name="share" /><span className="tool-label">Share</span></> : 'Share'}</button>
+      <button type="button" className={className} title="Share" onClick={() => ref.current?.showModal()}>{className === 'tool' ? <><Icon name="share" /><span className="tool-label">Share</span></> : 'Share'}</button>
       <dialog ref={ref} className="share" aria-labelledby="share-title" onClick={(e) => { if (e.target === ref.current) ref.current.close() }}>
         <header className="share-head">
           <div>
