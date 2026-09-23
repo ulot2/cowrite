@@ -23,6 +23,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 9. Type `/task` in a document, assign it to the second account, and give it a date. It shows on their Tasks page and in their bell; ticking it there ticks it in your open document. Type `/decision` to record a numbered decision. From "New", start a Brainstorm board or a Plan.
 10. Meet Nib, the writing assistant. Select a sentence and click "Ask Nib" in the toolbar that appears, then choose "Make shorter" or type your own instruction, such as "translate to French". On an empty line, type `@nib write an intro for this plan` and press Enter. Each answer shows as a suggestion by Nib that you accept or reject. In a comment, type `@Nib` and a question: Nib replies in the thread a few seconds later.
 11. Open Settings from the account menu. Upload a photo or pick an avatar color, and your cursor and comments change for everyone. Turn off the kinds of notifications you do not want, switch Nib off, or change the theme and the text size for this browser.
+12. Make a space and open its Discussions tab. Ask "Launch in October or November?", pick who decides and a date: it shows under Open questions on the space home and in the other members' bells. Reply, turn a reply into a task for someone (it lands on their Tasks page), then mark the question answered.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -90,6 +91,8 @@ Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-in
 
 Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: avatar color, muted notification kinds, Nib on or off) and what belongs to a device in the browser (theme, text size, compact sidebar), applied by a small script before the first paint. The name, the photo, the password, GitHub linking, and the list of signed-in devices go through Better Auth's own server calls. Muted kinds are filtered in the bell's SQL. Deleting an account deletes the documents and spaces the person owns (with their objects), their memberships and sessions; what they did stays in other timelines as "Deleted user".
 
+A space has its own room, a third kind of object next to a document's text and comments rooms: `<space id>:space`, at `/ws/space/<id>`. It holds the space's discussions (each a Y.Map with its posts) and the tasks made from posts, so they sync live and merge offline like everything else. Commenters and up write; viewers read. The room's alarm writes an index to D1 (`discussions`, and task rows with `space_id` and `discussion_id`) for the space home, the Tasks page, and the bell. A question is a discussion with an owner and a "decide by" date; the space home lists open questions first, late ones in red.
+
 ## Run it locally
 
 1. Install the dependencies with `npm install`.
@@ -106,7 +109,7 @@ Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: 
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-two tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-six tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -145,6 +148,10 @@ Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: 
 - With Nib off, the AI route refuses.
 - A password change needs the current password, and the new one signs in.
 - Deleting an account needs the email typed, takes the owned documents, and signs the person out.
+- Space members share a discussion live; a viewer's write is dropped; a stranger's socket gets 403.
+- An open question shows on the space home with who decides and the date, and reaches other members' bells.
+- A task made from a message reaches the Tasks page, and ticking it there ticks it in the room.
+- Deleting a space takes its discussions and their tasks.
 
 ## Accessibility
 
@@ -161,6 +168,7 @@ Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: 
 - Word exports link to images instead of embedding them.
 - The sign-in email cannot be changed yet; that needs an email service to verify the new address.
 - Uploaded images, profile photos included, stay in storage after they are replaced.
+- A discussion message is plain text; no formatting or @mentions yet.
 - Nib has no per-person limit. One person can use the whole free daily allowance.
 - Nib reads at most 12,000 characters of a document.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.

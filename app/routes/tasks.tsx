@@ -1,10 +1,11 @@
 import { Link, useFetcher } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { roleOnDocument } from '~/lib/access.server'
+import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { getTask, listTasks, setTaskDone, type TaskRow } from '~/lib/work.server'
-import { logEvent } from '~/lib/events.server'
+import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import { docStub } from '~/lib/versions.server'
 import { atLeast } from '~/lib/roles'
+import { Icon } from '~/components/icon'
 import type { Route } from './+types/tasks'
 
 export const meta = () => [{ title: 'Tasks · cowrite' }]
@@ -21,13 +22,16 @@ export async function action({ request }: Route.ActionArgs) {
   const user = await requireUser(request)
   const f = await request.formData()
   const task = await getTask(String(f.get('id')))
-  const role = task && await roleOnDocument(user.id, task.document_id)
+  // A discussion task lives in its space's room; commenters there wrote it, so they may tick it.
+  const inSpace = !!(task?.discussion_id && task.space_id)
+  const role = task && (inSpace ? await roleOnSpace(user.id, task.space_id!) : await roleOnDocument(user.id, task.document_id))
   if (!task || !role) throw new Response('Not found', { status: 404 })
-  if (!atLeast(role, 'editor') && task.assignee_id !== user.id) throw new Response('Only editors and the assignee can tick a task', { status: 403 })
+  if (!atLeast(role, inSpace ? 'commenter' : 'editor') && task.assignee_id !== user.id) throw new Response('Only editors and the assignee can tick a task', { status: 403 })
   const done = f.get('done') === 'true'
-  if (!(await docStub(task.document_id).setTask(task.id, { done }))) throw new Response('Not found', { status: 404 })
+  if (!(await docStub(inSpace ? `${task.space_id}:space` : task.document_id).setTask(task.id, { done }))) throw new Response('Not found', { status: 404 })
   await setTaskDone(task.id, done)
-  if (done) await logEvent(task.document_id, user.id, 'task', `completed “${task.text.slice(0, 80)}”`)
+  const text = `completed “${task.text.slice(0, 80)}”`
+  if (done) await (inSpace ? logSpaceEvent(task.space_id!, user.id, 'task', text) : logEvent(task.document_id, user.id, 'task', text))
   return null
 }
 
@@ -58,7 +62,7 @@ function TaskItem({ task }: { task: TaskRow }) {
         </button>
       </fetcher.Form>
       <span className="task-row-text">{task.text || 'Untitled task'}</span>
-      <Link to={`/doc/${task.document_id}`} className="task-row-doc">{task.title}</Link>
+      <Link to={task.discussion_id ? `/space/${task.space_id}?tab=discussions&d=${task.discussion_id}` : `/doc/${task.document_id}`} className="task-row-doc">{task.discussion_id && <Icon name="comment" />}{task.title}</Link>
       {task.due && <time dateTime={task.due} className="task-row-due">{new Date(task.due + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}</time>}
     </li>
   )
@@ -84,10 +88,10 @@ export default function Tasks({ loaderData }: Route.ComponentProps) {
       <header className="page-title">
         <p className="eyebrow">Work</p>
         <h1>Tasks</h1>
-        <p className="muted">Every task written in your documents. Type <kbd>/task</kbd> in a document to add one.</p>
+        <p className="muted">Every task from your documents and your spaces’ discussions. Type <kbd>/task</kbd> in a document, or make one from a message in a discussion.</p>
       </header>
       <Section title="Assigned to me" tasks={loaderData.mine} empty="Nothing assigned to you." />
-      <Section title="In my documents" tasks={loaderData.others} empty="No other tasks yet." />
+      <Section title="In my documents and spaces" tasks={loaderData.others} empty="No other tasks yet." />
     </div>
   )
 }

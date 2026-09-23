@@ -1,6 +1,6 @@
 import { createRequestHandler } from 'react-router'
 import { getAuth } from '~/lib/auth.server'
-import { roleOnDocument } from '~/lib/access.server'
+import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { usersById } from '~/lib/db.server'
 import { atLeast } from '~/lib/roles'
 
@@ -43,6 +43,20 @@ export default {
       const object = await env.FILES.get(pathname.slice(7))
       if (!object) return new Response('Not found', { status: 404 })
       return new Response(object.body, { headers: { 'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream', etag: object.httpEtag, 'cache-control': 'public, max-age=31536000, immutable' } })
+    }
+
+    // /ws/space/<id>: the space's room (discussions and their tasks). Commenters and up write.
+    const space = pathname.match(/^\/ws\/space\/([\w-]+)$/)
+    if (space) {
+      if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
+      const session = await getAuth().api.getSession({ headers: request.headers })
+      if (!session) return new Response('Sign in first', { status: 401 })
+      const role = await roleOnSpace(session.user.id, space[1])
+      if (!role) return new Response('No access to this space', { status: 403 })
+      const headers = new Headers(request.headers)
+      headers.set('X-Role', atLeast(role, 'commenter') ? 'editor' : 'viewer')
+      headers.set('X-User', session.user.id)
+      return env.DOC.get(env.DOC.idFromName(`${space[1]}:space`)).fetch(new Request(request, { headers }))
     }
 
     // /ws/<id> is the text, /ws/<id>/threads the comments. Each is its own object with its own

@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 
-export type EventRow = { id: number; document_id: string | null; actor_id: string; actor: string; actor_color: string | null; actor_image: string | null; type: string; text: string; at: number; title: string | null }
+export type EventRow = { id: number; space_id: string | null; document_id: string | null; actor_id: string; actor: string; actor_color: string | null; actor_image: string | null; type: string; text: string; at: number; title: string | null }
 
 // How long the same person doing the same thing on the same document counts as one event.
 const COLLAPSE = 30 * 60 * 1000
@@ -23,7 +23,7 @@ export const touchEvent = async (documentId: string, actorId: string, type: stri
   if (meta.changes === 0) await logEvent(documentId, actorId, type, text)
 }
 
-const columns = "e.id, e.document_id, e.actor_id, COALESCE(u.name, 'Deleted user') AS actor, us.color AS actor_color, u.image AS actor_image, e.type, e.text, e.at, d.title"
+const columns = "e.id, e.space_id, e.document_id, e.actor_id, COALESCE(u.name, 'Deleted user') AS actor, us.color AS actor_color, u.image AS actor_image, e.type, e.text, e.at, d.title"
 const joins = 'FROM events e LEFT JOIN "user" u ON u.id = e.actor_id LEFT JOIN user_settings us ON us.user_id = e.actor_id LEFT JOIN documents d ON d.id = e.document_id'
 
 export const listSpaceEvents = async (spaceId: string) =>

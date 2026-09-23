@@ -7,6 +7,7 @@ import * as decoding from 'lib0/decoding'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { indexBody, indexComments } from '~/lib/search.server'
 import { syncWork, type WorkItem } from '~/lib/work.server'
+import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/discussions.server'
 import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 
@@ -209,6 +210,27 @@ export class Doc extends DurableObject<Env> {
     const name = this.ctx.id.name ?? ''
     const editors = [...this.touched].filter(Boolean)
     this.touched.clear()
+    if (name.endsWith(':space')) {
+      // A space's room: discussions (a Y.Map each, with a Y.Array of posts) and the tasks made from posts.
+      const str = (v: unknown) => (typeof v === 'string' && v ? v : null)
+      const items: DiscussionItem[] = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => {
+        const posts = (d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []
+        const last = posts[posts.length - 1]
+        return {
+          id, title: String(d.get('title') ?? '').slice(0, 200) || 'Untitled', kind: d.get('kind') === 'question' ? 'question' : 'talk',
+          status: d.get('status') === 'answered' ? 'answered' : d.get('status') === 'closed' ? 'closed' : 'open',
+          owner: str(d.get('owner')), due: str(d.get('due')), posts: posts.length,
+          lastAt: Number(last?.get('createdAt') ?? d.get('createdAt') ?? Date.now()), lastBy: str(last?.get('userId')),
+          createdBy: String(d.get('createdBy') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: str(d.get('answeredBy')),
+        }
+      })
+      const tasks: SpaceTaskItem[] = [...this.doc.getMap<Record<string, unknown>>('tasks').entries()].map(([id, t]) => ({
+        id, text: String(t.text ?? '').slice(0, 500), assignee: str(t.assignee), assigneeName: String(t.assigneeName ?? ''),
+        due: str(t.due), done: t.done === true, discussionId: String(t.discussionId ?? ''), createdBy: String(t.createdBy ?? ''),
+      }))
+      await syncDiscussions(name.slice(0, -6), items, tasks)
+      return
+    }
     if (name.endsWith(':threads')) {
       const id = name.slice(0, -8)
       // One Y.Map per thread with a `resolved` flag.
@@ -332,10 +354,12 @@ export class Doc extends DurableObject<Env> {
   setTask(id: string, patch: { done?: boolean }) {
     const el = findBlock(this.doc, id)
     const card = this.doc.getMap<Y.Map<unknown>>('cards').get(id)
-    if (!el && !card?.get('task')) return false
+    const spaceTasks = this.doc.getMap<object>('tasks') // a space room's tasks, made from discussion posts
+    if (!el && !card?.get('task') && !spaceTasks.has(id)) return false
     this.doc.transact(() => {
       if (el) for (const [k, v] of Object.entries(patch)) el.setAttribute(k, v as unknown as string)
-      else card!.set('task', { ...(card!.get('task') as object), ...patch })
+      else if (card?.get('task')) card.set('task', { ...(card.get('task') as object), ...patch })
+      else spaceTasks.set(id, { ...spaceTasks.get(id), ...patch })
     }, 'list')
     return true
   }

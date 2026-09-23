@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers'
+import { unindexSpace } from './discussions.server'
 import { rank, type Role } from './roles'
 import { requireUser } from './auth.server'
 import { getDocument } from './db.server'
@@ -45,7 +46,13 @@ export const createSpace = async (userId: string, name: string) => {
 
 // Deleting a space keeps its documents: they leave the space and stay with their own members.
 // People who could open them only through the space lose access. Space members and links go.
-export const deleteSpace = (id: string) => env.DB.batch([
+// Deletes a space. Its documents stay (moved out); its room (discussions) and their index go.
+export const deleteSpace = async (id: string) => {
+  await env.DOC.get(env.DOC.idFromName(`${id}:space`)).wipe()
+  await unindexSpace(id)
+  await deleteSpaceRows(id)
+}
+const deleteSpaceRows = (id: string) => env.DB.batch([
   env.DB.prepare('UPDATE documents SET space_id = NULL WHERE space_id = ?').bind(id),
   env.DB.prepare('UPDATE decisions SET space_id = NULL WHERE space_id = ?').bind(id),
   env.DB.prepare("DELETE FROM share_links WHERE target_type = 'space' AND target_id = ?").bind(id),

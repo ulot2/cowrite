@@ -9,7 +9,7 @@ import { Icon } from './icon'
 const kinds: Record<string, string> = {
   commented: 'comment', mention: 'comment', created: 'plus', deleted: 'trash', edited: 'suggest', renamed: 'suggest',
   suggestion: 'suggest', joined: 'user', moved: 'space', space: 'space', published: 'globe', restored: 'history',
-  version: 'history', shared: 'share', status: 'check', task: 'tasks',
+  version: 'history', shared: 'share', status: 'check', task: 'tasks', discussion: 'comment',
 }
 export function EventAvatar({ e, size = 28 }: { e: EventRow; size?: number }) {
   return (

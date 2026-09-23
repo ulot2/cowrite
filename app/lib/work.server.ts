@@ -53,19 +53,22 @@ export const unindexWork = (documentId: string) => env.DB.batch([
   env.DB.prepare('DELETE FROM decisions WHERE document_id = ?').bind(documentId),
 ])
 
-export type TaskRow = { id: string; document_id: string; title: string; text: string; assignee_id: string | null; due: string | null; done: number }
+export type TaskRow = { id: string; document_id: string; title: string; text: string; assignee_id: string | null; due: string | null; done: number; space_id: string | null; discussion_id: string | null }
 
-// Tasks in documents this user can open. The page splits them into "assigned to me" and the rest.
+// Tasks in documents and space discussions this user can open. The page splits them into
+// "assigned to me" and the rest. A discussion task has no document; its space decides who sees it.
 export const listTasks = async (userId: string) =>
   (await env.DB.prepare(
-    `SELECT t.id, t.document_id, d.title, t.text, t.assignee_id, t.due, t.done FROM tasks t JOIN documents d ON d.id = t.document_id
+    `SELECT t.id, t.document_id, COALESCE(d.title, dis.title, '') AS title, t.text, t.assignee_id, t.due, t.done, t.space_id, t.discussion_id FROM tasks t
+     LEFT JOIN documents d ON d.id = t.document_id
+     LEFT JOIN discussions dis ON dis.id = t.discussion_id
      LEFT JOIN memberships m ON m.document_id = d.id AND m.user_id = ?1
-     LEFT JOIN space_memberships sm ON sm.space_id = d.space_id AND sm.user_id = ?1
-     WHERE m.user_id IS NOT NULL OR sm.user_id IS NOT NULL
+     LEFT JOIN space_memberships sm ON sm.space_id = COALESCE(d.space_id, t.space_id) AND sm.user_id = ?1
+     WHERE (d.id IS NOT NULL OR t.discussion_id IS NOT NULL) AND (m.user_id IS NOT NULL OR sm.user_id IS NOT NULL)
      ORDER BY t.done, t.due IS NULL, t.due, t.updated_at DESC LIMIT 500`,
   ).bind(userId).all<TaskRow>()).results
 
-export const getTask = (id: string) => env.DB.prepare('SELECT id, document_id, assignee_id, text FROM tasks WHERE id = ?').bind(id).first<{ id: string; document_id: string; assignee_id: string | null; text: string }>()
+export const getTask = (id: string) => env.DB.prepare('SELECT id, document_id, space_id, discussion_id, assignee_id, text FROM tasks WHERE id = ?').bind(id).first<{ id: string; document_id: string; space_id: string | null; discussion_id: string | null; assignee_id: string | null; text: string }>()
 export const setTaskDone = (id: string, done: boolean) => env.DB.prepare('UPDATE tasks SET done = ?, updated_at = ? WHERE id = ?').bind(done ? 1 : 0, Date.now(), id).run()
 
 export type DecisionRow = { id: string; document_id: string; title: string; number: number; text: string; status: string; updated_at: number }
