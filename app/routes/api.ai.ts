@@ -13,6 +13,7 @@ export async function action({ request }: Route.ActionArgs) {
   const body = await request.json().catch(() => ({})) as { documentId?: string; command?: string; text?: string; instruction?: string }
   const command = String(body.command ?? '')
   if (!isCommand(command)) return Response.json({ error: 'Unknown command' }, { status: 400 })
+  if (!user.settings.nib) return Response.json({ error: 'Nib is off in your settings' }, { status: 403 })
   const role = await roleOnDocument(user.id, String(body.documentId ?? ''))
   if (!role) return Response.json({ error: 'Not found' }, { status: 404 })
   if (!atLeast(role, 'reviewer')) return Response.json({ error: 'Only people who can suggest changes can ask Nib' }, { status: 403 })

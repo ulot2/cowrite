@@ -25,8 +25,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   const stub = docStub(params.id)
   const rows = await stub.listVersions()
-  const people = new Map((await usersById(rows.map((v) => v.created_by).filter((id): id is string => !!id))).map((u) => [u.id, u.name]))
-  const versions = rows.map((v) => ({ ...v, author: v.created_by ? people.get(v.created_by) ?? 'Someone' : null }))
+  const people = new Map((await usersById(rows.map((v) => v.created_by).filter((id): id is string => !!id))).map((u) => [u.id, u]))
+  const versions = rows.map((v) => { const u = v.created_by ? people.get(v.created_by) : undefined; return { ...v, author: v.created_by ? u?.name ?? 'Someone' : null, authorColor: u?.color ?? null, authorImage: u?.image ?? null } })
 
   const url = new URL(request.url)
   const selected = versions.find((v) => v.id === Number(url.searchParams.get('v'))) ?? versions[0] ?? null
@@ -118,7 +118,7 @@ export default function History({ loaderData, params }: Route.ComponentProps) {
           <section className="sheet" aria-label="Selected version">
             <header className="version-head">
               <div className="version-meta">
-                <Avatar name={selected.author ?? 'cowrite'} color={selected.created_by ? colorFor(selected.created_by) : 'var(--fg-muted)'} size={32} />
+                <Avatar name={selected.author ?? 'cowrite'} color={selected.created_by ? colorFor(selected.created_by, selected.authorColor) : 'var(--fg-muted)'} image={selected.authorImage} size={32} />
                 <div>
                   <h2>{selected.name ?? 'Automatic version'}</h2>
                   <p className="muted">{selected.author ? `Saved by ${selected.author}` : 'Saved by cowrite'} · <time dateTime={new Date(selected.created_at).toISOString()}>{timeAgo(selected.created_at)}</time></p>

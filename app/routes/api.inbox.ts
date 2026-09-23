@@ -1,12 +1,14 @@
 import { requireUser } from '~/lib/auth.server'
 import { countUnseen, listInbox, markSeen, seenAt } from '~/lib/events.server'
+import { mutedTypes } from '~/lib/settings.server'
 import type { Route } from './+types/api.inbox'
 
 // The bell's data: how many events since the bell was last opened, and the newest twenty.
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
   const since = await seenAt(user.id)
-  return { since, unseen: await countUnseen(user.id, since), events: await listInbox(user.id) }
+  const muted = mutedTypes(user.settings.muted)
+  return { since, unseen: await countUnseen(user.id, since, muted), events: await listInbox(user.id, muted) }
 }
 
 // Opening the bell marks everything seen.

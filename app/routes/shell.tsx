@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Form, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router'
+import { Form, Link, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
-import { colorFor } from '~/lib/color'
 import { listSpaces } from '~/lib/access.server'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
@@ -11,18 +10,15 @@ import { NewMenu } from '~/components/new-menu'
 import { Mark } from '~/components/logo'
 import type { Route } from './+types/shell'
 
-export type ShellUser = { id: string; name: string; email: string; color: string }
+export type ShellUser = { id: string; name: string; email: string; color: string; image: string | null }
 
 // Runs for every page inside the shell: who is signed in.
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  return { user: { id: user.id, name: user.name, email: user.email, color: colorFor(user.id) } satisfies ShellUser, spaces: await listSpaces(user.id) }
+  return { user: { id: user.id, name: user.name, email: user.email, color: user.color, image: user.image ?? null } satisfies ShellUser, spaces: await listSpaces(user.id) }
 }
 
-type Theme = 'system' | 'light' | 'dark'
-const themes: Theme[] = ['system', 'light', 'dark']
-
-// Reads and writes the two per-browser preferences. Both are conveniences, so failures are ignored.
+// Reads and writes the per-browser preferences. They are conveniences, so failures are ignored.
 const pref = {
   get: (key: string) => { try { return localStorage.getItem(key) } catch { return null } },
   set: (key: string, value: string) => { try { localStorage.setItem(key, value) } catch { /* private window */ } },
@@ -34,18 +30,15 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
   const [params] = useSearchParams()
   const [open, setOpen] = useState(false) // phone drawer
   const [collapsed, setCollapsed] = useState(false) // desktop rail
-  const [theme, setTheme] = useState<Theme>('system')
 
   // Preferences load after the first paint, so the server and the browser render the same HTML.
+  // The settings page can change the sidebar too; it says so with a "prefs" event.
   useEffect(() => {
-    setCollapsed(document.documentElement.dataset.sidebar === 'collapsed')
-    setTheme((pref.get('theme') as Theme) || 'system')
+    const read = () => setCollapsed(document.documentElement.dataset.sidebar === 'collapsed')
+    read()
+    addEventListener('prefs', read)
+    return () => removeEventListener('prefs', read)
   }, [])
-  const chooseTheme = (t: Theme) => {
-    setTheme(t); pref.set('theme', t)
-    if (t === 'system') delete document.documentElement.dataset.theme
-    else document.documentElement.dataset.theme = t
-  }
   const toggleCollapsed = () => {
     const next = !collapsed
     setCollapsed(next); pref.set('sidebar', next ? 'collapsed' : 'open')
@@ -64,16 +57,11 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           <NewMenu />
           <Inbox />
           <details className="account">
-            <summary aria-label="Account menu"><Avatar name={user.name} color={user.color} size={32} /></summary>
+            <summary aria-label="Account menu"><Avatar name={user.name} color={user.color} image={user.image} size={32} /></summary>
             <div className="popover">
               <p className="who"><strong>{user.name}</strong><span>{user.email}</span></p>
-              <fieldset className="theme">
-                <legend>Theme</legend>
-                {themes.map((t) => (
-                  <label key={t}><input type="radio" name="theme" value={t} checked={theme === t} onChange={() => chooseTheme(t)} />{t[0].toUpperCase() + t.slice(1)}</label>
-                ))}
-              </fieldset>
-              <button className="ghost" type="button" onClick={async () => { await authClient.signOut(); navigate('/login') }}>Sign out</button>
+              <Link className="ghost button menu-item" to="/settings"><Icon name="settings" />Settings</Link>
+              <button className="ghost menu-item" type="button" onClick={async () => { await authClient.signOut(); navigate('/login') }}><Icon name="back" />Sign out</button>
             </div>
           </details>
         </div>
@@ -97,6 +85,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           <input name="name" placeholder="New space" aria-label="New space name" maxLength={60} required />
           <button className="ghost" aria-label="Create space"><Icon name="plus" /></button>
         </Form>
+        <NavLink to="/settings" className="side-settings" onClick={() => setOpen(false)}><Icon name="settings" /><span>Settings</span></NavLink>
       </nav>
       <div className="backdrop" hidden={!open} onClick={() => setOpen(false)} />
 

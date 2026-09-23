@@ -23,7 +23,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!role || !document) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
   return {
-    user: { id: user.id, name: user.name, color: colorFor(user.id) },
+    user: { id: user.id, name: user.name, color: user.color },
+    nib: user.settings.nib,
     role, document, isOwner,
     members: await listMembers('document', params.id),
     link: isOwner ? await getShareLink('document', params.id) : null,
@@ -122,12 +123,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
-  const { user, role, document, isOwner, members, link, spaces } = loaderData
+  const { user, role, document, isOwner, members, link, spaces, nib } = loaderData
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))} kind={document.kind}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <div className="tool-group" role="group" aria-label="Document">

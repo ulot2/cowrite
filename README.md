@@ -22,6 +22,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 8. Open "Share" and publish the document. Open the public link in a private window: no account needed. From the "⋯" menu, present it as slides (one per level-1 heading) or export it to Word, Markdown, text, or PDF. Search the Documents page for a word from the text or from a comment.
 9. Type `/task` in a document, assign it to the second account, and give it a date. It shows on their Tasks page and in their bell; ticking it there ticks it in your open document. Type `/decision` to record a numbered decision. From "New", start a Brainstorm board or a Plan.
 10. Meet Nib, the writing assistant. Select a sentence and click "Ask Nib" in the toolbar that appears, then choose "Make shorter" or type your own instruction, such as "translate to French". On an empty line, type `@nib write an intro for this plan` and press Enter. Each answer shows as a suggestion by Nib that you accept or reject. In a comment, type `@Nib` and a question: Nib replies in the thread a few seconds later.
+11. Open Settings from the account menu. Upload a photo or pick an avatar color, and your cursor and comments change for everyone. Turn off the kinds of notifications you do not want, switch Nib off, or change the theme and the text size for this browser.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -87,6 +88,8 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, about 30 of the 10,000 free daily neurons a request) through one route, `/api/ai`, and one module, `app/lib/ai.server.ts`. Only people who can suggest (reviewer and up) may call it. A rewrite sends only the selected text, so the model cannot mix the rest of the document into its answer. The answer never changes the text directly: the editor inserts it as a suggestion whose id starts with `ai~`, so the existing bar shows "Suggested by Nib" and Accept and Reject work as for a person. A free instruction (`@nib …` in the text, or the field in the Nib menu) applies to the selection, or writes new blocks at the cursor from Markdown, with the document as context. A comment that mentions `@Nib` is found by the same alarm scan as other mentions; the threads object asks the model with the thread and the document, and adds the answer as a reply by the user `ai`. The Workers free plan gives 10,000 neurons a day; after that Nib says it is out of free uses until the next day, and nothing is billed.
 
+Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: avatar color, muted notification kinds, Nib on or off) and what belongs to a device in the browser (theme, text size, compact sidebar), applied by a small script before the first paint. The name, the photo, the password, GitHub linking, and the list of signed-in devices go through Better Auth's own server calls. Muted kinds are filtered in the bell's SQL. Deleting an account deletes the documents and spaces the person owns (with their objects), their memberships and sessions; what they did stays in other timelines as "Deleted user".
+
 ## Run it locally
 
 1. Install the dependencies with `npm install`.
@@ -103,7 +106,7 @@ Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-in
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs thirty-seven tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-two tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -137,6 +140,11 @@ Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-in
 - Only people who can suggest may ask the AI; unknown commands and empty input are refused; whole-document commands read the text from the object.
 - A free instruction needs words and at most 500 characters.
 - `@Nib` in a comment gets a reply by Nib in the same thread.
+- A new name and photo show for everyone; a photo must be a file this app stored.
+- Muted notification kinds stay out of the bell and its count.
+- With Nib off, the AI route refuses.
+- A password change needs the current password, and the new one signs in.
+- Deleting an account needs the email typed, takes the owned documents, and signs the person out.
 
 ## Accessibility
 
@@ -151,6 +159,8 @@ Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-in
 - A reviewer's suggest-only mode is enforced by the editor, not the server.
 - The compare view shows each block as plain text; the preview of one version shows the formatting.
 - Word exports link to images instead of embedding them.
+- The sign-in email cannot be changed yet; that needs an email service to verify the new address.
+- Uploaded images, profile photos included, stay in storage after they are replaced.
 - Nib has no per-person limit. One person can use the whole free daily allowance.
 - Nib reads at most 12,000 characters of a document.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.

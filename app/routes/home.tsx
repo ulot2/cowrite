@@ -14,7 +14,7 @@ export const meta = () => [{ title: 'Home · cowrite' }]
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
   const recent = await listDocuments(user.id, { limit: 6 })
-  return { firstName: user.name.split(' ')[0], owner: { name: user.name, color: colorFor(user.id) }, recent }
+  return { firstName: user.name.split(' ')[0], owner: { name: user.name, color: user.color, image: user.image }, recent }
 }
 
 // "New document" from anywhere posts here: create it and open it.

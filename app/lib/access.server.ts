@@ -7,7 +7,7 @@ export type { Role }
 const higher = (a: Role | null | undefined, b: Role | null | undefined) => (rank(a) >= rank(b) ? a ?? null : b ?? null)
 
 export type SpaceRow = { id: string; name: string; owner_id: string; visibility: 'private' | 'public'; created_at: number }
-export type Member = { user_id: string; name: string; email: string; role: Role }
+export type Member = { user_id: string; name: string; email: string; role: Role; color: string | null; image: string | null }
 export type ShareLink = { token: string; target_type: 'document' | 'space'; target_id: string; role: Role; created_at: number }
 
 // A person's role on a space: their membership, or viewer when the space is public.
@@ -63,7 +63,7 @@ export const moveDocument = (documentId: string, spaceId: string | null) =>
 export const listMembers = async (target: 'document' | 'space', id: string) => {
   const table = target === 'document' ? 'memberships' : 'space_memberships'
   const column = target === 'document' ? 'document_id' : 'space_id'
-  return (await env.DB.prepare(`SELECT m.user_id, u.name, u.email, m.role FROM ${table} m JOIN "user" u ON u.id = m.user_id WHERE m.${column} = ? ORDER BY u.name`).bind(id).all<Member>()).results
+  return (await env.DB.prepare(`SELECT m.user_id, u.name, u.email, m.role, us.color, u.image FROM ${table} m JOIN "user" u ON u.id = m.user_id LEFT JOIN user_settings us ON us.user_id = u.id WHERE m.${column} = ? ORDER BY u.name`).bind(id).all<Member>()).results
 }
 
 // Adds or changes one membership. The caller has checked that the actor is the owner.

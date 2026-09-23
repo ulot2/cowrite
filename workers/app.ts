@@ -19,7 +19,8 @@ export default {
     if (pathname === '/upload' && request.method === 'POST') {
       if (!(await getAuth().api.getSession({ headers: request.headers }))) return new Response('Sign in first', { status: 401 })
       const type = request.headers.get('content-type') ?? ''
-      if (!type.startsWith('image/')) return new Response('Only images', { status: 415 })
+      // No SVG: served from this origin, an SVG could run a script when opened on its own.
+      if (!type.startsWith('image/') || type.includes('svg')) return new Response('Only PNG, JPEG, GIF, or WebP images', { status: 415 })
       const body = await request.arrayBuffer()
       if (body.byteLength > MAX_UPLOAD) return new Response('Images must be 8 MB or smaller', { status: 413 })
       const name = (request.headers.get('x-file-name') ?? 'image').replace(/[^\w.-]+/g, '-').slice(0, 80)

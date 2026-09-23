@@ -11,11 +11,12 @@ type Props = {
   fields: Record<string, string> // what the form posts (intent and ids)
   action?: string
   tone?: 'danger' | 'primary'
+  inputs?: React.ReactNode // fields the person fills in, posted with the form (a typed confirmation)
 }
 
 // A confirm step in the app's own style: a native <dialog> (focus, Escape, and the backdrop come
 // free), the consequence in plain words, and the action button showing its own progress.
-export function Confirm({ trigger, title, children, confirm, busy, fields, action, tone = 'danger' }: Props) {
+export function Confirm({ trigger, title, children, confirm, busy, fields, action, tone = 'danger', inputs }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const fetcher = useFetcher()
   const pending = fetcher.state !== 'idle'
@@ -34,7 +35,8 @@ export function Confirm({ trigger, title, children, confirm, busy, fields, actio
         <div className="confirm-body">{children}</div>
         <fetcher.Form method="post" action={action} className="confirm-actions">
           {Object.entries(fields).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-          <button type="button" onClick={() => ref.current?.close()} disabled={pending} autoFocus>Cancel</button>
+          {inputs && <div className="confirm-inputs">{inputs}</div>}
+          <button type="button" onClick={() => ref.current?.close()} disabled={pending} autoFocus={!inputs}>Cancel</button>
           <button className={tone === 'danger' ? 'danger-solid' : 'primary'} disabled={pending} aria-busy={pending}>
             {pending ? <><span className="spinner" aria-hidden="true" />{busy}</> : confirm}
           </button>

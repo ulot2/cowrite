@@ -52,7 +52,7 @@ function MemberRow({ m, isOwner }: { m: Member; isOwner: boolean }) {
   const removing = fetcher.formData?.get('intent') === 'remove'
   return (
     <li data-leaving={removing || undefined}>
-      <Avatar name={m.name} color={colorFor(m.user_id)} size={32} />
+      <Avatar name={m.name} color={colorFor(m.user_id, m.color)} image={m.image} size={32} />
       <span className="member-name"><strong>{m.name}</strong><span className="muted">{m.email}</span></span>
       {isOwner && m.role !== 'owner' ? (
         <span className="member-actions">

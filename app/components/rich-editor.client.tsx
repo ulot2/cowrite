@@ -25,6 +25,7 @@ type Props = {
   // Suggest mode: edits become suggestions. `canResolve` is who may accept or reject.
   suggesting: boolean
   canResolve: boolean
+  nib: boolean // Nib is on in this person's settings
   people: Person[] // members, for @mentions in comments
   panel: Panel
   onPanel: (panel: Panel) => void
@@ -76,7 +77,8 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, people, panel, onPanel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, nib, people, panel, onPanel, onStatus }: Props) {
+  const canNib = canEdit && nib
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
     // server can let a commenter write comments and still refuse their edits to the text.
@@ -232,7 +234,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   const openNib = useCallback((instruction: string) => { setNibStart(instruction); onPanel('ai') }, [onPanel])
   const closeAi = useCallback(() => { setNibStart(''); onPanel('none') }, [onPanel])
   const nameOf = (author: string) => (author === user.id ? 'you' : author === 'ai' ? NIB : names[author] ?? '…')
-  const uiComponents = useMemo(() => componentsWithMentions([...people, { id: 'ai', name: NIB }]), [people])
+  const uiComponents = useMemo(() => componentsWithMentions(nib ? [...people, { id: 'ai', name: NIB }] : people), [people, nib])
   const [names, setNames] = useState<Record<string, string>>({})
   useEffect(() => {
     const missing = [...new Set(found.all.map((s) => s.author))].filter((id) => id !== 'ai' && !(id in names))
@@ -243,9 +245,9 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     <BlockNoteView editor={editor} editable={canEdit} comments={false} slashMenu={false} formattingToolbar={false} theme={useTheme()} renderEditor={false}>
       <People.Provider value={people}>
       <SuggestionMenuController triggerCharacter="/" getItems={slashItems(editor)} />
-      <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{canEdit && <AskAiButton onOpen={() => onPanel('ai')} />}{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
-      {canEdit && <SuggestionMenuController triggerCharacter="@" getItems={nibItems(openNib)} suggestionMenuComponent={NibSuggestion} />}
-      {panel === 'ai' && canEdit && <AiMenu editor={editor} documentId={documentId} start={nibStart} onClose={closeAi} />}
+      <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{canNib && <AskAiButton onOpen={() => onPanel('ai')} />}{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
+      {canNib && <SuggestionMenuController triggerCharacter="@" getItems={nibItems(openNib)} suggestionMenuComponent={NibSuggestion} />}
+      {panel === 'ai' && canNib && <AiMenu editor={editor} documentId={documentId} start={nibStart} onClose={closeAi} />}
       {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
           floating composer and thread are rendered here instead of by the view. */}
       <ComponentsContext.Provider value={uiComponents}>

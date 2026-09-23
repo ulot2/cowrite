@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 
-export type EventRow = { id: number; document_id: string | null; actor_id: string; actor: string; type: string; text: string; at: number; title: string | null }
+export type EventRow = { id: number; document_id: string | null; actor_id: string; actor: string; actor_color: string | null; actor_image: string | null; type: string; text: string; at: number; title: string | null }
 
 // How long the same person doing the same thing on the same document counts as one event.
 const COLLAPSE = 30 * 60 * 1000
@@ -23,8 +23,8 @@ export const touchEvent = async (documentId: string, actorId: string, type: stri
   if (meta.changes === 0) await logEvent(documentId, actorId, type, text)
 }
 
-const columns = 'e.id, e.document_id, e.actor_id, u.name AS actor, e.type, e.text, e.at, d.title'
-const joins = 'FROM events e JOIN "user" u ON u.id = e.actor_id LEFT JOIN documents d ON d.id = e.document_id'
+const columns = "e.id, e.document_id, e.actor_id, COALESCE(u.name, 'Deleted user') AS actor, us.color AS actor_color, u.image AS actor_image, e.type, e.text, e.at, d.title"
+const joins = 'FROM events e LEFT JOIN "user" u ON u.id = e.actor_id LEFT JOIN user_settings us ON us.user_id = e.actor_id LEFT JOIN documents d ON d.id = e.document_id'
 
 export const listSpaceEvents = async (spaceId: string) =>
   (await env.DB.prepare(`SELECT ${columns} ${joins} WHERE e.space_id = ? ORDER BY e.at DESC LIMIT 100`).bind(spaceId).all<EventRow>()).results
@@ -43,8 +43,11 @@ export const seenAt = async (userId: string) =>
 export const markSeen = (userId: string) =>
   env.DB.prepare('INSERT INTO inbox_seen (user_id, seen_at) VALUES (?1, ?2) ON CONFLICT DO UPDATE SET seen_at = ?2').bind(userId, Date.now()).run()
 
-export const listInbox = async (userId: string) =>
-  (await env.DB.prepare(`SELECT ${columns} ${joins} WHERE ${mine} ORDER BY e.at DESC LIMIT 20`).bind(userId).all<EventRow>()).results
+// `muted` are event types the person keeps out of the bell (Settings, Notifications).
+const wanted = 'e.type NOT IN (SELECT value FROM json_each(?2))'
 
-export const countUnseen = async (userId: string, since: number) =>
-  (await env.DB.prepare(`SELECT COUNT(*) AS n FROM events e WHERE ${mine} AND e.at > ?2`).bind(userId, since).first<{ n: number }>())?.n ?? 0
+export const listInbox = async (userId: string, muted: string[] = []) =>
+  (await env.DB.prepare(`SELECT ${columns} ${joins} WHERE ${mine} AND ${wanted} ORDER BY e.at DESC LIMIT 20`).bind(userId, JSON.stringify(muted)).all<EventRow>()).results
+
+export const countUnseen = async (userId: string, since: number, muted: string[] = []) =>
+  (await env.DB.prepare(`SELECT COUNT(*) AS n FROM events e WHERE ${mine} AND ${wanted} AND e.at > ?3`).bind(userId, JSON.stringify(muted), since).first<{ n: number }>())?.n ?? 0

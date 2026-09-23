@@ -17,6 +17,7 @@ export default [
     route('documents', 'routes/documents.tsx'),
     route('tasks', 'routes/tasks.tsx'),
     route('review', 'routes/review.tsx'),
+    route('settings', 'routes/settings.tsx'),
     route('doc/:id', 'routes/doc.tsx'),
     route('doc/:id/history', 'routes/history.tsx'),
     route('space/:id', 'routes/space.tsx'),

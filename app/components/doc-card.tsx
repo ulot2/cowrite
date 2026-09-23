@@ -12,7 +12,7 @@ function Snippet({ hit }: { hit: Hit }) {
 }
 
 // One document as a card: title, the first lines, when it changed, who is on it.
-export function DocCard({ doc, owner, index = 0, hit }: { doc: DocumentRow; owner: { name: string; color: string }; index?: number; hit?: Hit | null }) {
+export function DocCard({ doc, owner, index = 0, hit }: { doc: DocumentRow; owner: { name: string; color: string; image?: string | null }; index?: number; hit?: Hit | null }) {
   return (
     <Link to={`/doc/${doc.id}`} className="card" style={{ '--i': index } as React.CSSProperties}>
       <span className="card-title">{doc.title}{doc.status !== 'draft' && <span className="status" data-status={doc.status}>{statusLabel[doc.status]}</span>}</span>
@@ -20,7 +20,7 @@ export function DocCard({ doc, owner, index = 0, hit }: { doc: DocumentRow; owne
       {hit && hit.kind !== 'title' ? <Snippet hit={hit} /> : <span className="card-preview">{doc.preview || 'Nothing written yet.'}</span>}
       <span className="card-meta">
         <span>Edited {timeAgo(doc.updated_at)}{doc.open_comments > 0 && ` · ${doc.open_comments} open ${doc.open_comments === 1 ? 'comment' : 'comments'}`}</span>
-        <span className="avatars"><Avatar name={owner.name} color={owner.color} size={24} /></span>
+        <span className="avatars"><Avatar name={owner.name} color={owner.color} image={owner.image} size={24} /></span>
       </span>
     </Link>
   )

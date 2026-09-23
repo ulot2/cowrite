@@ -3,7 +3,7 @@ import { BlockNoteSchema, defaultBlockSpecs, type BlockNoteEditor } from '@block
 import { createReactInlineContentSpec, FormattingToolbarController, SuggestionMenuController, type DefaultReactSuggestionItem } from '@blocknote/react'
 import { BlockNoteView, components } from '@blocknote/mantine'
 
-export type Person = { id: string; name: string }
+export type Person = { id: string; name: string; color?: string; image?: string | null }
 
 // "@Bea" inside a comment. Stored as inline content with the user's id and name, so the
 // name shows without a lookup and the object can see who was mentioned.

@@ -14,7 +14,7 @@ const kinds: Record<string, string> = {
 export function EventAvatar({ e, size = 28 }: { e: EventRow; size?: number }) {
   return (
     <span className="event-avatar">
-      <Avatar name={e.actor} color={colorFor(e.actor_id)} size={size} />
+      <Avatar name={e.actor} color={colorFor(e.actor_id, e.actor_color)} image={e.actor_image} size={size} />
       <span className="event-kind" data-type={e.type} aria-hidden="true"><Icon name={kinds[e.type] ?? 'docs'} /></span>
     </span>
   )

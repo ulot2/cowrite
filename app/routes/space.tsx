@@ -24,7 +24,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!role || !space) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
   return {
-    owner: { name: user.name, color: colorFor(user.id) },
+    owner: { name: user.name, color: user.color, image: user.image },
     space, role, isOwner,
     documents: await listSpaceDocuments(params.id, role),
     members: await listMembers('space', params.id),
@@ -115,7 +115,7 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
         <p className="eyebrow">{space.visibility === 'public' ? 'Public space' : 'Private space'}</p>
         <h1>{space.name}</h1>
         <div className="title-meta">
-          <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id)} size={26} />)}</span>
+          <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id, m.color)} image={m.image} size={26} />)}</span>
           <p className="muted">{members.length} {members.length === 1 ? 'member' : 'members'} · {space.visibility === 'public' ? 'anyone with the link can view' : 'only members can open it'}</p>
           {(role === 'owner' || role === 'editor') && <span className="title-action"><NewMenu action="" /></span>}
         </div>

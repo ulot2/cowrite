@@ -82,10 +82,10 @@ export const getPublished = (slug: string) =>
   env.DB.prepare('SELECT id, title, preview, published_version, published_at FROM documents WHERE published_slug = ? AND published_version IS NOT NULL').bind(slug)
     .first<{ id: string; title: string; preview: string; published_version: number; published_at: number }>()
 
-export type UserRow = { id: string; name: string; image: string | null }
+export type UserRow = { id: string; name: string; image: string | null; color: string | null }
 // Names and avatars for a list of ids (at most 50: the comments UI and the version list ask in batches).
 export const usersById = async (ids: string[]): Promise<UserRow[]> => {
   const some = [...new Set(ids)].slice(0, 50)
   if (some.length === 0) return []
-  return (await env.DB.prepare(`SELECT id, name, image FROM "user" WHERE id IN (${some.map(() => '?').join(',')})`).bind(...some).all<UserRow>()).results
+  return (await env.DB.prepare(`SELECT u.id, u.name, u.image, us.color FROM "user" u LEFT JOIN user_settings us ON us.user_id = u.id WHERE u.id IN (${some.map(() => '?').join(',')})`).bind(...some).all<UserRow>()).results
 }

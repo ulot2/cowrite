@@ -20,8 +20,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        {/* Applies the saved theme and sidebar state before the first paint, so nothing flashes or jumps. */}
-        <script dangerouslySetInnerHTML={{ __html: "try{var d=document.documentElement,t=localStorage.getItem('theme');if(t==='light'||t==='dark')d.dataset.theme=t;if(localStorage.getItem('sidebar')==='collapsed')d.dataset.sidebar='collapsed'}catch(e){}" }} />
+        {/* Applies the saved theme, sidebar state, and text size before the first paint, so nothing flashes or jumps. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var d=document.documentElement,t=localStorage.getItem('theme');if(t==='light'||t==='dark')d.dataset.theme=t;if(localStorage.getItem('sidebar')==='collapsed')d.dataset.sidebar='collapsed';var s=localStorage.getItem('textSize');if(s==='small'||s==='large')d.dataset.textSize=s}catch(e){}" }} />
       </head>
       <body>
         {children}

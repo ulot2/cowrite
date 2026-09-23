@@ -55,7 +55,7 @@ const Task = createReactBlockSpec(
           <div className="task-text" ref={contentRef} data-placeholder="Describe the task" />
           <span className="task-meta" contentEditable={false}>
             <span className="chip person-chip" data-empty={!assignee || undefined}>
-              {assignee ? <Avatar name={assigneeName || '?'} color={colorFor(assignee)} size={18} /> : <Icon name="user" />}
+              {assignee ? (() => { const p = people.find((x) => x.id === assignee); return <Avatar name={assigneeName || '?'} color={p?.color ?? colorFor(assignee)} image={p?.image} size={18} /> })() : <Icon name="user" />}
               <Select key={assignee} name="assignee" label="Assigned to" className="quiet" disabled={!editable} defaultValue={assignee}
                 options={[{ value: '', label: 'Assign' }, ...people.map((p) => ({ value: p.id, label: p.name }))]}
                 onChange={(v) => set({ assignee: v, assigneeName: people.find((p) => p.id === v)?.name ?? '' })} />

@@ -3748,3 +3748,376 @@ input.board-column-name:focus-visible {
     clip: rect(0 0 0 0);
   }
 }
+
+/* A photo fills the avatar circle. */
+.avatar {
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Editor text size, from Settings > Appearance (per browser). */
+.bn-editor {
+  font-size: var(--editor-size, 17px);
+}
+html[data-text-size="small"] {
+  --editor-size: 15px;
+}
+html[data-text-size="large"] {
+  --editor-size: 19.5px;
+}
+
+/* Account menu items and the sidebar's Settings link at the bottom. */
+.account .menu-item {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  margin: 0;
+  border: 0;
+  color: var(--fg);
+}
+.account .menu-item .icon {
+  color: var(--fg-muted);
+}
+.sidebar .side-settings {
+  margin-top: auto;
+}
+
+/* A switch: a native checkbox drawn as a track and a knob. */
+input.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 2.5rem;
+  height: 1.5rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tint-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+input.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+input.switch:checked {
+  background: var(--accent);
+  box-shadow: none;
+}
+input.switch:checked::after {
+  transform: translateX(1rem);
+}
+
+/* Settings: section links on the left, one card per section on the right. */
+.page.settings {
+  max-width: 64rem;
+  container: settings / inline-size;
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+  margin-bottom: 4rem;
+}
+.settings-nav {
+  position: sticky;
+  top: calc(var(--topbar) + 1.5rem);
+  display: grid;
+  gap: 2px;
+}
+.settings-nav a {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.settings-nav a:hover {
+  color: var(--fg);
+  background: var(--tint);
+}
+.settings-nav a:last-child {
+  color: var(--danger);
+}
+.settings-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+.settings-card {
+  scroll-margin-top: calc(var(--topbar) + 1.5rem);
+  padding: 0.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  animation: rise var(--t-base) var(--ease-out) both;
+}
+.settings-card > header {
+  padding: 1.25rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.settings-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.0625rem;
+}
+.settings-card > header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 1.125rem 0;
+  border-top: 1px solid var(--border);
+}
+.settings-card > header + .setting-row,
+.settings-card > header + form > .setting-row:first-of-type {
+  border-top: 0;
+}
+label.setting-row {
+  cursor: pointer;
+}
+.setting-row > div:first-of-type:not(.setting-actions, .photo-row, .swatches),
+.setting-row > label:first-of-type,
+.photo-row > div {
+  display: grid;
+  gap: 0.2rem;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.setting-row strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.setting-row > div > span:not(.avatar),
+.setting-row > label > span,
+.photo-row > div > span,
+.devices span span {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.setting-stack {
+  align-items: stretch;
+  flex-direction: column;
+}
+.setting-stack > * {
+  flex: none !important; /* in a column, a flex size would become a height */
+}
+.setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.setting-actions input:not([type="checkbox"]) {
+  width: 16rem;
+  max-width: 100%;
+}
+.setting-stack .setting-actions {
+  justify-content: flex-end;
+}
+.setting-value {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.setting-said {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: -0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ok);
+  animation: fade var(--t-base) var(--ease-out);
+}
+.setting-said .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.setting-said[data-error] {
+  color: var(--danger);
+}
+.settings-card > .setting-said {
+  margin: 0 0 1rem;
+}
+.setting-note {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: var(--radius);
+  background: var(--tint);
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.setting-row > div.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1 1 16rem;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.swatch {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px transparent;
+  transition: box-shadow var(--t-fast), transform var(--t-fast);
+}
+.swatch:hover {
+  transform: scale(1.08);
+}
+.swatch[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg);
+}
+.swatch .icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 3;
+}
+.swatch.auto {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--fg-muted);
+  background: var(--tint);
+  box-shadow: 0 0 0 2px var(--bg), inset 0 0 0 1px var(--border);
+}
+.swatch.auto[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg);
+}
+.password-fields {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 24rem;
+}
+.password-fields label {
+  display: grid;
+  align-content: start;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+label.check input {
+  width: auto;
+  accent-color: var(--accent);
+}
+.devices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.devices li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+}
+.devices li + li {
+  border-top: 1px solid var(--border);
+}
+.devices li > .icon {
+  color: var(--fg-muted);
+}
+.devices li > span:not(.status) {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.devices li strong {
+  font-size: 0.875rem;
+}
+.danger-zone {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+.danger-zone h2 {
+  color: var(--danger);
+}
+.danger-zone button.danger-solid .icon {
+  width: 1rem;
+  height: 1rem;
+}
+.confirm-actions {
+  flex-wrap: wrap;
+}
+.confirm-inputs {
+  flex: 1 1 100%;
+}
+.confirm-type {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.confirm-type strong {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+@container settings (max-width: 44rem) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .settings-nav {
+    position: static;
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    margin: 0 -1rem;
+    padding: 0 1rem 0.25rem;
+    scrollbar-width: none;
+  }
+  .settings-nav a {
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .settings-card {
+    padding: 0.25rem 1rem;
+  }
+  .setting-actions,
+  .setting-actions input:not([type="checkbox"]) {
+    width: 100%;
+  }
+  .setting-actions > input {
+    flex: 1;
+  }
+}

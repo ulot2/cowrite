@@ -15,7 +15,7 @@ export const meta = () => [{ title: 'Documents · cowrite' }]
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
   const q = new URL(request.url).searchParams.get('q')?.trim() ?? ''
-  const owner = { name: user.name, color: colorFor(user.id) }
+  const owner = { name: user.name, color: user.color, image: user.image }
   if (!q) return { q, owner, documents: (await listDocuments(user.id)).map((d) => ({ ...d, hit: null })) }
   // Search: full-text hits in rank order, each with the words it matched.
   const hits = await searchHits(user.id, q)
