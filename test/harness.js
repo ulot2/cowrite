@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:net'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as Y from 'yjs'
@@ -28,9 +28,15 @@ export const startApp = async () => {
   const migrate = wrangler(['d1', 'migrations', 'apply', 'cowrite', '--local', '--persist-to', persist])
   await new Promise((resolve, reject) => migrate.on('exit', (code) => code === 0 ? resolve() : reject(new Error('migrations failed'))))
 
+  // The built config without the AI binding: Workers AI always runs remotely and needs a login,
+  // which CI does not have. The tests set AI_FAKE, so the app never calls it.
+  const config = JSON.parse(readFileSync('build/server/wrangler.json', 'utf8'))
+  delete config.ai
+  writeFileSync('build/server/wrangler.test.json', JSON.stringify(config))
+
   const port = await freePort()
   const base = `http://localhost:${port}`
-  const proc = wrangler(['dev', '--port', String(port), '--inspector-port', String(await freePort()), '--persist-to', persist,
+  const proc = wrangler(['dev', '--config', 'build/server/wrangler.test.json', '--port', String(port), '--inspector-port', String(await freePort()), '--persist-to', persist,
     '--var', 'BETTER_AUTH_SECRET:test-secret-test-secret-test-secret', '--var', `BETTER_AUTH_URL:${base}`, '--var', 'AI_FAKE:1'])
   await new Promise((resolve, reject) => {
     proc.stdout.on('data', (d) => { if (d.toString().includes('Ready on')) resolve() })
