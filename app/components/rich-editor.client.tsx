@@ -8,8 +8,10 @@ import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
+import { selectSuggestion } from '@handlewithcare/prosemirror-suggest-changes'
 import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, readSuggestions, revertSuggestion, revertSuggestions, SuggestionsExtension, type SuggestionInfo } from './suggestions.client'
 
+export type Panel = 'none' | 'open' | 'resolved' | 'outline'
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
 export type Presence = { name: string; color: string; editing?: boolean }
 type Props = {
@@ -21,8 +23,8 @@ type Props = {
   suggesting: boolean
   canResolve: boolean
   people: Person[] // members, for @mentions in comments
-  panel: 'none' | 'open' | 'resolved'
-  onPanel: (panel: 'none' | 'open' | 'resolved') => void
+  panel: Panel
+  onPanel: (panel: Panel) => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
 }
 
@@ -137,7 +139,6 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
 
   const root = useRef<HTMLDivElement>(null)
   useActionLabels(root)
-  if (import.meta.env.DEV) (window as unknown as { __editor: unknown }).__editor = editor // for poking at it in the console
 
   // Suggest mode follows the prop. The plugin state lives in ProseMirror, so set it through its commands.
   useEffect(() => {
@@ -191,6 +192,37 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     return () => { el.removeEventListener('mouseover', over); el.removeEventListener('mouseout', out); clearTimeout(leaveTimer.current) }
   }, [])
   useEffect(() => { if (hover && !found.all.some((s) => s.id === hover.id)) setHover(null) }, [found, hover])
+  // Previous / Next: select a suggestion and bring it into view.
+  const step = (dir: 1 | -1) => {
+    if (!found.all.length) return
+    const i = found.all.findIndex((s) => s.id === found.atCursor?.id)
+    const next = found.all[(i + dir + found.all.length) % found.all.length]
+    run(selectSuggestion(next.id))
+    editor.prosemirrorView?.dispatch(editor.prosemirrorState.tr.scrollIntoView())
+    editor.focus()
+  }
+
+  // The outline: the document's headings, live. A click puts the cursor there and scrolls to it.
+  const [headings, setHeadings] = useState<{ id: string; level: number; text: string }[]>([])
+  useEffect(() => {
+    if (panel !== 'outline') return
+    const read = () => {
+      const out: { id: string; level: number; text: string }[] = []
+      const walk = (blocks: typeof editor.document) => blocks.forEach((b) => {
+        if (b.type === 'heading') out.push({ id: b.id, level: Number((b.props as { level?: number }).level ?? 1), text: (b.content as { text?: string }[]).map((c) => c.text ?? '').join('') })
+        walk(b.children)
+      })
+      walk(editor.document)
+      setHeadings(out)
+    }
+    read()
+    return editor.onChange(read)
+  }, [editor, panel])
+  const goTo = (id: string) => {
+    editor.setTextCursorPosition(id, 'start')
+    editor.focus()
+    root.current?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
   const nameOf = (author: string) => (author === user.id ? 'you' : names[author] ?? '…')
   const uiComponents = useMemo(() => componentsWithMentions(people), [people])
   const [names, setNames] = useState<Record<string, string>>({})
@@ -210,6 +242,10 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
           {found.all.length > 0 && (
             <div className="suggestion-bar" role="status">
               <span>{found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}{found.atCursor && <> · by <strong>{nameOf(found.atCursor.author)}</strong></>}</span>
+              <span className="suggestion-actions">
+                <button type="button" className="ghost" onClick={() => step(-1)} aria-label="Previous suggestion">↑</button>
+                <button type="button" className="ghost" onClick={() => step(1)} aria-label="Next suggestion">↓</button>
+              </span>
               {canResolve && (
                 <span className="suggestion-actions">
                   {found.atCursor ? (
@@ -235,7 +271,15 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
             </div>
           )}
         </div>
-        {panel !== 'none' && (
+        {panel === 'outline' && (
+          <aside className="comments-panel outline" aria-label="Outline">
+            <div className="panel-head"><strong>Outline</strong><button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close outline">✕</button></div>
+            {headings.length === 0 ? <p className="muted small">No headings yet. Type # and a space at the start of a line to make one.</p> : (
+              <ol>{headings.map((h) => <li key={h.id} data-level={h.level}><button type="button" className="ghost" onClick={() => goTo(h.id)}>{h.text || 'Untitled heading'}</button></li>)}</ol>
+            )}
+          </aside>
+        )}
+        {(panel === 'open' || panel === 'resolved') && (
           <aside className="comments-panel" aria-label="Comments">
             <div className="panel-head">
               <div className="segmented" role="group" aria-label="Which comments">

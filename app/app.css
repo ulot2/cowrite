@@ -1619,6 +1619,281 @@ h3.vb, h4.vb, h5.vb {
   }
 }
 
+/* Reading view: the document outside the editor (public page, print, slides, history). */
+.read-view {
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.read-view > * + * {
+  margin-top: 0.75rem;
+}
+.read-view p,
+.read-view ul,
+.read-view ol,
+.read-view blockquote,
+.read-view figure,
+.read-view pre {
+  margin: 0;
+}
+.read-view h1,
+.read-view h2,
+.read-view h3 {
+  margin: 1.75rem 0 0.25rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.read-view h1 { font-size: 1.75rem; }
+.read-view h2 { font-size: 1.375rem; }
+.read-view h3 { font-size: 1.125rem; }
+.read-view ul,
+.read-view ol {
+  padding-left: 1.5rem;
+}
+.read-view li + li {
+  margin-top: 0.25rem;
+}
+.read-view .checks {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.read-view .checks input {
+  width: auto;
+  margin-right: 0.5rem;
+  accent-color: var(--accent);
+}
+.read-view blockquote {
+  padding-left: 1rem;
+  border-left: 3px solid var(--border);
+  color: var(--fg-muted);
+}
+.read-view pre {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  background: var(--tint);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.read-view code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.9em;
+}
+.read-view :not(pre) > code {
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  background: var(--tint);
+}
+.read-view a {
+  color: var(--accent);
+}
+.read-view img {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+.read-view figcaption {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-top: 0.375rem;
+}
+.read-table {
+  overflow-x: auto;
+}
+.read-view table {
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.read-view td {
+  border: 1px solid var(--border);
+  padding: 0.375rem 0.625rem;
+  vertical-align: top;
+}
+.read-indent {
+  padding-left: 1.5rem;
+}
+.read-title {
+  margin: 0 0 0.25rem;
+  font-size: 2.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Public page: the wordmark, the text at the measure, a quiet footer. No app chrome. */
+.public {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+}
+.public-bar {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.public-page {
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+  animation: rise var(--t-base) var(--ease-out);
+}
+.public-page > .muted {
+  margin: 0 0 2rem;
+}
+.public-foot {
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.public-foot a {
+  color: var(--accent);
+}
+
+/* Print page: the same reading view. The hint and buttons stay off paper. */
+.print-page {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+.print-hint {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 2rem;
+  border-radius: var(--radius);
+  background: var(--tint);
+  font-size: 0.875rem;
+}
+@media print {
+  .no-print { display: none !important; }
+  .print-page { padding: 0; max-width: none; }
+  .read-view { font-size: 11pt; }
+  .read-view a { color: inherit; }
+  .read-view h1, .read-view h2, .read-view h3 { break-after: avoid; }
+  .read-view figure, .read-view pre, .read-table { break-inside: avoid; }
+}
+
+/* Slides: one idea on a big, calm page. Slides cross-fade; no motion when the system asks. */
+.present {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  background: var(--bg);
+}
+.present-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+.present-bar > .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.present-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.present:fullscreen .present-bar {
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+.present:fullscreen .present-bar:hover,
+.present:fullscreen .present-bar:focus-within {
+  opacity: 1;
+}
+.slide {
+  align-self: center;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem clamp(1.25rem, 6vw, 5rem);
+  font-size: clamp(1.125rem, 2.2vw, 1.75rem);
+  animation: fade var(--t-base) var(--ease-out);
+}
+.slide h1,
+.slide h2 {
+  margin-top: 0;
+  font-size: clamp(2rem, 5vw, 3.75rem);
+}
+.slide h3 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+.slide-notes {
+  max-width: 60rem;
+  width: calc(100% - 2rem);
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+  font-size: 0.9375rem;
+}
+.slide-notes p {
+  margin: 0;
+}
+.present-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+}
+
+/* More menu (present, export) and the outline panel. */
+.more-menu .popover {
+  left: auto;
+  right: 0;
+}
+.more-menu .popover .button {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+}
+.more-menu .popover .button:hover {
+  background: var(--tint);
+}
+.menu-label {
+  margin: 0.375rem 0.75rem 0.125rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.outline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+.outline li[data-level="2"] { padding-left: 0.875rem; }
+.outline li[data-level="3"] { padding-left: 1.75rem; }
+.outline li button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+  padding: 0.375rem 0.5rem;
+  color: var(--fg);
+}
+.outline li[data-level="1"] button {
+  font-weight: 600;
+}
+.card-preview mark {
+  background: var(--accent-soft);
+  color: var(--fg);
+  border-radius: 2px;
+}
+
 /* Login: statement on the left, form on the right. Stacked on phones. */
 .login {
   min-height: 100%;

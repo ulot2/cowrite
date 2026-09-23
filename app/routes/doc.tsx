@@ -1,6 +1,7 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { getDocument, renameDocument, setStatus } from '~/lib/db.server'
+import { clearPublished, getDocument, renameDocument, setPublished, setStatus } from '~/lib/db.server'
+import { docStub } from '~/lib/versions.server'
 import { moves, statusLabel, type Move } from '~/lib/status'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent } from '~/lib/events.server'
@@ -10,6 +11,7 @@ import { Editor } from '~/components/editor'
 import { Icon } from '~/components/icon'
 import { ShareDialog } from '~/components/share-dialog'
 import { StatusMenu } from '~/components/status-menu'
+import { MoreMenu } from '~/components/more-menu'
 import type { Route } from './+types/doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }]
@@ -87,6 +89,15 @@ export async function action({ request, params }: Route.ActionArgs) {
       await logEvent(params.id, user.id, 'shared', intent === 'role' ? `made ${person.name} ${granted}` : `removed ${person.name}`)
       return null
     }
+    case 'publish': {
+      // A new version named "Published"; the slug is made once and kept across unpublish.
+      const version = await docStub(params.id).publish(user.id)
+      const slug = document.published_slug ?? `${document.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'document'}-${crypto.randomUUID().slice(0, 6)}`
+      await setPublished(params.id, slug, version)
+      await logEvent(params.id, user.id, 'published', document.published_version ? 'updated the public page' : 'published it to the web')
+      return null
+    }
+    case 'unpublish': await clearPublished(params.id); await logEvent(params.id, user.id, 'published', 'unpublished it'); return null
     case 'link-create': await createShareLink('document', params.id, granted, user.id); await logEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
     case 'link-revoke': await revokeShareLink('document', params.id); await logEvent(params.id, user.id, 'shared', 'revoked the link'); return null
     case 'move': {
@@ -113,7 +124,8 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <Link className="tool" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
-          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} className="tool" />
+          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} error={actionData?.error} published={{ slug: document.published_slug, at: document.published_at }} className="tool" />
+          <MoreMenu documentId={params.id} />
         </>}>
         {atLeast(role, 'editor') ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.

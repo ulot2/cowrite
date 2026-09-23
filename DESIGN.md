@@ -42,6 +42,10 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Document header: the breadcrumb and the status pill on the left (Draft grey, In review warning, Approved green; owners and reviewers open it for the moves they may make), then the presence avatars and the tools: Suggest (pressed while on; a reviewer sees it on and locked), Comments, History, Share. The header spans the wide column; the title and the text sit centered at the measure.
 - Suggestions: insertions on the accent wash with an accent underline, deletions struck on the warning wash, changed formatting with a dotted underline. Hovering a suggestion shows a small card under it: "Suggested by Bea" with Accept and Reject. A quiet bar above the text says how many suggestions there are and, while the cursor is in one, who made it, with Accept and Reject; otherwise Accept all and Reject all.
 - Mentions: "@Name" in a comment, accent text on the accent wash, picked from a menu of the members that opens on `@`.
+- Reading view: the document outside the editor, at the measure, in the same type as the editor. Public page: only the wordmark above and "Written with cowrite" below, the title, the published date. Print: the same page with a hint bar that stays off paper.
+- Slides: one idea per screen, the heading large and fluid (`clamp`), the bar fades away in full screen and comes back on hover or focus, a counter below, notes on the warning wash.
+- More menu (⋯): Present and the four exports, the same popover as the status menu. Outline: the side panel lists the headings, indented by level, level 1 in bold.
+- Search results: the matched words on the accent wash inside the card, "In a comment" when the hit is there.
 - Bell: in the top bar, a count badge in the accent, the same popover as the account menu with the newest twenty events and a dot on the unseen ones.
 - Activity: rows grouped by day (Today, Yesterday, then dates) with the actor's avatar, the sentence, a link to the document, and the relative time. Shown under the cards on a space page and under the versions on a history page.
 

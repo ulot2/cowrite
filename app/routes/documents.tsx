@@ -2,6 +2,7 @@ import { Form } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { deleteDocument, getDocument, listDocuments } from '~/lib/db.server'
 import { logEvent } from '~/lib/events.server'
+import { searchHits } from '~/lib/search.server'
 import { roleOnDocument } from '~/lib/access.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
@@ -13,7 +14,12 @@ export const meta = () => [{ title: 'Documents · cowrite' }]
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
   const q = new URL(request.url).searchParams.get('q')?.trim() ?? ''
-  return { q, owner: { name: user.name, color: colorFor(user.id) }, documents: await listDocuments(user.id, { q }) }
+  const owner = { name: user.name, color: colorFor(user.id) }
+  if (!q) return { q, owner, documents: (await listDocuments(user.id)).map((d) => ({ ...d, hit: null })) }
+  // Search: full-text hits in rank order, each with the words it matched.
+  const hits = await searchHits(user.id, q)
+  const byId = new Map((await listDocuments(user.id)).map((d) => [d.id, d]))
+  return { q, owner, documents: hits.flatMap((h) => { const d = byId.get(h.document_id); return d ? [{ ...d, hit: h }] : [] }) }
 }
 
 // Delete checks the role again: the form is not trusted.
@@ -57,7 +63,7 @@ export default function Documents({ loaderData }: Route.ComponentProps) {
           )}
           {documents.map((d, i) => (
             <div className="card-wrap" key={d.id}>
-              <DocCard doc={d} owner={owner} index={i} />
+              <DocCard doc={d} owner={owner} index={i} hit={d.hit} />
               {d.role === 'owner' && (
                 <Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${d.title}"? This cannot be undone.`)) e.preventDefault() }}>
                   <input type="hidden" name="id" value={d.id} />

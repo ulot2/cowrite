@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { rank, type Role } from './roles'
+import { requireUser } from './auth.server'
+import { getDocument } from './db.server'
 
 export type { Role }
 const higher = (a: Role | null | undefined, b: Role | null | undefined) => (rank(a) >= rank(b) ? a ?? null : b ?? null)
@@ -97,3 +99,12 @@ export const redeemShareLink = async (link: ShareLink, userId: string) => {
 }
 
 export const findUser = (id: string) => env.DB.prepare('SELECT id, name FROM "user" WHERE id = ?').bind(id).first<{ id: string; name: string }>()
+
+// Signed in and allowed to open this document, else the login page or a 404.
+export const requireDocument = async (request: Request, documentId: string) => {
+  const user = await requireUser(request)
+  const role = await roleOnDocument(user.id, documentId)
+  const document = role && await getDocument(documentId)
+  if (!role || !document) throw new Response('Not found', { status: 404 })
+  return { user, role, document }
+}

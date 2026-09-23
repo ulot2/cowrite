@@ -5,6 +5,8 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import { logEvent, touchEvent } from '~/lib/events.server'
+import { indexBody, indexComments } from '~/lib/search.server'
+import { safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -34,6 +36,58 @@ const blocksOf = (doc: Y.Doc): Block[] => {
   }
   doc.getXmlFragment('document-store').forEach(walk)
   return out
+}
+
+// The same XML as a tree with formatting, for reading outside the editor. Pending suggestions read
+// as rejected: inserted text is left out, deleted text stays. Comment marks are ignored.
+const inlineOf = (node: Y.XmlElement): Inline[] => {
+  const out: Inline[] = []
+  node.forEach((child) => {
+    if (!(child instanceof Y.XmlText)) return
+    for (const op of child.toDelta() as { insert: unknown; attributes?: Record<string, { href?: string } | undefined> }[]) {
+      const a = op.attributes ?? {}
+      if (typeof op.insert !== 'string' || a.insertion) continue
+      out.push({ text: op.insert, bold: !!a.bold || undefined, italic: !!a.italic || undefined, underline: !!a.underline || undefined, strike: !!a.strike || undefined, code: !!a.code || undefined, href: a.link ? safeHref(a.link.href) : undefined })
+    }
+  })
+  return out
+}
+const richFrom = (doc: Y.Doc): RichBlock[] => {
+  const blocksIn = (parent: Y.XmlFragment | Y.XmlElement): RichBlock[] => {
+    const out: RichBlock[] = []
+    parent.forEach((node) => {
+      if (!(node instanceof Y.XmlElement)) return
+      if (node.nodeName === 'blockGroup') return out.push(...blocksIn(node))
+      if (node.nodeName === 'blockContainer') {
+        const [content, group] = node.toArray().filter((n): n is Y.XmlElement => n instanceof Y.XmlElement)
+        if (!content) return
+        const block = blockOf(content)
+        if (group?.nodeName === 'blockGroup') block.children = blocksIn(group)
+        return out.push(block)
+      }
+      out.push(blockOf(node)) // a content node without a container (older documents, tests)
+    })
+    return out
+  }
+  const blockOf = (el: Y.XmlElement): RichBlock => {
+    const attr = (k: string) => el.getAttribute(k) as unknown
+    const block: RichBlock = { type: el.nodeName, props: {}, content: [], children: [] }
+    if (el.nodeName === 'table') {
+      // table > tableRow > tableCell | tableHeader > tableParagraph
+      block.rows = el.toArray().filter((r): r is Y.XmlElement => r instanceof Y.XmlElement).map((row) =>
+        row.toArray().filter((c): c is Y.XmlElement => c instanceof Y.XmlElement).map((cell) =>
+          cell.toArray().filter((p): p is Y.XmlElement => p instanceof Y.XmlElement).flatMap(inlineOf)))
+      return block
+    }
+    if (attr('level')) block.props.level = Number(attr('level'))
+    if (attr('checked') != null) block.props.checked = String(attr('checked')) === 'true'
+    if (attr('language')) block.props.language = String(attr('language'))
+    if (attr('url')) block.props.url = safeHref(attr('url'))
+    if (attr('caption')) block.props.caption = String(attr('caption'))
+    block.content = inlineOf(el)
+    return block
+  }
+  return blocksIn(doc.getXmlFragment('document-store'))
 }
 
 // One Doc per room. It holds the Y.Doc, stores every update, and forwards messages between sockets.
@@ -108,11 +162,13 @@ export class Doc extends DurableObject<Env> {
       await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, id).run()
       for (const user of editors) await touchEvent(id, user, 'commented', 'commented')
       await this.logMentions(id)
+      await indexComments(id, this.commentsText())
       return
     }
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
     const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
     await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), name).run()
+    await indexBody(name, toText(richFrom(this.doc)))
     // A baseline after the first edit, then at most one automatic version per half hour of work.
     const last = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MAX(created_at) AS at FROM versions').one().at
     if (!last || Date.now() - last > AUTO_VERSION_EVERY) this.snapshot(null, null)
@@ -171,6 +227,32 @@ export class Doc extends DurableObject<Env> {
   // They run inside the object, in order with the socket messages, so they see a consistent document.
   listVersions(): Version[] {
     return this.ctx.storage.sql.exec<Version>('SELECT id, name, created_by, created_at, length(snapshot) AS bytes FROM versions ORDER BY id DESC').toArray()
+  }
+
+  // Every comment's words, for search. Bodies are BlockNote blocks: collect the text leaves.
+  commentsText() {
+    const words: string[] = []
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(walk)
+      if (!node || typeof node !== 'object') return
+      const n = node as { text?: string; props?: { name?: string }; type?: string; content?: unknown; children?: unknown }
+      if (typeof n.text === 'string') words.push(n.text)
+      if (n.type === 'mention' && n.props?.name) words.push('@' + n.props.name)
+      walk(n.content); walk(n.children)
+    }
+    for (const thread of this.doc.getMap<Y.Map<unknown>>('threads').values())
+      for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) walk(comment.get('body'))
+    return words.join(' ')
+  }
+
+  readRich(id: number | 'now'): RichBlock[] | null {
+    const doc = id === 'now' ? this.doc : this.docFrom(id)
+    return doc && richFrom(doc)
+  }
+
+  // Publishing freezes the document as it is now: a version named "Published".
+  publish(userId: string) {
+    return this.snapshot('Published', userId)
   }
 
   readVersion(id: number | 'now'): Block[] | null {

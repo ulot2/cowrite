@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import type { Block } from '../../workers/doc'
 
 export type { Block, Version } from '../../workers/doc'
+export type { Block as RichBlock } from './rich'
 
 // The object that holds this document's text. Its methods run inside the object (RPC).
 export const docStub = (documentId: string) => env.DOC.get(env.DOC.idFromName(documentId))

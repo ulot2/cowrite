@@ -21,6 +21,7 @@
     "@mantine/hooks": "^9.6.1",
     "@tiptap/core": "^3.31.3",
     "better-auth": "^1.7.5",
+    "docx": "^9.7.1",
     "isbot": "^5.1.36",
     "lib0": "^0.2.117",
     "prosemirror-state": "^1.4.4",

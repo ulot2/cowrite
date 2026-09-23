@@ -9,6 +9,8 @@ const paths: Record<string, string> = {
   menu: 'M4 7h16M4 12h16M4 17h16',
   space: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   share: 'M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 15V4M8 8l4-4 4 4',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  outline: 'M4 6h16M8 12h12M12 18h8',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
   suggest: 'M4 20h4l10-10-4-4L4 16zM13 7l4 4M15 5l4 4',
   lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v9H5z',

@@ -7,6 +7,7 @@ import { diffBlocks, docStub, type Block, type DiffRow } from '~/lib/versions.se
 import { atLeast } from '~/lib/roles'
 import { timeAgo } from '~/lib/time'
 import { Activity } from '~/components/activity'
+import { ReadView } from '~/components/read-view'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { colorFor } from '~/lib/color'
@@ -28,6 +29,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const url = new URL(request.url)
   const selected = versions.find((v) => v.id === Number(url.searchParams.get('v'))) ?? versions[0] ?? null
   const blocks = selected ? await stub.readVersion(selected.id) : null
+  const rich = selected && !url.searchParams.get('against') ? await stub.readRich(selected.id) : null
   // ?against= is another version id, or "now" for the live document. The diff always reads old → new.
   const againstParam = url.searchParams.get('against')
   const against = againstParam === 'now' ? 'now' : versions.find((v) => v.id === Number(againstParam))?.id ?? null
@@ -35,7 +37,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const olderFirst = against === 'now' || (against !== null && selected !== null && against > selected.id)
   const diff = blocks && other ? (olderFirst ? diffBlocks(blocks, other) : diffBlocks(other, blocks)) : null
 
-  return { document, canEdit: atLeast(role, 'editor'), versions, selected, blocks, against, diff, events: await listDocumentEvents(params.id) }
+  return { document, canEdit: atLeast(role, 'editor'), versions, selected, blocks, rich, against, diff, events: await listDocumentEvents(params.id) }
 }
 
 // Save and restore need an editor. The role is checked here, not trusted from the page.
@@ -61,7 +63,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   return null
 }
 
-// A version's blocks as plain headings and paragraphs. Formatting inside a block is not shown here.
+// One block of the diff, as plain text. The preview (no compare) uses ReadView with formatting.
 function BlockView({ block }: { block: Block }) {
   const Tag = block.type === 'heading' ? (`h${Math.min(3, block.level ?? 1) + 2}` as 'h3') : 'p'
   return <Tag className={`vb vb-${block.type}`}>{block.type === 'image' ? 'Image' : block.text || ' '}</Tag>
@@ -70,7 +72,7 @@ function BlockView({ block }: { block: Block }) {
 const labels: Record<DiffRow['kind'], string> = { same: '', removed: 'Removed', added: 'Added' }
 
 export default function History({ loaderData, params }: Route.ComponentProps) {
-  const { document, canEdit, versions, selected, blocks, against, diff } = loaderData
+  const { document, canEdit, versions, selected, blocks, rich, against, diff } = loaderData
   const changes = diff?.filter((r) => r.kind !== 'same').length ?? 0
   const n = versions.length
   return (
@@ -153,7 +155,7 @@ export default function History({ loaderData, params }: Route.ComponentProps) {
               </>
             ) : (
               <div className="version-body">
-                {blocks.length === 0 ? <p className="muted">This version is empty.</p> : blocks.map((b, i) => <BlockView key={i} block={b} />)}
+                {blocks.length === 0 ? <p className="muted">This version is empty.</p> : <ReadView blocks={rich ?? []} />}
               </div>
             )}
           </section>

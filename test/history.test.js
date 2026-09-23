@@ -42,8 +42,7 @@ test('the first edit gets an automatic version; a named version, a restore, and 
 
   // Preview shows the block text; the diff against the live document marks "two" as added.
   html = await page(app, docId, ada, `?v=${v1}`)
-  assert.match(html, /vb-paragraph">one</)
-  assert.doesNotMatch(html, /vb-paragraph">two</)
+  assert.match(html, /class="read-view"><p><span>one<\/span><\/p><\/div>/) // only "one": "two" came after the version
   html = await page(app, docId, ada, `?v=${v1}&against=now`)
   assert.match(html, /data-kind="added"[^]*?two/)
   assert.match(html, /1 block changed/)

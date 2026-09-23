@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import type { ConnectionState, Presence } from './rich-editor.client'
+import type { ConnectionState, Panel, Presence } from './rich-editor.client'
 import { Avatar } from './avatar'
 import { Icon } from './icon'
 
@@ -11,8 +11,6 @@ const notes: Record<ConnectionState, string | null> = {
 
 // The editor needs a DOM, so it loads in the browser only, after the first paint.
 const RichEditor = lazy(() => import('./rich-editor.client').then((m) => ({ default: m.RichEditor })))
-
-type Panel = 'none' | 'open' | 'resolved'
 
 type Props = {
   documentId: string
@@ -57,7 +55,10 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
               <Icon name="suggest" /><span className="tool-label">Suggest</span>
             </button>
           )}
-          <button type="button" className="tool" aria-pressed={panel !== 'none'} onClick={() => setPanel(panel === 'none' ? 'open' : 'none')}>
+          <button type="button" className="tool" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
+            <Icon name="outline" /><span className="tool-label">Outline</span>
+          </button>
+          <button type="button" className="tool" aria-pressed={panel === 'open' || panel === 'resolved'} onClick={() => setPanel(panel === 'open' || panel === 'resolved' ? 'none' : 'open')}>
             <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
           </button>
           {actions}

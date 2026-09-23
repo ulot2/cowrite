@@ -5,6 +5,11 @@ export default [
   route('api/auth/*', 'routes/api.auth.ts'),
   route('api/inbox', 'routes/api.inbox.ts'),
   route('s/:token', 'routes/share.tsx'),
+  route('p/:slug', 'routes/public.tsx'),
+  // Outside the shell: a download, a print page, and full-screen slides.
+  route('doc/:id/export', 'routes/export.ts'),
+  route('doc/:id/print', 'routes/print.tsx'),
+  route('doc/:id/present', 'routes/present.tsx'),
   // Everything behind the shell needs a signed-in user. The shell route checks once.
   layout('routes/shell.tsx', [
     index('routes/home.tsx'),

@@ -19,6 +19,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 5. Click "Share", create a link for viewers, and open it in a private window with a second account. That account can read and follow your cursor, but not type.
 6. Click "History". Name the current version, change a paragraph, compare the version to the current document, and restore it. The other tab changes without a reload.
 7. Share the document with the second account as a reviewer. In that window, type a sentence: it shows as a suggestion in both windows. Accept it from the first window. Use the status pill to submit the document for review and approve it from the second window; the bell in the first window lists the approval.
+8. Open "Share" and publish the document. Open the public link in a private window: no account needed. From the "⋯" menu, present it as slides (one per level-1 heading) or export it to Word, Markdown, text, or PDF. Search the Documents page for a word from the text or from a comment.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -72,6 +73,10 @@ Suggestions are marks on the text (`insertion`, `deletion`, `modification`, from
 
 Comments can mention a member: type `@` in a comment and pick a name. The comment editor has its own schema with a `mention` inline item, and the threads object scans new comments when its alarm runs and logs "mentioned Bea", which reaches her bell.
 
+Outside the editor, the object reads its Yjs XML into a small tree of blocks and inline runs with their formatting (`app/lib/rich.ts`). Pending suggestions read as rejected, and only web, mail, and same-site links are kept. One React component draws that tree, so no HTML string is ever stored or served. The public page, print, slides, the history preview, and the Markdown, text, and Word exports (the `docx` package, on the server) all use it. Publishing saves a version named "Published" and the public page `/p/<slug>` shows that version, so later edits stay private until the owner updates the page.
+
+Search is an SQLite FTS5 table in D1 with one row per document for its title, its text, and its comments. The two objects write their rows when their alarm runs; renames write the title. A query becomes quoted prefix terms, so no input is read as search syntax, and results are limited to the documents you can open.
+
 Status is a column on the document row with four moves (submit, request changes, approve, reopen), each checked against the role and the current status. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
 
 The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs reviewer, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word. A reviewer can write to the text; their editor makes every edit a suggestion, but the server cannot tell a suggestion from an edit, so that rule holds only for the real app.
@@ -92,7 +97,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty-two tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty-six tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -115,6 +120,10 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - The bell counts what other people did since it was last opened, and never your own actions.
 - Accepting or rejecting a suggestion is logged for its author; only editors may log one.
 - A mention in a comment becomes an event for the mentioned person.
+- A published page needs no account, shows the published text until the owner updates it, drops unsafe links, and is gone after unpublish; only the owner publishes.
+- Export gives Markdown, plain text, and a Word file; a stranger gets 404.
+- Search finds a word from the text and from a comment, and nothing for a stranger.
+- Slides split at level-1 headings, and "Note:" paragraphs stay off the slide.
 
 ## Accessibility
 
@@ -127,7 +136,8 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - Adding someone by email needs them to have an account already; no invitation email is sent.
 - A mention is found by the comment's creation time on the writer's clock; a comment edited later to add a mention is not logged.
 - A reviewer's suggest-only mode is enforced by the editor, not the server.
-- The version preview shows headings, paragraphs, and list items as plain text; bold, links, and images inside a block are not drawn.
+- The compare view shows each block as plain text; the preview of one version shows the formatting.
+- Word exports link to images instead of embedding them.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack

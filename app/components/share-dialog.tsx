@@ -17,18 +17,20 @@ type Props = {
   spaces?: SpaceRow[]
   spaceId?: string | null
   error?: string | null
+  published?: { slug: string | null; at: number | null } // documents only: the public page
   className?: string // "tool" on the document page: icon plus label, icon only on phones
 }
 
 // A native <dialog>: the browser handles focus, Escape, and the backdrop.
-export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, error, className }: Props) {
+export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, error, published, className }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const [copied, setCopied] = useState(false)
   // The server renders the path; the browser adds its origin after mount, so both render the same HTML.
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(location.origin), [])
   const linkUrl = link ? `${origin}/s/${link.token}` : ''
-  const copy = async () => { await navigator.clipboard.writeText(linkUrl); setCopied(true); setTimeout(() => setCopied(false), 1500) }
+  const copy = async (text = linkUrl) => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) }
+  const publicUrl = published?.at && published.slug ? `${origin}/p/${published.slug}` : ''
 
   return (
     <>
@@ -67,7 +69,7 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, e
             {link ? (
               <div className="share-row">
                 <input readOnly value={linkUrl} aria-label="Share link" onFocus={(e) => e.currentTarget.select()} />
-                <button type="button" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+                <button type="button" onClick={() => copy()}>{copied ? 'Copied' : 'Copy'}</button>
                 <Form method="post"><button className="ghost" name="intent" value="link-revoke">Revoke</button></Form>
               </div>
             ) : (
@@ -78,6 +80,31 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, e
               </Form>
             )}
             {link && <p className="muted small">{describe[link.role]}. Create a new link to change the role.</p>}
+
+            {published && (
+              <>
+                <h3>Publish to the web</h3>
+                {publicUrl ? (
+                  <>
+                    <div className="share-row">
+                      <input readOnly value={publicUrl} aria-label="Public page" onFocus={(e) => e.currentTarget.select()} />
+                      <button type="button" onClick={() => copy(publicUrl)}>Copy</button>
+                      <a className="button" href={publicUrl} target="_blank" rel="noopener">Open</a>
+                    </div>
+                    <Form method="post" className="share-row">
+                      <button name="intent" value="publish">Update to the current text</button>
+                      <button className="ghost" name="intent" value="unpublish">Unpublish</button>
+                    </Form>
+                    <p className="muted small">Anyone with the address can read the page, without an account. It shows the text as it was when you last published or updated it.</p>
+                  </>
+                ) : (
+                  <Form method="post" className="share-row">
+                    <button name="intent" value="publish">Publish</button>
+                    <span className="muted small">Makes a public, read-only page of the current text.</span>
+                  </Form>
+                )}
+              </>
+            )}
 
             {spaces && (
               <>
