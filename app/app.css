@@ -3044,42 +3044,132 @@ input.board-column-name:focus-visible {
   }
 }
 
-/* AI panel: two short groups of commands. Answers land in the text as suggestions by AI. */
-.ai-panel h3 {
-  margin: 0.75rem 0 0.25rem;
+/* Ask AI: a menu next to the selected text (or under the header button); a bottom sheet on phones.
+   The answer lands in the text as a suggestion by AI. */
+.ask-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--accent);
+}
+.ai-menu {
+  position: fixed;
+  z-index: 5000;
+  width: 17.5rem;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 0.375rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  animation: drop var(--t-fast) var(--ease-out);
+}
+.ai-menu-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.625rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
+}
+.ai-menu-head .ai-mark {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: 1rem;
+}
+.ai-menu-head .small {
+  font-size: 0.75rem;
+}
+.ai-group + .ai-group {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+.ai-group-label {
+  margin: 0.375rem 0.625rem 0.25rem;
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-muted);
 }
-.ai-command {
+.ai-group-label span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.ai-item {
   width: 100%;
   justify-content: flex-start;
-  gap: 0.5rem;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid var(--border);
+  gap: 0.625rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.625rem;
+  border: 0;
   border-radius: var(--radius);
-  background: var(--bg);
+  background: transparent;
   color: var(--fg);
-  transition: border-color var(--t-fast), background var(--t-fast);
+  font-weight: 450;
+  text-align: left;
+  transition: background var(--t-fast), color var(--t-fast);
 }
-.ai-command + .ai-command {
-  margin-top: 0.375rem;
-}
-.ai-command:not(:disabled):hover {
-  border-color: var(--accent);
+.ai-item:not(:disabled):hover,
+.ai-item:focus-visible {
   background: var(--accent-soft);
 }
-.ai-command > span[aria-hidden] {
+.ai-mark {
   color: var(--accent);
 }
-.ai-command:disabled {
-  opacity: 0.55;
+.ai-item:disabled {
+  opacity: 0.5;
   cursor: default;
 }
+.ai-item[aria-busy="true"] {
+  opacity: 1;
+  background: var(--accent-soft);
+}
 .ai-error {
-  margin: 0.75rem 0 0;
+  margin: 0.375rem 0.625rem 0.5rem;
   font-size: 0.8125rem;
   color: var(--danger);
+}
+.ai-scrim {
+  display: none;
+}
+@media (max-width: 600px) {
+  .ai-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 4999;
+    background: rgba(10, 14, 30, 0.35);
+    animation: fade var(--t-fast) var(--ease-out);
+  }
+  .ai-menu {
+    inset: auto 0 0 0;
+    width: auto;
+    max-height: 85vh;
+    padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    border-radius: 16px 16px 0 0;
+    border-bottom: 0;
+    animation: sheet var(--t-base) var(--ease-out);
+  }
+  .ai-item {
+    min-height: 2.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-menu,
+  .ai-scrim {
+    animation: none;
+  }
 }

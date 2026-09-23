@@ -16,12 +16,16 @@ export async function action({ request }: Route.ActionArgs) {
   const role = await roleOnDocument(user.id, String(body.documentId ?? ''))
   if (!role) return Response.json({ error: 'Not found' }, { status: 404 })
   if (!atLeast(role, 'reviewer')) return Response.json({ error: 'Only people who can suggest changes can use AI' }, { status: 403 })
-  const doc = toText((await docStub(String(body.documentId)).readRich('now')) ?? [])
-  const selection = ['improve', 'shorten', 'continue'].includes(command)
-  const text = selection ? String(body.text ?? '').trim() : doc
-  if (!text) return Response.json({ error: selection ? 'Select some text first' : 'The document is empty' }, { status: 400 })
+  // Rewrites get only the selected text ("continue": the text before the cursor), so the model cannot
+  // mix the rest of the document into its answer. The other commands read the whole document.
+  const selection = ['improve', 'fix', 'shorten', 'continue'].includes(command)
+  const text = selection ? String(body.text ?? '').trim() : toText((await docStub(String(body.documentId)).readRich('now')) ?? [])
+  if (!text) return Response.json({ error: selection ? (command === 'continue' ? 'Write something first' : 'Select some text first') : 'The document is empty' }, { status: 400 })
   try {
-    return Response.json({ text: await ask(command, text, selection ? doc : '') })
+    const answer = await ask(command, text)
+    if (!answer) return Response.json({ error: 'The AI gave an empty answer. Try again.' }, { status: 502 })
+    if (answer === text) return Response.json({ error: 'The AI found nothing to change.' }, { status: 422 })
+    return Response.json({ text: answer })
   } catch (e) {
     if (e instanceof AiLimit) return Response.json({ error: 'The AI is out of free uses for today. Try again tomorrow.' }, { status: 429 })
     console.error(e)

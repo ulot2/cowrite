@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFetcher } from 'react-router'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
@@ -7,10 +7,11 @@ import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comme
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { People, schema, slashItems, TurnIntoTask } from './blocks.client'
+import { AiMenu, AskAiButton } from './ai-menu.client'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
 import { selectSuggestion } from '@handlewithcare/prosemirror-suggest-changes'
-import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, readSuggestions, revertSuggestion, revertSuggestions, suggestAs, SuggestionsExtension, type SuggestionInfo } from './suggestions.client'
+import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggestChanges, readSuggestions, revertSuggestion, revertSuggestions, SuggestionsExtension, type SuggestionInfo } from './suggestions.client'
 
 export type Panel = 'none' | 'open' | 'resolved' | 'outline' | 'ai'
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
@@ -225,39 +226,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     editor.focus()
     root.current?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
-  // AI: the Worker asks the model; the answer goes into the text as a suggestion by "ai".
-  const [aiBusy, setAiBusy] = useState<string | null>(null)
-  const [aiError, setAiError] = useState('')
-  const askAi = async (command: string) => {
-    const view = editor.prosemirrorView
-    if (!view || aiBusy) return
-    const { from, to } = view.state.selection
-    const selected = view.state.doc.textBetween(from, to, '\n')
-    setAiBusy(command); setAiError('')
-    try {
-      const res = await fetch('/api/ai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ documentId, command, text: selected }) })
-      const out = await res.json() as { text?: string; error?: string }
-      if (!res.ok || !out.text) throw new Error(out.error ?? 'The AI did not answer. Try again.')
-      const text = out.text
-      // List answers: one item per line, without bullets or numbers.
-      const lines = text.split('\n').map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim()).filter((l) => l && !/^none found\.?$/i.test(l))
-      if ((command === 'actions' || command === 'contradictions') && !lines.length) throw new Error('The AI found none.')
-      const last = editor.document[editor.document.length - 1]
-      suggestAs(view, 'ai', () => {
-        if (command === 'improve' || command === 'shorten') view.dispatch(view.state.tr.insertText(text, view.state.selection.from, view.state.selection.to))
-        else if (command === 'continue') view.dispatch(view.state.tr.insertText(' ' + text, view.state.selection.$to.end()))
-        else if (command === 'summarize') editor.insertBlocks([{ type: 'paragraph', content: text }], editor.document[0], 'before')
-        else if (command === 'actions') editor.insertBlocks(lines.map((l) => ({ type: 'task' as const, props: { taskId: crypto.randomUUID() }, content: l })), last, 'after')
-        else editor.insertBlocks(lines.map((l) => ({ type: 'bulletListItem' as const, content: l })), last, 'after')
-      })
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setAiBusy(null)
-    }
-  }
-  const hasSelection = useEditorSelection(editor)
-
+  const closeAi = useCallback(() => onPanel('none'), [onPanel])
   const nameOf = (author: string) => (author === user.id ? 'you' : author === 'ai' ? 'AI' : names[author] ?? '…')
   const uiComponents = useMemo(() => componentsWithMentions([...people, { id: 'ai', name: 'AI' }]), [people])
   const [names, setNames] = useState<Record<string, string>>({})
@@ -270,7 +239,8 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     <BlockNoteView editor={editor} editable={canEdit} comments={false} slashMenu={false} formattingToolbar={false} theme={useTheme()} renderEditor={false}>
       <People.Provider value={people}>
       <SuggestionMenuController triggerCharacter="/" getItems={slashItems(editor)} />
-      <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
+      <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{canEdit && <AskAiButton onOpen={() => onPanel('ai')} />}{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
+      {panel === 'ai' && canEdit && <AiMenu editor={editor} documentId={documentId} onClose={closeAi} />}
       {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
           floating composer and thread are rendered here instead of by the view. */}
       <ComponentsContext.Provider value={uiComponents}>
@@ -317,18 +287,6 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
             )}
           </aside>
         )}
-        {panel === 'ai' && (
-          <aside className="comments-panel ai-panel" aria-label="AI">
-            <div className="panel-head"><strong>AI</strong><button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close AI">✕</button></div>
-            <p className="muted small">Answers arrive as suggestions by AI. Accept or reject them like any other.</p>
-            <h3>Selected text</h3>
-            {!hasSelection && <p className="muted small">Select some text first.</p>}
-            {aiCommands.slice(0, 3).map(([id, label]) => <AiButton key={id} id={id} label={label} busy={aiBusy} disabled={!hasSelection} onClick={askAi} />)}
-            <h3>Whole document</h3>
-            {aiCommands.slice(3).map(([id, label]) => <AiButton key={id} id={id} label={label} busy={aiBusy} onClick={askAi} />)}
-            {aiError && <p className="ai-error" role="alert">{aiError}</p>}
-          </aside>
-        )}
         {(panel === 'open' || panel === 'resolved') && (
           <aside className="comments-panel" aria-label="Comments">
             <div className="panel-head">
@@ -347,28 +305,4 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
       </People.Provider>
     </BlockNoteView>
   )
-}
-
-const aiCommands = [
-  ['improve', 'Improve writing'], ['shorten', 'Make shorter'], ['continue', 'Continue writing'],
-  ['summarize', 'Summarize at the top'], ['actions', 'Extract action items'], ['contradictions', 'Find contradictions'],
-] as const
-
-function AiButton({ id, label, busy, disabled, onClick }: { id: string; label: string; busy: string | null; disabled?: boolean; onClick: (id: string) => void }) {
-  return (
-    <button type="button" className="ai-command" disabled={disabled || !!busy} aria-busy={busy === id} onClick={() => onClick(id)}>
-      {busy === id ? <span className="spinner" aria-hidden="true" /> : <span aria-hidden="true">✦</span>}{label}
-    </button>
-  )
-}
-
-// True while the editor holds a text selection. Clicking the panel does not clear it.
-function useEditorSelection(editor: { onSelectionChange: (f: () => void) => () => void; prosemirrorState: import('prosemirror-state').EditorState }) {
-  const [has, setHas] = useState(false)
-  useEffect(() => {
-    const f = () => setHas(!editor.prosemirrorState.selection.empty)
-    f()
-    return editor.onSelectionChange(f)
-  }, [editor])
-  return has
 }
