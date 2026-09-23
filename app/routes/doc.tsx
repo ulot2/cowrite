@@ -128,11 +128,13 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))} kind={document.kind}
-        crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
+        crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
-          <Link className="tool" title="Version history" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
-          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} published={{ slug: document.published_slug, at: document.published_at }} className="tool" />
-          <MoreMenu documentId={params.id} />
+          <div className="tool-group" role="group" aria-label="Document">
+            <Link className="tool" data-tip="Version history" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
+            <MoreMenu documentId={params.id} />
+          </div>
+          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} published={{ slug: document.published_slug, at: document.published_at }} className="tool share-cta" />
         </>}>
         {atLeast(role, 'editor') ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.

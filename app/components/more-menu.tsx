@@ -6,7 +6,7 @@ export function MoreMenu({ documentId }: { documentId: string }) {
   const file = (format: string) => `/doc/${documentId}/export?format=${format}`
   return (
     <details className="status-menu more-menu">
-      <summary className="tool" title="Export or present"><Icon name="download" /><span className="tool-label">Export</span></summary>
+      <summary className="tool" data-tip="Export or present"><Icon name="download" /><span className="tool-label">Export</span></summary>
       <div className="popover">
         <p className="menu-label">Download as</p>
         <a className="button ghost" href={file('docx')} download>Word (.docx)</a>

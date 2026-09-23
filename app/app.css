@@ -528,8 +528,8 @@ html[data-sidebar="collapsed"] .sidebar a {
   html[data-sidebar="collapsed"] .side-head {
     flex-direction: row;
   }
-  .collapse {
-    display: none;
+  .sidebar .side-head .collapse {
+    display: none; /* the drawer closes from the backdrop; collapsing is a desktop idea */
   }
   .backdrop:not([hidden]) {
     display: block;
@@ -1525,10 +1525,6 @@ button:disabled[aria-busy="true"] {
     flex: 0 1 auto;
     min-width: 0;
   }
-  .doc-where .crumbs a:first-child,
-  .doc-where .crumbs a:first-child + span {
-    display: none; /* the sidebar already has Documents; keep the title */
-  }
   .doc-where .status-menu,
   .doc-where > .status {
     flex: none;
@@ -1559,49 +1555,138 @@ button:disabled[aria-busy="true"] {
   }
 }
 .account .inbox-list {
-  width: 22rem;
+  width: 24rem;
   max-width: calc(100vw - 2rem);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.inbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.inbox-head strong {
+  font-size: 0.9375rem;
+}
+.inbox-new {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.inbox-scroll {
+  max-height: min(28rem, 70vh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding: 0.25rem 0.375rem 0.5rem;
+}
+.inbox-list h3 {
+  margin: 0.625rem 0.625rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
 }
 .inbox-list ol {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 24rem;
-  overflow: auto;
+  display: grid;
+  gap: 1px;
 }
-.inbox-list li {
-  display: flex;
-  gap: 0.5rem;
-  align-items: baseline;
-  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
-  font-size: 0.875rem;
+.inbox-list li > a,
+.inbox-list li > div {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.625rem 1.5rem 0.625rem 0.625rem;
   border-radius: var(--radius);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background var(--t-fast);
 }
-.inbox-list li[data-new="true"]::before {
+.inbox-list li > a:hover {
+  background: var(--tint);
+}
+.inbox-list li[data-new="true"] > * {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+.inbox-list li[data-new="true"] > a:hover {
+  background: var(--accent-soft);
+}
+.inbox-list li[data-new="true"] > *::after {
   content: "";
   position: absolute;
-  left: 0.5rem;
-  top: 0.95rem;
-  width: 6px;
-  height: 6px;
+  right: 0.625rem;
+  top: 1.05rem;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--accent);
 }
-.inbox-text {
-  flex: 1;
+.inbox-body {
+  display: grid;
+  gap: 0.2rem;
   min-width: 0;
 }
-.inbox-text a {
-  color: var(--accent);
-  text-decoration: none;
+.inbox-text {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--fg-muted);
 }
-.inbox-list time {
+.inbox-text strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+.inbox-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
   font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+.inbox-doc {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
+  color: var(--fg);
+}
+.inbox-doc::after {
+  content: "·";
+  margin-left: 0.375rem;
+  color: var(--fg-muted);
+  font-weight: 400;
+}
+.inbox-meta time {
+  flex: none;
 }
 .inbox-empty {
-  padding: 0.5rem 0.75rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.375rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+.inbox-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* Suggestions: insertions on the accent wash, deletions struck on the warning wash. */
@@ -1627,26 +1712,129 @@ button:disabled[aria-busy="true"] {
 .bn-editor [data-node-deletion="true"] {
   opacity: 0.75;
 }
+/* Suggestion bar: a card that stays under the top bar while you scroll the text. Who and where on
+   the left, previous/next in the middle, Reject and a filled Accept on the right. On phones it
+   sits at the bottom of the screen, within thumb reach. */
 .suggestion-bar {
+  position: sticky;
+  top: calc(var(--topbar) + 0.75rem);
+  z-index: 7;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0 0 1rem 3.25rem;
-  padding: 0.375rem 0.375rem 0.375rem 0.875rem;
+  gap: 0.75rem;
+  margin: 0 var(--bn-gutter, 54px) 1.25rem; /* lines up with the text, inside BlockNote's side gutter */
+  padding: 0.5rem 0.5rem 0.5rem 0.625rem;
   font-size: 0.875rem;
   color: var(--fg-muted);
-  background: var(--tint);
-  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
   animation: rise var(--t-base) var(--ease-out);
 }
-.suggestion-bar strong {
+.suggestion-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.suggestion-badge .icon {
+  width: 1rem;
+  height: 1rem;
+}
+.suggestion-info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.suggestion-info strong {
   color: var(--fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.suggestion-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+.suggestion-nav {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.suggestion-nav .ghost {
+  width: 1.875rem;
+  height: 1.75rem;
+  padding: 0;
+  justify-content: center;
+}
+.suggestion-nav .ghost:first-child .icon {
+  transform: rotate(180deg);
 }
 .suggestion-actions {
   display: flex;
-  gap: 0.25rem;
+  flex: none;
+  gap: 0.375rem;
+}
+.suggestion-actions button {
+  gap: 0.375rem;
+  height: 2.125rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+}
+.suggestion-actions .icon {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+.suggestion-reject {
+  color: var(--fg-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.suggestion-reject:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+}
+.suggestion-accept {
+  color: #fff;
+  background: var(--ok);
+  border: 1px solid transparent;
+}
+.suggestion-accept:hover {
+  background: color-mix(in srgb, var(--ok) 85%, #000);
+}
+@media (max-width: 600px) {
+  .suggestion-bar {
+    position: fixed;
+    top: auto;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: 4; /* under the drawer and its backdrop */
+    flex-wrap: wrap;
+    gap: 0.5rem 0.625rem;
+    margin: 0;
+  }
+  .suggestion-actions {
+    flex: 1 1 100%;
+  }
+  .suggestion-actions button {
+    flex: 1;
+    justify-content: center;
+    height: 2.5rem;
+  }
 }
 .editor-column {
   position: relative;
@@ -1669,9 +1857,13 @@ button:disabled[aria-busy="true"] {
 .suggestion-pop strong {
   color: var(--fg);
 }
-.suggestion-pop .ghost {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+.suggestion-pop {
+  padding: 0.3125rem 0.3125rem 0.3125rem 0.75rem;
+  gap: 0.75rem;
+}
+.suggestion-pop .suggestion-actions button {
+  height: 1.875rem;
+  padding: 0 0.625rem;
 }
 .mention {
   color: var(--accent);
@@ -1912,62 +2104,170 @@ h3.vb, h4.vb, h5.vb {
   margin-bottom: 0.25rem;
 }
 
-/* Activity: rows grouped by day. */
-.activity {
-  margin-top: 2.5rem;
+/* An avatar with a small badge for the kind of event, shared by the activity timeline and the bell. */
+.event-avatar {
+  position: relative;
+  display: inline-grid;
+  flex: none;
 }
-.activity h2 {
+.event-kind {
+  --k: var(--fg-muted);
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--k);
+  background: var(--bg);
+  box-shadow: 0 0 0 1.5px var(--bg), inset 0 0 0 1px color-mix(in srgb, var(--k) 35%, var(--border));
+}
+.event-kind .icon {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.4;
+}
+.event-kind:is([data-type="commented"], [data-type="mention"]) { --k: var(--accent); }
+.event-kind:is([data-type="status"], [data-type="task"], [data-type="created"]) { --k: var(--ok); }
+.event-kind:is([data-type="shared"], [data-type="joined"], [data-type="published"]) { --k: #8b5cf6; }
+.event-kind:is([data-type="deleted"]) { --k: var(--danger); }
+.event-kind:is([data-type="restored"], [data-type="version"], [data-type="moved"]) { --k: var(--warn); }
+.event-doc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.event-doc:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.event-doc .icon {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* Activity: a timeline. One line runs through the avatars; days are small labels on it. */
+.activity {
+  margin-top: 3rem;
+}
+.activity-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  margin-bottom: 0.5rem;
+}
+.activity-head h2 {
+  margin: 0;
   font-size: 1.125rem;
-  margin: 0 0 0.75rem;
+}
+.activity-head span {
+  font-size: 0.8125rem;
 }
 .activity h3 {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-muted);
-  margin: 1.25rem 0 0.5rem;
+}
+.activity h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 .activity ol {
+  position: relative;
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.375rem;
+  gap: 1rem;
+}
+.activity ol::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--border);
 }
 .activity li {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  font-size: 0.9375rem;
+  align-items: flex-start;
+  gap: 0.875rem;
   animation: rise var(--t-base) var(--ease-out) both;
 }
-.activity-text {
+.activity li .avatar {
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.activity-body {
   flex: 1;
   min-width: 0;
+  display: grid;
+  justify-items: start;
+  padding-top: 0.2rem;
 }
-.activity-text a {
-  color: var(--accent);
-  text-decoration: none;
+.activity-body p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--fg-muted);
 }
-.activity-text a:hover {
-  text-decoration: underline;
+.activity-body strong {
+  color: var(--fg);
+  font-weight: 600;
 }
 .activity time {
-  font-size: 0.8125rem;
+  flex: none;
+  padding-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 @media (max-width: 720px) {
+  .title-action,
+  .title-action button {
+    width: 100%;
+  }
+}
+/* The history page goes to one column by its own width, not the screen's: with the sidebar open on a
+   tablet the page is phone-narrow even though the screen is not. */
+.page.history {
+  container: history / inline-size;
+}
+@container history (max-width: 46rem) {
   .history-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
   }
   .versions {
     position: static;
-  }
-  .title-action,
-  .title-action button {
-    width: 100%;
+    min-width: 0;
   }
   .version-list {
     display: flex;
@@ -1988,8 +2288,14 @@ h3.vb, h4.vb, h5.vb {
     scroll-snap-align: start;
   }
   .version-list a {
+    max-width: 13rem;
     border: 1px solid var(--border);
     background: var(--bg);
+  }
+  .version-list a > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .version-list a[aria-current="page"] {
     border-color: var(--accent);
@@ -3278,5 +3584,167 @@ input.board-column-name:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .nib-at {
     animation: none;
+  }
+}
+
+/* Document header: where you are and the status on the left; people, two tool groups, and Share on
+   the right. When the row is too narrow it wraps; nothing shrinks under something else. */
+.doc-bar {
+  flex-wrap: wrap;
+  row-gap: 0.625rem;
+}
+.doc-where {
+  flex: 1 0 auto;
+}
+.doc-where .crumbs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+.doc-where .crumbs .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.doc-tools {
+  margin-left: auto;
+  gap: 0.5rem;
+}
+.doc-tools .presence {
+  margin-right: 0.25rem;
+}
+.doc-tools .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.doc-tools .pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 3px);
+  background: var(--bg);
+}
+.tool-group .tool {
+  position: relative;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.4rem;
+  justify-content: center;
+  border-radius: var(--radius);
+}
+.tool-group .tool .tool-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.tool-group .tool[aria-pressed="true"],
+.tool-group .tool[aria-expanded="true"],
+.tool-group details[open] > .tool {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.tool-group .nib-tool .icon {
+  color: var(--accent);
+}
+.tool-group .tool .count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  font-size: 0.625rem;
+  color: var(--accent-fg);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.tool-group .more-menu {
+  display: inline-flex;
+}
+.doc-tools .tool.share-cta {
+  height: 2.375rem;
+  padding: 0 0.875rem;
+  gap: 0.375rem;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+.doc-tools .tool.share-cta:hover {
+  color: var(--accent-fg);
+  background: color-mix(in srgb, var(--accent) 86%, #000);
+}
+.doc-tools .tool.share-cta .tool-label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+
+/* Tooltips for icon buttons: the name under the button, on hover or keyboard focus. */
+[data-tip] {
+  position: relative;
+}
+@media (hover: hover) {
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    z-index: 30;
+    transform: translateX(-50%);
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--bg);
+    background: var(--fg);
+    border-radius: 6px;
+    pointer-events: none;
+    animation: fade var(--t-fast) var(--ease-out) 0.25s both;
+  }
+  details[open] > [data-tip]::after {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .doc-where .crumbs a:first-child {
+    display: inline-flex;
+  }
+  .doc-tools {
+    gap: 0.375rem;
+  }
+  .doc-tools .tool.share-cta {
+    width: 2.375rem;
+    padding: 0;
+    justify-content: center;
+  }
+  .doc-tools .tool.share-cta .tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 }

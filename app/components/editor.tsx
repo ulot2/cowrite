@@ -4,10 +4,11 @@ import type { ConnectionState, Panel, Presence } from './rich-editor.client'
 import { Avatar } from './avatar'
 import { Icon } from './icon'
 
-const notes: Record<ConnectionState, string | null> = {
+// A short word in the header; the full sentence is its tooltip and what screen readers hear.
+const notes: Record<ConnectionState, { short: string; long: string } | null> = {
   connected: null,
-  connecting: 'Connecting…',
-  disconnected: 'Offline. Changes are saved here and sync when you are back.',
+  connecting: { short: 'Connecting', long: 'Connecting…' },
+  disconnected: { short: 'Offline', long: 'Offline. Changes are saved here and sync when you are back.' },
 }
 
 // The editor needs a DOM, so it loads in the browser only, after the first paint.
@@ -50,24 +51,29 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
         {crumbs}
         <div className="doc-tools">
           <span role="status" className="presence">
-            {note && <span className="pill" data-state={status.state}>{note}</span>}
+            {note && <span className="pill" data-state={status.state} title={note.long}><span className="sr-only">{note.long}</span><span aria-hidden="true">{note.short}</span></span>}
             <span className="avatars" aria-label={`In this document: you${status.others.map((o) => `, ${o.name}${o.editing ? ' (editing)' : ''}`).join('')}`}>
               {status.others.map((o, i) => <span key={o.name + i} className="who-is" data-editing={o.editing}><Avatar name={o.name} color={o.color} /></span>)}
               <Avatar name={user.name} color={user.color} />
             </span>
           </span>
-          {canSuggest && !board && (
-            <button type="button" className="tool" aria-pressed={suggesting} disabled={mustSuggest} title={mustSuggest ? 'As a reviewer, your edits are suggestions' : 'Suggest changes'} onClick={() => setSuggesting(!suggesting)}>
-              <Icon name="suggest" /><span className="tool-label">Suggest</span>
-            </button>
+          {/* Writing tools in one group: icons, with the name in a tooltip. */}
+          {!board && (
+            <div className="tool-group" role="group" aria-label="Writing tools">
+              {canSuggest && (
+                <button type="button" className="tool" aria-pressed={suggesting} disabled={mustSuggest} data-tip={mustSuggest ? 'Your edits are suggestions' : suggesting ? 'Suggesting: on' : 'Suggest changes'} onClick={() => setSuggesting(!suggesting)}>
+                  <Icon name="suggest" /><span className="tool-label">Suggest</span>
+                </button>
+              )}
+              {canEdit && <button type="button" className="tool nib-tool" data-tip="Ask Nib" data-ai-open aria-haspopup="dialog" aria-expanded={panel === 'ai'} onClick={() => setPanel(panel === 'ai' ? 'none' : 'ai')}><Icon name="sparkle" /><span className="tool-label">Ask Nib</span></button>}
+              <button type="button" className="tool" data-tip="Outline" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
+                <Icon name="outline" /><span className="tool-label">Outline</span>
+              </button>
+              <button type="button" className="tool" data-tip="Comments" aria-pressed={panel === 'open' || panel === 'resolved'} onClick={() => setPanel(panel === 'open' || panel === 'resolved' ? 'none' : 'open')}>
+                <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
+              </button>
+            </div>
           )}
-          {!board && canEdit && <button type="button" className="tool" title="Ask Nib" data-ai-open aria-haspopup="dialog" aria-expanded={panel === 'ai'} onClick={() => setPanel(panel === 'ai' ? 'none' : 'ai')}><Icon name="sparkle" /><span className="tool-label">Nib</span></button>}
-          {!board && <><button type="button" className="tool" title="Outline" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
-            <Icon name="outline" /><span className="tool-label">Outline</span>
-          </button>
-          <button type="button" className="tool" title="Comments" aria-pressed={panel === 'open' || panel === 'resolved'} onClick={() => setPanel(panel === 'open' || panel === 'resolved' ? 'none' : 'open')}>
-            <Icon name="comment" /><span className="tool-label">Comments</span>{status.open > 0 && <span className="count">{status.open}</span>}
-          </button></>}
           {actions}
         </div>
       </div>

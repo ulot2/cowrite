@@ -7,6 +7,7 @@ import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comme
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { People, schema, slashItems, TurnIntoTask } from './blocks.client'
+import { Icon } from './icon'
 import { AiMenu, AskAiButton, NIB, nibItems, NibSuggestion } from './ai-menu.client'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
@@ -251,35 +252,35 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
       {canComment && <><FloatingComposerController /><FloatingThreadController /></>}
       <div className="editor-layout" data-panel={panel} ref={root}>
         <div className="editor-column">
-          {found.all.length > 0 && (
-            <div className="suggestion-bar" role="status">
-              <span>{found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}{found.atCursor && <> · by <strong>{nameOf(found.atCursor.author)}</strong></>}</span>
-              <span className="suggestion-actions">
-                <button type="button" className="ghost" onClick={() => step(-1)} aria-label="Previous suggestion">↑</button>
-                <button type="button" className="ghost" onClick={() => step(1)} aria-label="Next suggestion">↓</button>
-              </span>
-              {canResolve && (
-                <span className="suggestion-actions">
-                  {found.atCursor ? (
-                    <>
-                      <button type="button" className="ghost" onClick={() => resolve('accepted', found.atCursor)}>Accept</button>
-                      <button type="button" className="ghost" onClick={() => resolve('rejected', found.atCursor)}>Reject</button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" className="ghost" onClick={() => resolve('accepted', null)}>Accept all</button>
-                      <button type="button" className="ghost" onClick={() => resolve('rejected', null)}>Reject all</button>
-                    </>
-                  )}
+          {found.all.length > 0 && (() => {
+            // "2 of 5" while the cursor is in one; the total otherwise. Accept is the one filled button.
+            const at = found.atCursor ? found.all.findIndex((x) => x.id === found.atCursor!.id) + 1 : 0
+            const one = found.atCursor
+            return (
+              <div className="suggestion-bar" role="region" aria-label="Suggestions">
+                <span className="suggestion-badge" aria-hidden="true"><Icon name={one?.author === 'ai' ? 'sparkle' : 'suggest'} /></span>
+                <span className="suggestion-info" role="status">
+                  <strong>{one ? `Suggestion ${at} of ${found.all.length}` : found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}</strong>
+                  <span>{one ? <>by {nameOf(one.author)}</> : canResolve ? 'Review them one by one, or all at once' : 'Waiting for an editor to review'}</span>
                 </span>
-              )}
-            </div>
-          )}
+                <span className="suggestion-nav">
+                  <button type="button" className="ghost" onClick={() => step(-1)} aria-label="Previous suggestion" data-tip="Previous"><Icon name="chevron" /></button>
+                  <button type="button" className="ghost" onClick={() => step(1)} aria-label="Next suggestion" data-tip="Next"><Icon name="chevron" /></button>
+                </span>
+                {canResolve && (
+                  <span className="suggestion-actions">
+                    <button type="button" className="suggestion-reject" onClick={() => resolve('rejected', one)}><Icon name="close" />{one ? 'Reject' : 'Reject all'}</button>
+                    <button type="button" className="suggestion-accept" onClick={() => resolve('accepted', one)}><Icon name="check" />{one ? 'Accept' : 'Accept all'}</button>
+                  </span>
+                )}
+              </div>
+            )
+          })()}
           <BlockNoteViewEditor />
           {hover && (
             <div className="suggestion-pop" style={{ top: hover.top, left: hover.left }} onMouseEnter={() => clearTimeout(leaveTimer.current)} onMouseLeave={() => setHover(null)}>
               <span>Suggested by <strong>{nameOf(hover.author)}</strong></span>
-              {canResolve && <span className="suggestion-actions"><button type="button" className="ghost" onClick={() => resolve('accepted', hover)}>Accept</button><button type="button" className="ghost" onClick={() => resolve('rejected', hover)}>Reject</button></span>}
+              {canResolve && <span className="suggestion-actions"><button type="button" className="suggestion-reject" onClick={() => resolve('rejected', hover)}><Icon name="close" />Reject</button><button type="button" className="suggestion-accept" onClick={() => resolve('accepted', hover)}><Icon name="check" />Accept</button></span>}
             </div>
           )}
         </div>
