@@ -21,7 +21,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 7. Share the document with the second account as a reviewer. In that window, type a sentence: it shows as a suggestion in both windows. Accept it from the first window. Use the status pill to submit the document for review and approve it from the second window; the bell in the first window lists the approval.
 8. Open "Share" and publish the document. Open the public link in a private window: no account needed. From the "⋯" menu, present it as slides (one per level-1 heading) or export it to Word, Markdown, text, or PDF. Search the Documents page for a word from the text or from a comment.
 9. Type `/task` in a document, assign it to the second account, and give it a date. It shows on their Tasks page and in their bell; ticking it there ticks it in your open document. Type `/decision` to record a numbered decision. From "New", start a Brainstorm board or a Plan.
-10. Select a sentence and click "Ask AI" in the toolbar that appears, then choose "Make shorter". The shorter text shows as a suggestion by AI that you accept or reject. In a comment, type `@AI` and a question: the AI replies in the thread a few seconds later.
+10. Meet Nib, the writing assistant. Select a sentence and click "Ask Nib" in the toolbar that appears, then choose "Make shorter" or type your own instruction, such as "translate to French". On an empty line, type `@nib write an intro for this plan` and press Enter. Each answer shows as a suggestion by Nib that you accept or reject. In a comment, type `@Nib` and a question: Nib replies in the thread a few seconds later.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -85,7 +85,7 @@ Status is a column on the document row with four moves (submit, request changes,
 
 The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs reviewer, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word. A reviewer can write to the text; their editor makes every edit a suggestion, but the server cannot tell a suggestion from an edit, so that rule holds only for the real app.
 
-AI runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, about 30 of the 10,000 free daily neurons a request) through one route, `/api/ai`, and one module, `app/lib/ai.server.ts`. Only people who can suggest (reviewer and up) may call it. A rewrite sends only the selected text, so the model cannot mix the rest of the document into its answer. The answer never changes the text directly: the editor inserts it as a suggestion whose id starts with `ai~`, so the existing bar shows "Suggested by AI" and Accept and Reject work as for a person. A comment that mentions `@AI` is found by the same alarm scan as other mentions; the threads object asks the model with the thread and the document, and adds the answer as a reply by the user `ai`. The Workers free plan gives 10,000 neurons a day; after that the AI says it is out of free uses until the next day, and nothing is billed.
+Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, about 30 of the 10,000 free daily neurons a request) through one route, `/api/ai`, and one module, `app/lib/ai.server.ts`. Only people who can suggest (reviewer and up) may call it. A rewrite sends only the selected text, so the model cannot mix the rest of the document into its answer. The answer never changes the text directly: the editor inserts it as a suggestion whose id starts with `ai~`, so the existing bar shows "Suggested by Nib" and Accept and Reject work as for a person. A free instruction (`@nib …` in the text, or the field in the Nib menu) applies to the selection, or writes new blocks at the cursor from Markdown, with the document as context. A comment that mentions `@Nib` is found by the same alarm scan as other mentions; the threads object asks the model with the thread and the document, and adds the answer as a reply by the user `ai`. The Workers free plan gives 10,000 neurons a day; after that Nib says it is out of free uses until the next day, and nothing is billed.
 
 ## Run it locally
 
@@ -103,7 +103,7 @@ AI runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, ab
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs thirty-six tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs thirty-seven tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -135,7 +135,8 @@ AI runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, ab
 - Plan mode starts with the template; a board starts with three columns, a card made a task is on the Tasks page, and a card can become a document.
 - The review queue lists documents waiting for you, not the ones you submitted.
 - Only people who can suggest may ask the AI; unknown commands and empty input are refused; whole-document commands read the text from the object.
-- `@AI` in a comment gets a reply by the AI in the same thread.
+- A free instruction needs words and at most 500 characters.
+- `@Nib` in a comment gets a reply by Nib in the same thread.
 
 ## Accessibility
 
@@ -150,8 +151,8 @@ AI runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, ab
 - A reviewer's suggest-only mode is enforced by the editor, not the server.
 - The compare view shows each block as plain text; the preview of one version shows the formatting.
 - Word exports link to images instead of embedding them.
-- The AI has no per-person limit. One person can use the whole free daily allowance.
-- The AI reads at most 12,000 characters of a document.
+- Nib has no per-person limit. One person can use the whole free daily allowance.
+- Nib reads at most 12,000 characters of a document.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
 
 ## Stack

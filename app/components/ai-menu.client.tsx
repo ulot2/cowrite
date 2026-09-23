@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { BlockNoteEditor } from '@blocknote/core'
-import { useComponentsContext } from '@blocknote/react'
+import { useComponentsContext, type SuggestionMenuProps, type DefaultReactSuggestionItem } from '@blocknote/react'
 import { selectSuggestion } from '@handlewithcare/prosemirror-suggest-changes'
 import { readSuggestions, suggestAs } from './suggestions.client'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = BlockNoteEditor<any, any, any>
+
+// Nib is the assistant's name. Its answers are suggestions by the user id "ai".
+export const NIB = 'Nib'
 
 const groups: { label: string; selection?: true; items: [string, string][] }[] = [
   { label: 'Edit selection', selection: true, items: [['improve', 'Improve writing'], ['fix', 'Fix spelling and grammar'], ['shorten', 'Make shorter']] },
@@ -18,29 +21,57 @@ const groups: { label: string; selection?: true; items: [string, string][] }[] =
 export function AskAiButton({ onOpen }: { onOpen: () => void }) {
   const Components = useComponentsContext()!
   return (
-    <Components.FormattingToolbar.Button mainTooltip="Ask AI" label="Ask AI" onClick={onOpen}>
-      <span className="ask-ai" data-ai-open><span aria-hidden="true">✦</span> Ask AI</span>
+    <Components.FormattingToolbar.Button mainTooltip={`Ask ${NIB}`} label={`Ask ${NIB}`} onClick={onOpen}>
+      <span className="ask-ai" data-ai-open><span aria-hidden="true">✦</span> Ask {NIB}</span>
     </Components.FormattingToolbar.Button>
   )
 }
 
-// The AI menu: next to the selected text (or under the header's AI button) on a wide screen,
-// a bottom sheet on a phone. The answer goes into the text as a suggestion by "ai", then the
-// menu closes and the new suggestion is selected, so the bar offers Accept and Reject at once.
-export function AiMenu({ editor, documentId, onClose }: { editor: Editor; documentId: string; onClose: () => void }) {
+// "@nib" in the text: one item while what follows "@" could still be "nib". Whatever is typed after
+// "nib " becomes the instruction, so "@nib write an intro" and Enter runs at once.
+export const nibItems = (open: (instruction: string) => void) => async (query: string): Promise<DefaultReactSuggestionItem[]> => {
+  const q = query.toLowerCase()
+  if (!(q.startsWith('nib') ? q.length === 3 || q[3] === ' ' : 'nib'.startsWith(q))) return []
+  const instruction = query.slice(4).trim()
+  return [{ title: instruction ? `Ask ${NIB}: ${instruction}` : `Ask ${NIB}`, subtext: instruction ? 'Press Enter to send' : 'Type an instruction, or press Enter for the menu', onItemClick: () => open(instruction) }]
+}
+
+// Its menu: nothing at all when there is no match, so an "@" in an email address stays quiet.
+export function NibSuggestion({ items, selectedIndex, onItemClick }: SuggestionMenuProps<DefaultReactSuggestionItem>) {
+  if (!items.length) return null
+  return (
+    <div className="nib-at" role="listbox" id="bn-suggestion-menu">
+      {items.map((item, i) => (
+        <button key={item.title} type="button" role="option" id={`bn-suggestion-menu-item-${i}`} aria-selected={i === selectedIndex} onMouseDown={(e) => e.preventDefault()} onClick={() => onItemClick?.(item)}>
+          <span className="nib-badge" aria-hidden="true">✦</span>
+          <span><strong>{item.title}</strong><small>{item.subtext}</small></span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// The Nib menu: next to the selected text (or under the header's Nib button) on a wide screen,
+// a bottom sheet on a phone. The answer goes into the text as a suggestion by Nib, then the menu
+// closes and the new suggestion is selected, so the bar offers Accept and Reject at once.
+export function AiMenu({ editor, documentId, start = '', onClose }: { editor: Editor; documentId: string; start?: string; onClose: () => void }) {
   const view = editor.prosemirrorView!
   const [hasSelection] = useState(() => !view.state.selection.empty)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [instruction, setInstruction] = useState(start)
   const [pos, setPos] = useState<CSSProperties | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const input = useRef<HTMLTextAreaElement>(null)
 
   useLayoutEffect(() => {
     const menu = ref.current!
     if (matchMedia('(max-width: 600px)').matches) return setPos({}) // the CSS makes it a sheet
     const w = menu.offsetWidth, h = menu.offsetHeight
     const sel = view.state.selection
-    const at = sel.empty ? null : view.coordsAtPos(sel.to)
+    // Next to the selection, or the cursor when "@nib" opened it; under the header button otherwise.
+    const header = document.activeElement?.closest('.doc-tools')
+    const at = header ? null : view.coordsAtPos(sel.to)
     let top: number, left: number
     if (at && at.bottom > 56 && at.bottom < innerHeight - 40) {
       top = at.bottom + 8
@@ -54,10 +85,7 @@ export function AiMenu({ editor, documentId, onClose }: { editor: Editor; docume
     setPos({ top, left: Math.min(Math.max(12, left), innerWidth - w - 12) })
   }, [view])
 
-  // Focus the first command; Escape or a click outside closes (not while the AI is working).
-  useEffect(() => {
-    ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true })
-  }, [])
+  // Escape or a click outside closes (not while Nib is working).
   const busyRef = useRef(busy)
   busyRef.current = busy
   useEffect(() => {
@@ -77,18 +105,27 @@ export function AiMenu({ editor, documentId, onClose }: { editor: Editor; docume
     const text = command === 'continue' ? view.state.doc.textBetween(0, $to.end(), '\n').slice(-4000) : view.state.doc.textBetween(from, to, '\n')
     setBusy(command); setError('')
     try {
-      const res = await fetch('/api/ai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ documentId, command, text }) })
+      const res = await fetch('/api/ai', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ documentId, command, text, instruction }) })
       const out = await res.json().catch(() => ({})) as { text?: string; error?: string }
-      if (!res.ok || !out.text) throw new Error(out.error ?? 'The AI did not answer. Try again.')
+      if (!res.ok || !out.text) throw new Error(out.error ?? `${NIB} did not answer. Try again.`)
       const answer = out.text
       // List answers: one item per line, without bullets or numbers.
       const lines = answer.split('\n').map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim()).filter((l) => l && !/^none found\.?$/i.test(l))
-      if ((command === 'actions' || command === 'contradictions') && !lines.length) throw new Error(command === 'actions' ? 'The AI found no action items.' : 'The AI found no contradictions.')
+      if ((command === 'actions' || command === 'contradictions') && !lines.length) throw new Error(command === 'actions' ? `${NIB} found no action items.` : `${NIB} found no contradictions.`)
       const before = new Set(readSuggestions(view.state).all.map((s) => s.id))
       const last = editor.document[editor.document.length - 1]
+      // A free instruction may answer in Markdown: headings, lists, several paragraphs.
+      const parsed = command === 'custom' ? editor.tryParseMarkdownToBlocks(answer) : []
+      const selectedBlocks = editor.getSelection()?.blocks
+      const here = selectedBlocks?.[selectedBlocks.length - 1] ?? editor.getTextCursorPosition().block
       suggestAs(view, 'ai', () => {
         const sel = view.state.selection
-        if (command === 'improve' || command === 'fix' || command === 'shorten') view.dispatch(view.state.tr.insertText(answer, sel.from, sel.to))
+        const replace = command === 'improve' || command === 'fix' || command === 'shorten' || (command === 'custom' && !sel.empty && parsed.length <= 1 && parsed[0]?.type === 'paragraph')
+        if (replace) view.dispatch(view.state.tr.insertText(command === 'custom' ? answer.replace(/\s*\n\s*/g, ' ') : answer, sel.from, sel.to))
+        else if (command === 'custom') {
+          if (!sel.empty) view.dispatch(view.state.tr.delete(sel.from, sel.to))
+          editor.insertBlocks(parsed, here, 'after')
+        }
         else if (command === 'continue') view.dispatch(view.state.tr.insertText(' ' + answer, sel.$to.end()))
         else if (command === 'summarize') editor.insertBlocks([{ type: 'paragraph', content: answer }], editor.document[0], 'before')
         else if (command === 'actions') editor.insertBlocks(lines.map((l) => ({ type: 'task', props: { taskId: crypto.randomUUID() }, content: l })), last, 'after')
@@ -107,15 +144,33 @@ export function AiMenu({ editor, documentId, onClose }: { editor: Editor; docume
     }
   }
 
+  // "@nib <instruction>" and Enter: send it right away. Otherwise the field waits for one.
+  useEffect(() => {
+    if (start) run('custom')
+    else input.current?.focus({ preventScroll: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const send = () => { if (instruction.trim() && !busy) run('custom') }
+
   return (
     <>
       <div className="ai-scrim" aria-hidden="true" />
-      <div ref={ref} className="ai-menu" role="dialog" aria-label="Ask AI" style={pos ?? { visibility: 'hidden' }}>
+      <div ref={ref} className="ai-menu" role="dialog" aria-label={`Ask ${NIB}`} style={pos ?? { visibility: 'hidden' }}>
         <div className="ai-menu-head">
           <span className="ai-mark" aria-hidden="true">✦</span>
-          <strong>Ask AI</strong>
+          <strong>{NIB}</strong>
           <span className="muted small">{busy ? 'Writing…' : 'Answers arrive as suggestions'}</span>
         </div>
+        <form className="ai-ask" onSubmit={(e) => { e.preventDefault(); send() }}>
+          <textarea ref={input} rows={1} value={instruction} maxLength={500} disabled={!!busy} aria-label={`Instruction for ${NIB}`}
+            placeholder={hasSelection ? 'Tell Nib what to do with the selection…' : 'Tell Nib what to write…'}
+            onChange={(e) => setInstruction(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
+          <button type="submit" className="primary ai-send" disabled={!instruction.trim() || !!busy} aria-busy={busy === 'custom'} aria-label="Send">
+            {busy === 'custom' ? <span className="spinner" aria-hidden="true" /> : '↑'}
+          </button>
+        </form>
         {groups.map((g) => (
           <div key={g.label} className="ai-group" role="group" aria-label={g.label}>
             <p className="ai-group-label">{g.label}{g.selection && !hasSelection && <span> · select text first</span>}</p>

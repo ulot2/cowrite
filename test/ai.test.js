@@ -42,6 +42,14 @@ test('an unknown command, an empty selection, and an empty document are refused'
   assert.equal((await ask(ada.cookie, { command: 'summarize' })).status, 400)
 })
 
+test('a free instruction needs words, applies to a selection, and caps its length', async () => {
+  assert.equal((await ask(ada.cookie, { command: 'custom', instruction: '  ', text: 'Hello' })).status, 400, 'no instruction')
+  assert.equal((await ask(ada.cookie, { command: 'custom', instruction: 'x'.repeat(501), text: 'Hello' })).status, 400, 'too long')
+  const res = await ask(ada.cookie, { command: 'custom', instruction: 'make it French', text: 'Hello' })
+  assert.deepEqual(await res.json(), { text: 'AI custom: 5' })
+  assert.equal((await ask(bea.cookie, { command: 'custom', instruction: 'make it French', text: 'Hello' })).status, 403, 'a viewer')
+})
+
 test('whole-document commands read the text from the document', async () => {
   const tab = app.openTab(docId, ada.cookie)
   await until(() => tab.provider.synced, 'synced')
@@ -54,10 +62,10 @@ test('whole-document commands read the text from the document', async () => {
   tab.close()
 })
 
-test('@AI in a comment gets a reply by the AI in the same thread', async () => {
+test('@Nib in a comment gets a reply by Nib in the same thread', async () => {
   const tab = app.openTab(docId, ada.cookie, 'threads')
   const store = new YjsThreadStore(adaId, tab.doc.getMap('threads'), new DefaultThreadStoreAuth(adaId, 'editor'))
-  const body = [{ type: 'paragraph', content: [{ type: 'mention', props: { user: 'ai', name: 'AI' } }, { type: 'text', text: ' what is missing?', styles: {} }] }]
+  const body = [{ type: 'paragraph', content: [{ type: 'mention', props: { user: 'ai', name: 'Nib' } }, { type: 'text', text: ' what is missing?', styles: {} }] }]
   const thread = await store.createThread({ initialComment: { body } })
   const comments = () => tab.doc.getMap('threads').get(thread.id).get('comments').toArray()
   await waitFor(() => comments().length === 2, 'the reply arrives')

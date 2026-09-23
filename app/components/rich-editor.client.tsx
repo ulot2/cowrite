@@ -7,7 +7,7 @@ import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comme
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { People, schema, slashItems, TurnIntoTask } from './blocks.client'
-import { AiMenu, AskAiButton } from './ai-menu.client'
+import { AiMenu, AskAiButton, NIB, nibItems, NibSuggestion } from './ai-menu.client'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
 import { selectSuggestion } from '@handlewithcare/prosemirror-suggest-changes'
@@ -226,9 +226,12 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     editor.focus()
     root.current?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
-  const closeAi = useCallback(() => onPanel('none'), [onPanel])
-  const nameOf = (author: string) => (author === user.id ? 'you' : author === 'ai' ? 'AI' : names[author] ?? '…')
-  const uiComponents = useMemo(() => componentsWithMentions([...people, { id: 'ai', name: 'AI' }]), [people])
+  // Nib's menu. "@nib <instruction>" opens it with the instruction already given.
+  const [nibStart, setNibStart] = useState('')
+  const openNib = useCallback((instruction: string) => { setNibStart(instruction); onPanel('ai') }, [onPanel])
+  const closeAi = useCallback(() => { setNibStart(''); onPanel('none') }, [onPanel])
+  const nameOf = (author: string) => (author === user.id ? 'you' : author === 'ai' ? NIB : names[author] ?? '…')
+  const uiComponents = useMemo(() => componentsWithMentions([...people, { id: 'ai', name: NIB }]), [people])
   const [names, setNames] = useState<Record<string, string>>({})
   useEffect(() => {
     const missing = [...new Set(found.all.map((s) => s.author))].filter((id) => id !== 'ai' && !(id in names))
@@ -240,7 +243,8 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
       <People.Provider value={people}>
       <SuggestionMenuController triggerCharacter="/" getItems={slashItems(editor)} />
       <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{canEdit && <AskAiButton onOpen={() => onPanel('ai')} />}{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
-      {panel === 'ai' && canEdit && <AiMenu editor={editor} documentId={documentId} onClose={closeAi} />}
+      {canEdit && <SuggestionMenuController triggerCharacter="@" getItems={nibItems(openNib)} suggestionMenuComponent={NibSuggestion} />}
+      {panel === 'ai' && canEdit && <AiMenu editor={editor} documentId={documentId} start={nibStart} onClose={closeAi} />}
       {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
           floating composer and thread are rendered here instead of by the view. */}
       <ComponentsContext.Provider value={uiComponents}>

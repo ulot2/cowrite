@@ -258,14 +258,14 @@ export class Doc extends DurableObject<Env> {
     await this.ctx.storage.put('mentionsScannedAt', now)
   }
 
-  // "@AI" in a comment: the model reads the thread and the document, and its answer becomes a reply
+  // "@Nib" in a comment: the model reads the thread and the document, and its answer becomes a reply
   // by the user "ai", in the shape BlockNote's thread store writes (so every open tab shows it).
   async aiReply(documentId: string, thread: Y.Map<unknown>) {
     const comments = (thread.get('comments') as Y.Array<Y.Map<unknown>>).toArray()
-    const said = comments.map((c) => `${c.get('userId') === AI ? 'AI' : 'Person'}: ${plainOf(c.get('body'))}`).join('\n')
+    const said = comments.map((c) => `${c.get('userId') === AI ? 'Nib' : 'Person'}: ${plainOf(c.get('body'))}`).join('\n')
     const doc = toText((await this.env.DOC.get(this.env.DOC.idFromName(documentId)).readRich('now')) ?? [])
     let answer: string
-    try { answer = await ask('reply', said, doc) } catch { answer = 'The AI is out of free uses for today. Try again tomorrow.' }
+    try { answer = await ask('reply', said, doc) } catch { answer = 'I am out of free uses for today. Ask me again tomorrow.' }
     const now = Date.now()
     const reply = new Y.Map<unknown>()
     this.doc.transact(() => {
