@@ -20,6 +20,7 @@ Live: **https://cowrite.cowrite.workers.dev**
 6. Click "History". Name the current version, change a paragraph, compare the version to the current document, and restore it. The other tab changes without a reload.
 7. Share the document with the second account as a reviewer. In that window, type a sentence: it shows as a suggestion in both windows. Accept it from the first window. Use the status pill to submit the document for review and approve it from the second window; the bell in the first window lists the approval.
 8. Open "Share" and publish the document. Open the public link in a private window: no account needed. From the "⋯" menu, present it as slides (one per level-1 heading) or export it to Word, Markdown, text, or PDF. Search the Documents page for a word from the text or from a comment.
+9. Type `/task` in a document, assign it to the second account, and give it a date. It shows on their Tasks page and in their bell; ticking it there ticks it in your open document. Type `/decision` to record a numbered decision. From "New", start a Brainstorm board or a Plan.
 
 The v1.0 demo without accounts is tagged `v1.0.0`.
 
@@ -77,6 +78,8 @@ Outside the editor, the object reads its Yjs XML into a small tree of blocks and
 
 Search is an SQLite FTS5 table in D1 with one row per document for its title, its text, and its comments. The two objects write their rows when their alarm runs; renames write the title. A query becomes quoted prefix terms, so no input is read as search syntax, and results are limited to the documents you can open.
 
+Tasks and decisions are blocks inside the document, so they sync, merge offline, and live in versions like any text. The object's alarm writes an index of them to D1 (`tasks`, `decisions`) for the Tasks page and the decision log; a decision gets its number there (per space) and the object writes it back into the block. Ticking a task on the Tasks page asks the object over RPC to change the block, so open editors tick too. A brainstorm board is a document whose content is columns and cards (a Y.Array and a Y.Map) in the same object; it exports, publishes, and restores like a document.
+
 Status is a column on the document row with four moves (submit, request changes, approve, reopen), each checked against the role and the current status. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
 
 The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs reviewer, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word. A reviewer can write to the text; their editor makes every edit a suggestion, but the server cannot tell a suggestion from an edit, so that rule holds only for the real app.
@@ -97,7 +100,7 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs twenty-six tests over real WebSockets:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs thirty-one tests over real WebSockets:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -124,6 +127,10 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 - Export gives Markdown, plain text, and a Word file; a stranger gets 404.
 - Search finds a word from the text and from a comment, and nothing for a stranger.
 - Slides split at level-1 headings, and "Note:" paragraphs stay off the slide.
+- A task block reaches its assignee's Tasks page and bell, and ticking it there ticks the block in the open document; a stranger gets 404.
+- Decisions get numbers per space, written back into the blocks and listed on the space page.
+- Plan mode starts with the template; a board starts with three columns, a card made a task is on the Tasks page, and a card can become a document.
+- The review queue lists documents waiting for you, not the ones you submitted.
 
 ## Accessibility
 

@@ -10,6 +10,7 @@ type Props = {
   label: string // the accessible name; there is no visible label
   disabled?: boolean
   autoSubmit?: boolean // submit the surrounding form as soon as the value changes
+  onChange?: (value: string) => void // for use outside a form
   className?: string
 }
 
@@ -17,7 +18,7 @@ type Props = {
 // in any form. The list is a popover in the browser's top layer: never clipped by a dialog or a
 // scrolling box, and light-dismiss and Escape come free. Keyboard: arrows, Home/End, Enter or
 // Space to choose, a letter to jump, Escape or Tab to close.
-export function Select({ name, options, defaultValue, label, disabled, autoSubmit, className }: Props) {
+export function Select({ name, options, defaultValue, label, disabled, autoSubmit, onChange, className }: Props) {
   const id = useId()
   const [value, setValue] = useState(defaultValue ?? options[0]?.value ?? '')
   const [active, setActive] = useState(0)
@@ -46,6 +47,7 @@ export function Select({ name, options, defaultValue, label, disabled, autoSubmi
     setValue(v)
     input.current!.value = v
     if (autoSubmit) input.current!.form?.requestSubmit()
+    onChange?.(v)
   }
 
   const onListKey = (e: React.KeyboardEvent) => {

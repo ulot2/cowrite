@@ -6,7 +6,8 @@ import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { indexBody, indexComments } from '~/lib/search.server'
-import { safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
+import { syncWork, type WorkItem } from '~/lib/work.server'
+import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -84,10 +85,50 @@ const richFrom = (doc: Y.Doc): RichBlock[] => {
     if (attr('language')) block.props.language = String(attr('language'))
     if (attr('url')) block.props.url = safeHref(attr('url'))
     if (attr('caption')) block.props.caption = String(attr('caption'))
+    for (const k of ['taskId', 'assignee', 'assigneeName', 'due', 'decisionId', 'status'] as const) if (attr(k)) block.props[k] = String(attr(k))
+    if (attr('done') != null) block.props.done = String(attr('done')) === 'true'
+    if (attr('number')) block.props.number = Number(attr('number'))
     block.content = inlineOf(el)
     return block
   }
-  return blocksIn(doc.getXmlFragment('document-store'))
+  return isBoard(doc) ? boardBlocks(doc) : blocksIn(doc.getXmlFragment('document-store'))
+}
+
+// A board keeps columns in `groups` and cards in `cards`. Read as blocks (a heading per column, an item
+// per card, task cards as tasks), it exports, prints, publishes, and is searched like a document.
+export type Card = { text: string; group: string; pos: number; votes: string[]; doc?: string; task?: { assignee?: string; assigneeName?: string; due?: string; done?: boolean } }
+const isBoard = (doc: Y.Doc) => doc.getArray('groups').length > 0
+const cardsOf = (doc: Y.Doc) => [...doc.getMap<Y.Map<unknown>>('cards').entries()].map(([id, c]) => ({
+  id, text: String(c.get('text') ?? ''), group: String(c.get('group') ?? ''), pos: Number(c.get('pos') ?? 0),
+  votes: [...((c.get('votes') as Y.Map<boolean> | undefined)?.keys() ?? [])], task: c.get('task') as Card['task'],
+}))
+const boardBlocks = (doc: Y.Doc): RichBlock[] => {
+  const cards = cardsOf(doc).sort((a, b) => a.pos - b.pos)
+  return (doc.getArray('groups').toArray() as { id: string; name: string }[]).flatMap((g) => [
+    { type: 'heading', props: { level: 2 }, content: [{ text: g.name }], children: [] },
+    ...cards.filter((c) => c.group === g.id).map((c): RichBlock => c.task
+      ? { type: 'task', props: { taskId: c.id, ...c.task }, content: [{ text: c.text }], children: [] }
+      : { type: 'bulletListItem', props: {}, content: [{ text: c.text + (c.votes.length ? ` (${c.votes.length} ${c.votes.length === 1 ? 'vote' : 'votes'})` : '') }], children: [] }),
+  ])
+}
+
+// Every task and decision in the tree, nested ones included.
+const workOf = (blocks: RichBlock[]): WorkItem[] => blocks.flatMap((b) => [
+  ...(b.type === 'task' && b.props.taskId ? [{ kind: 'task' as const, id: b.props.taskId, text: inlineText(b.content), assignee: b.props.assignee || null, assigneeName: b.props.assigneeName ?? '', due: b.props.due || null, done: !!b.props.done }] : []),
+  ...(b.type === 'decision' && b.props.decisionId ? [{ kind: 'decision' as const, id: b.props.decisionId, text: inlineText(b.content), status: b.props.status ?? 'proposed', number: b.props.number ?? 0 }] : []),
+  ...workOf(b.children),
+])
+
+// The XML element of a task or decision block, by its id prop.
+const findBlock = (doc: Y.Doc, id: string) => {
+  let found: Y.XmlElement | null = null
+  const walk = (node: Y.XmlFragment | Y.XmlElement) => node.forEach((n) => {
+    if (found || !(n instanceof Y.XmlElement)) return
+    if (n.getAttribute('taskId') === id || n.getAttribute('decisionId') === id) found = n
+    else walk(n)
+  })
+  walk(doc.getXmlFragment('document-store'))
+  return found as Y.XmlElement | null
 }
 
 // One Doc per room. It holds the Y.Doc, stores every update, and forwards messages between sockets.
@@ -168,7 +209,11 @@ export class Doc extends DurableObject<Env> {
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
     const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
     await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), name).run()
-    await indexBody(name, toText(richFrom(this.doc)))
+    const blocks = richFrom(this.doc)
+    await indexBody(name, toText(blocks))
+    // Tasks and decisions go to their D1 index. New decisions get a number, written back into the block.
+    const numbered = await syncWork(name, workOf(blocks), editors[0] ?? null)
+    if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) findBlock(this.doc, id)?.setAttribute('number', number as unknown as string) }, 'index')
     // A baseline after the first edit, then at most one automatic version per half hour of work.
     const last = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MAX(created_at) AS at FROM versions').one().at
     if (!last || Date.now() - last > AUTO_VERSION_EVERY) this.snapshot(null, null)
@@ -250,6 +295,44 @@ export class Doc extends DurableObject<Env> {
     return doc && richFrom(doc)
   }
 
+  // A list page changes a task (tick it done) or a decision: set the block's attributes, or the card's
+  // task, in one transaction. It travels the normal update path, so open editors change in place.
+  setTask(id: string, patch: { done?: boolean }) {
+    const el = findBlock(this.doc, id)
+    const card = this.doc.getMap<Y.Map<unknown>>('cards').get(id)
+    if (!el && !card?.get('task')) return false
+    this.doc.transact(() => {
+      if (el) for (const [k, v] of Object.entries(patch)) el.setAttribute(k, v as unknown as string)
+      else card!.set('task', { ...(card!.get('task') as object), ...patch })
+    }, 'list')
+    return true
+  }
+
+  // New content for a new document: a plan template, or the columns of a board.
+  seed(kind: 'plan' | 'board') {
+    if (kind === 'board') {
+      this.doc.getArray('groups').push(['Ideas', 'Maybe', 'Next'].map((name) => ({ id: crypto.randomUUID(), name })))
+      return
+    }
+    const container = (content: Y.XmlElement) => { const c = new Y.XmlElement('blockContainer'); c.setAttribute('id', crypto.randomUUID()); c.insert(0, [content]); return c }
+    const el = (type: string, attrs: Record<string, unknown>, text = '') => {
+      const e = new Y.XmlElement(type)
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v as string)
+      if (text) e.insert(0, [new Y.XmlText(text)])
+      return e
+    }
+    const group = new Y.XmlElement('blockGroup')
+    this.doc.transact(() => {
+      this.doc.getXmlFragment('document-store').insert(0, [group])
+      group.insert(0, [
+        el('heading', { level: 2 }, 'Goal'), el('paragraph', {}, 'What does done look like?'),
+        el('heading', { level: 2 }, 'Tasks'), el('task', { taskId: crypto.randomUUID(), assignee: '', assigneeName: '', due: '', done: false }, 'First step'),
+        el('heading', { level: 2 }, 'Decisions'), el('decision', { decisionId: crypto.randomUUID(), status: 'proposed', number: 0 }, 'What we will decide'),
+        el('heading', { level: 2 }, 'Timeline'), el('paragraph', {}, ''),
+      ].map(container))
+    })
+  }
+
   // Publishing freezes the document as it is now: a version named "Published".
   publish(userId: string) {
     return this.snapshot('Published', userId)
@@ -257,7 +340,9 @@ export class Doc extends DurableObject<Env> {
 
   readVersion(id: number | 'now'): Block[] | null {
     const doc = id === 'now' ? this.doc : this.docFrom(id)
-    return doc && blocksOf(doc)
+    if (!doc) return null
+    // A board has no XML: read its columns and cards as blocks, flattened the same way.
+    return isBoard(doc) ? boardBlocks(doc).map((b) => ({ type: b.type, level: b.props.level ?? null, text: inlineText(b.content) })) : blocksOf(doc)
   }
 
   saveVersion(name: string, userId: string) {
@@ -273,9 +358,15 @@ export class Doc extends DurableObject<Env> {
     this.snapshot(null, null)
     const src = old.getXmlFragment('document-store')
     const dst = this.doc.getXmlFragment('document-store')
+    const groups = this.doc.getArray('groups'), cards = this.doc.getMap<Y.Map<unknown>>('cards')
     this.doc.transact(() => {
       dst.delete(0, dst.length)
       dst.insert(0, src.toArray().map((node) => node.clone()) as (Y.XmlElement | Y.XmlText)[])
+      // A board: its columns and cards come back too.
+      groups.delete(0, groups.length)
+      groups.insert(0, old.getArray('groups').toArray())
+      for (const key of [...cards.keys()]) cards.delete(key)
+      for (const [key, card] of old.getMap<Y.Map<unknown>>('cards').entries()) cards.set(key, card.clone())
     }, 'restore')
     return true
   }

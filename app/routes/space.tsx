@@ -1,7 +1,8 @@
 import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { createDocument, listSpaceDocuments } from '~/lib/db.server'
+import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { listSpaceDecisions } from '~/lib/work.server'
 import { listSpaceEvents, logEvent, logSpaceEvent } from '~/lib/events.server'
 import { Activity } from '~/components/activity'
 import type { Role } from '~/lib/roles'
@@ -9,6 +10,7 @@ import { colorFor } from '~/lib/color'
 import { Avatar } from '~/components/avatar'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
+import { NewMenu } from '~/components/new-menu'
 import { ShareDialog } from '~/components/share-dialog'
 import type { Route } from './+types/space'
 
@@ -27,6 +29,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     members: await listMembers('space', params.id),
     link: isOwner ? await getShareLink('space', params.id) : null,
     events: await listSpaceEvents(params.id),
+    decisions: await listSpaceDecisions(params.id),
   }
 }
 
@@ -39,8 +42,8 @@ export async function action({ request, params }: Route.ActionArgs) {
   const role = await roleOnSpace(user.id, params.id)
   if (intent === 'create') {
     if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
-    const id = await createDocument(user.id, 'Untitled', params.id)
-    await logEvent(id, user.id, 'created', 'created “Untitled”')
+    const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, params.id)
+    await logEvent(id, user.id, 'created', `created “${title}”`)
     throw redirect(`/doc/${id}`)
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
@@ -77,7 +80,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Space({ loaderData, actionData }: Route.ComponentProps) {
-  const { owner, space, role, isOwner, documents, members, link, events } = loaderData
+  const { owner, space, role, isOwner, documents, members, link, events, decisions } = loaderData
   return (
     <div className="page">
       <div className="doc-bar">
@@ -99,7 +102,7 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
         <div className="title-meta">
           <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id)} size={26} />)}</span>
           <p className="muted">{members.length} {members.length === 1 ? 'member' : 'members'} · {space.visibility === 'public' ? 'anyone with the link can view' : 'only members can open it'}</p>
-          {(role === 'owner' || role === 'editor') && <Form method="post" className="title-action"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>}
+          {(role === 'owner' || role === 'editor') && <span className="title-action"><NewMenu action="" /></span>}
         </div>
       </header>
       {documents.length === 0 ? (
@@ -109,6 +112,20 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
         </section>
       ) : (
         <div className="cards">{documents.map((d, i) => <DocCard key={d.id} doc={d} owner={owner} index={i} />)}</div>
+      )}
+      {decisions.length > 0 && (
+        <section className="decision-log" aria-labelledby="decisions-title">
+          <h2 id="decisions-title">Decisions</h2>
+          <ol>
+            {decisions.map((d) => (
+              <li key={d.id} data-status={d.status}>
+                <span className="decision-number">{`D-${d.number}`}</span>
+                <span className="decision-log-text">{d.text || 'Untitled decision'} <Link to={`/doc/${d.document_id}`}>{d.title}</Link></span>
+                <span className="status" data-status={d.status === 'decided' ? 'approved' : d.status === 'dropped' ? 'draft' : 'review'}>{d.status[0].toUpperCase() + d.status.slice(1)}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
       <Activity events={events} />
     </div>

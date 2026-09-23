@@ -4,7 +4,12 @@
 export type Inline = { text: string; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; code?: boolean; href?: string }
 export type Block = {
   type: string
-  props: { level?: number; checked?: boolean; language?: string; url?: string; caption?: string }
+  props: {
+    level?: number; checked?: boolean; language?: string; url?: string; caption?: string
+    // task: its id, who, when, done. decision: its id, status, number.
+    taskId?: string; assignee?: string; assigneeName?: string; due?: string; done?: boolean
+    decisionId?: string; status?: string; number?: number
+  }
   content: Inline[]
   rows?: Inline[][][] // tables: rows of cells of inline content
   children: Block[]
@@ -28,6 +33,12 @@ const md = (content: Inline[]) => content.map((i) => {
   return i.href ? `[${t}](${i.href})` : t
 }).join('')
 
+// " (@Bea, due 2026-10-01)" after a task, when it has either.
+export const taskMeta = (b: Block) => {
+  const bits = [b.props.assigneeName && `@${b.props.assigneeName}`, b.props.due && `due ${b.props.due}`].filter(Boolean)
+  return bits.length ? ` (${bits.join(', ')})` : ''
+}
+
 export const toMarkdown = (blocks: Block[], depth = 0): string => {
   const pad = '  '.repeat(depth)
   let n = 0
@@ -43,6 +54,8 @@ export const toMarkdown = (blocks: Block[], depth = 0): string => {
       case 'quote': return `> ${text}`
       case 'codeBlock': return '```' + (b.props.language ?? '') + '\n' + inlineText(b.content) + '\n```'
       case 'image': return `![${b.props.caption ?? ''}](${b.props.url ?? ''})`
+      case 'task': return `${pad}- [${b.props.done ? 'x' : ' '}] ${text}${taskMeta(b)}${kids}`
+      case 'decision': return `> **D-${b.props.number || '?'}** (${b.props.status ?? 'proposed'}): ${text}`
       case 'table': {
         const rows = (b.rows ?? []).map((r) => `| ${r.map(md).join(' | ')} |`)
         return rows.length ? [rows[0], `|${' --- |'.repeat(b.rows![0].length)}`, ...rows.slice(1)].join('\n') : ''

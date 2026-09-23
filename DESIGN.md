@@ -46,6 +46,10 @@ Only `opacity`, `transform`, and the sidebar's grid column animate. Enter is a f
 - Slides: one idea per screen, the heading large and fluid (`clamp`), the bar fades away in full screen and comes back on hover or focus, a counter below, notes on the warning wash.
 - More menu (⋯): Present and the four exports, the same popover as the status menu. Outline: the side panel lists the headings, indented by level, level 1 in bold.
 - Search results: the matched words on the accent wash inside the card, "In a comment" when the hit is there.
+- Task block: a checkbox, the text, a quiet assignee dropdown, and a date; done tasks are struck through in the muted color. Decision block: a tinted callout with "D-12" and a status dropdown; decided has a green edge, dropped is struck through.
+- Tasks page: groups in planning order (Overdue in red, This week, Later, No date, Done), one hairline row per task with a round tick that fills green.
+- Board: tinted columns that scroll sideways (85% of the screen on phones), white cards that lift on hover and tilt while dragged, an up-vote that turns accent when it is yours, a card menu with Move to, Turn into (a task, a document), and Delete.
+- New menu: Write, Brainstorm, Plan, and Review, each with a one-line description.
 - Bell: in the top bar, a count badge in the accent, the same popover as the account menu with the newest twenty events and a dot on the unseen ones.
 - Activity: rows grouped by day (Today, Yesterday, then dates) with the actor's avatar, the sentence, a link to the document, and the relative time. Shown under the cards on a space page and under the versions on a history page.
 

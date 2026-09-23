@@ -26,6 +26,18 @@ function One({ block }: { block: Block }) {
       return <H>{text}</H>
     }
     case 'quote': return <blockquote>{text}</blockquote>
+    case 'task': return (
+      <p className="read-task" data-done={block.props.done || undefined}>
+        <input type="checkbox" checked={!!block.props.done} readOnly aria-label={block.props.done ? 'Done' : 'Not done'} />
+        <span>{text}{(block.props.assigneeName || block.props.due) && <span className="read-meta">{block.props.assigneeName && `@${block.props.assigneeName}`}{block.props.assigneeName && block.props.due && ' · '}{block.props.due && `due ${block.props.due}`}</span>}</span>
+      </p>
+    )
+    case 'decision': return (
+      <div className="read-decision" data-status={block.props.status}>
+        <span className="read-meta">{`D-${block.props.number || '?'} · ${block.props.status ?? 'proposed'}`}</span>
+        <p>{text}</p>
+      </div>
+    )
     case 'codeBlock': return <pre><code>{block.content.map((i) => i.text).join('')}</code></pre>
     case 'image': return block.props.url ? <figure><img src={block.props.url} alt={block.props.caption ?? ''} />{block.props.caption && <figcaption>{block.props.caption}</figcaption>}</figure> : null
     case 'table': return (

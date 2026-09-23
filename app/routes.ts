@@ -14,6 +14,8 @@ export default [
   layout('routes/shell.tsx', [
     index('routes/home.tsx'),
     route('documents', 'routes/documents.tsx'),
+    route('tasks', 'routes/tasks.tsx'),
+    route('review', 'routes/review.tsx'),
     route('doc/:id', 'routes/doc.tsx'),
     route('doc/:id/history', 'routes/history.tsx'),
     route('space/:id', 'routes/space.tsx'),

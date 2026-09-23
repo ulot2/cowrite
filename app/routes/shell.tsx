@@ -7,6 +7,7 @@ import { listSpaces } from '~/lib/access.server'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { Inbox } from '~/components/inbox'
+import { NewMenu } from '~/components/new-menu'
 import { Mark } from '~/components/logo'
 import type { Route } from './+types/shell'
 
@@ -60,7 +61,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           <input name="q" type="search" placeholder="Search documents" aria-label="Search documents" defaultValue={params.get('q') ?? ''} />
         </Form>
         <div className="topbar-right">
-          <Form method="post" action="/?index"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>
+          <NewMenu />
           <Inbox />
           <details className="account">
             <summary aria-label="Account menu"><Avatar name={user.name} color={user.color} size={32} /></summary>
@@ -87,6 +88,8 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
         </div>
         <NavLink to="/" end onClick={() => setOpen(false)}><Icon name="home" /><span>Home</span></NavLink>
         <NavLink to="/documents" onClick={() => setOpen(false)}><Icon name="docs" /><span>Documents</span></NavLink>
+        <NavLink to="/tasks" onClick={() => setOpen(false)}><Icon name="tasks" /><span>Tasks</span></NavLink>
+        <NavLink to="/review" onClick={() => setOpen(false)}><Icon name="suggest" /><span>Review</span></NavLink>
         <p className="side-heading"><span>Spaces</span></p>
         {spaces.map((s) => <NavLink key={s.id} to={`/space/${s.id}`} onClick={() => setOpen(false)}><Icon name="space" /><span>{s.name}</span></NavLink>)}
         <Form method="post" action="/?index" className="new-space">

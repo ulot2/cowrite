@@ -1,6 +1,6 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { clearPublished, getDocument, renameDocument, setPublished, setStatus } from '~/lib/db.server'
+import { clearPublished, createInMode, getDocument, renameDocument, setPublished, setStatus } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
 import { moves, statusLabel, type Move } from '~/lib/status'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
@@ -58,6 +58,13 @@ export async function action({ request, params }: Route.ActionArgs) {
     const author = await findUser(String(f.get('author') ?? ''))
     await logEvent(params.id, user.id, 'suggestion', author ? `${outcome} a suggestion by ${author.id === user.id ? 'themselves' : author.name}` : `${outcome} all suggestions`)
     return null
+  }
+  if (intent === 'card-doc') {
+    // A board card becomes a document of its own, in the same space, titled with the card's text.
+    if (!atLeast(role, 'reviewer')) throw new Response('You cannot change this board', { status: 403 })
+    const { id, title } = await createInMode(user.id, 'write', document.space_id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled')
+    await logEvent(id, user.id, 'created', `created “${title}” from a card`)
+    return { created: id }
   }
   if (intent === 'rename') {
     if (!atLeast(role, 'editor')) throw new Response('Editors can rename', { status: 403 })
@@ -120,7 +127,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))} kind={document.kind}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <Link className="tool" title="Version history" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>

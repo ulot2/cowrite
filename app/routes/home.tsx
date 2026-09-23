@@ -1,11 +1,12 @@
 import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { createDocument, listDocuments } from '~/lib/db.server'
+import { createInMode, listDocuments, type Mode } from '~/lib/db.server'
 import { createSpace } from '~/lib/access.server'
 import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
+import { NewMenu } from '~/components/new-menu'
 import type { Route } from './+types/home'
 
 export const meta = () => [{ title: 'Home · cowrite' }]
@@ -27,12 +28,10 @@ export async function action({ request }: Route.ActionArgs) {
     const id = await createSpace(user.id, name)
     await logSpaceEvent(id, user.id, 'space', `created the space “${name}”`)
     throw redirect(`/space/${id}`)
-    return null
   }
   if (intent !== 'create') return null
-  const title = String(f.get('title') ?? '').trim().slice(0, 120)
-  const id = await createDocument(user.id, title || 'Untitled')
-  await logEvent(id, user.id, 'created', `created “${title || 'Untitled'}”`)
+  const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, null, String(f.get('title') ?? '').trim().slice(0, 120))
+  await logEvent(id, user.id, 'created', `created “${title}”`)
   throw redirect(`/doc/${id}`)
 }
 
@@ -52,7 +51,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <section className="empty">
           <h2>Start your first document</h2>
           <p className="muted">Write alone, or open the same document in two places and watch it stay in sync.</p>
-          <Form method="post"><button className="primary" name="intent" value="create"><Icon name="plus" />New document</button></Form>
+          <NewMenu />
         </section>
       ) : (
         <>

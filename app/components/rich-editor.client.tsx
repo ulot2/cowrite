@@ -5,7 +5,8 @@ import { WebsocketProvider } from 'y-websocket'
 import { createUserStore } from '@blocknote/core'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
-import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
+import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
+import { People, schema, slashItems, TurnIntoTask } from './blocks.client'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
 import { selectSuggestion } from '@handlewithcare/prosemirror-suggest-changes'
@@ -126,6 +127,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   }, [sync, onStatus])
 
   const editor = useCreateBlockNote(withCollaboration({
+    schema,
     uploadFile,
     domAttributes: { editor: { 'aria-label': 'Document text' } },
     extensions: [CommentsExtension({ threadStore: sync.threadStore, resolveUsers: users, schema: commentSchema }), SuggestionsExtension(user.id)],
@@ -232,7 +234,10 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   }, [found, names])
 
   return (
-    <BlockNoteView editor={editor} editable={canEdit} comments={false} theme={useTheme()} renderEditor={false}>
+    <BlockNoteView editor={editor} editable={canEdit} comments={false} slashMenu={false} formattingToolbar={false} theme={useTheme()} renderEditor={false}>
+      <People.Provider value={people}>
+      <SuggestionMenuController triggerCharacter="/" getItems={slashItems(editor)} />
+      <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
       {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
           floating composer and thread are rendered here instead of by the view. */}
       <ComponentsContext.Provider value={uiComponents}>
@@ -294,6 +299,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
         )}
       </div>
       </ComponentsContext.Provider>
+      </People.Provider>
     </BlockNoteView>
   )
 }
