@@ -754,6 +754,10 @@ html[data-sidebar="collapsed"] .sidebar a {
   background: var(--tint);
   border-color: transparent;
 }
+.tool.danger:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
 .tool[aria-pressed="true"] {
   color: var(--fg);
   background: var(--tint);

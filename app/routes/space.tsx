@@ -1,7 +1,7 @@
 import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
-import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listSpaceEvents, logEvent, logSpaceEvent } from '~/lib/events.server'
 import { Activity } from '~/components/activity'
@@ -47,6 +47,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     throw redirect(`/doc/${id}`)
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
+  if (intent === 'delete-space') {
+    await deleteSpace(params.id)
+    throw redirect('/')
+  }
   const pick = String(f.get('role'))
   const granted = grantable.includes(pick as Role) ? (pick as Role) : 'viewer'
   switch (intent) {
@@ -91,6 +95,11 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
               <input type="hidden" name="intent" value="visibility" />
               <input type="hidden" name="visibility" value={space.visibility === 'public' ? 'private' : 'public'} />
               <button className="tool"><Icon name={space.visibility === 'public' ? 'lock' : 'globe'} /><span className="tool-label">{space.visibility === 'public' ? 'Make private' : 'Make public'}</span></button>
+            </Form>
+          )}
+          {isOwner && (
+            <Form method="post" onSubmit={(e) => { if (!confirm(`Delete the space “${space.name}”? Its documents are kept and move out of the space. People who could open them only through the space lose access.`)) e.preventDefault() }}>
+              <button className="tool danger" name="intent" value="delete-space" title="Delete space"><Icon name="trash" /><span className="tool-label">Delete space</span></button>
             </Form>
           )}
           <ShareDialog target="space" isOwner={isOwner} members={members} link={link} className="tool" />

@@ -94,3 +94,18 @@ test('a space shares its documents with its members, and hides them from everyon
   const html = await (await fetch(`${app.base}/documents`, { headers: { cookie: grace.cookie } })).text()
   assert.match(html, /Marketing/)
 })
+
+test('the owner can delete a space; its documents stay with their owner, space-only members lose them', async () => {
+  const space = await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Temporary' })
+  const spaceId = space.headers.get('location').split('/').pop()
+  const docId = await app.createDocument(ada.cookie, 'Kept after the space')
+  await app.post(`/doc/${docId}`, ada.cookie, { intent: 'move', space_id: spaceId })
+  await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'add', email: grace.email, role: 'editor' })
+  assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 200)
+
+  assert.equal((await app.post(`/space/${spaceId}`, grace.cookie, { intent: 'delete-space' })).status, 403, 'only the owner')
+  assert.equal((await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'delete-space' })).status, 302)
+  assert.equal((await fetch(`${app.base}/space/${spaceId}`, { headers: { cookie: ada.cookie } })).status, 404)
+  assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: ada.cookie } })).status, 200, 'the owner keeps the document')
+  assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 404, 'access through the space is gone')
+})
