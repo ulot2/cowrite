@@ -1413,6 +1413,21 @@ button:disabled[aria-busy="true"] {
   background: var(--accent);
   color: var(--accent-fg);
 }
+/* On phones the bell sits away from the screen edge, so a popover anchored to it spills off the left.
+   Pin the top-bar menus to the screen instead: full width under the bar, with the page gutter. */
+@media (max-width: 600px) {
+  .topbar .account .popover,
+  .topbar .new-menu .popover {
+    position: fixed;
+    top: calc(var(--topbar) + 0.5rem);
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - var(--topbar) - 1.5rem);
+    overflow-y: auto;
+  }
+}
 .account .inbox-list {
   width: 22rem;
   max-width: calc(100vw - 2rem);
