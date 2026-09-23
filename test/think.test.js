@@ -73,7 +73,7 @@ test('Plan mode starts a document with the template, a task block included', asy
   const id = res.headers.get('location').split('/').pop()
   const md = await get(`/doc/${id}/export?format=md`, ada.cookie)
   for (const h of ['## Goal', '## Tasks', '## Decisions', '## Timeline']) assert.match(md, new RegExp(h))
-  assert.match(md, /- \[ \] First step/)
+  assert.match(md, /- \[ \] Write the first draft/)
 })
 
 test('a board: its columns come seeded, a card made a task is on the Tasks page, a card can become a document', async () => {

@@ -324,11 +324,26 @@ export class Doc extends DurableObject<Env> {
     const group = new Y.XmlElement('blockGroup')
     this.doc.transact(() => {
       this.doc.getXmlFragment('document-store').insert(0, [group])
+      const task = (text: string) => el('task', { taskId: crypto.randomUUID(), assignee: '', assigneeName: '', due: '', done: false }, text)
       group.insert(0, [
-        el('heading', { level: 2 }, 'Goal'), el('paragraph', {}, 'What does done look like?'),
-        el('heading', { level: 2 }, 'Tasks'), el('task', { taskId: crypto.randomUUID(), assignee: '', assigneeName: '', due: '', done: false }, 'First step'),
-        el('heading', { level: 2 }, 'Decisions'), el('decision', { decisionId: crypto.randomUUID(), status: 'proposed', number: 0 }, 'What we will decide'),
-        el('heading', { level: 2 }, 'Timeline'), el('paragraph', {}, ''),
+        el('paragraph', {}, 'One page for what we are doing, why, who does what, and by when. Replace each line below.'),
+        el('heading', { level: 2 }, 'Goal'),
+        el('paragraph', {}, 'The outcome, in one sentence someone outside the team would understand.'),
+        el('heading', { level: 2 }, 'Why now'),
+        el('paragraph', {}, 'What happens if we wait. One or two sentences.'),
+        el('heading', { level: 2 }, 'Done looks like'),
+        el('bulletListItem', {}, 'A result we can check, with a number'),
+        el('bulletListItem', {}, 'What people will see or be able to do'),
+        el('heading', { level: 2 }, 'Tasks'),
+        task('Write the first draft'), task('Get feedback from two people'), task('Ship it'),
+        el('heading', { level: 2 }, 'Decisions'),
+        el('decision', { decisionId: crypto.randomUUID(), status: 'proposed', number: 0 }, 'The first thing we need to decide'),
+        el('heading', { level: 2 }, 'Timeline'),
+        el('checkListItem', { checked: false }, 'Week 1: draft'),
+        el('checkListItem', { checked: false }, 'Week 2: review'),
+        el('checkListItem', { checked: false }, 'Week 3: ship'),
+        el('heading', { level: 2 }, 'Risks'),
+        el('bulletListItem', {}, 'What could stop us, and what we will do about it'),
       ].map(container))
     })
   }

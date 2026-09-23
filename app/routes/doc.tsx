@@ -126,7 +126,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
-    <article className="document" key={params.id}>
+    <article className="document" data-kind={document.kind} key={params.id}>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} people={members.map((m) => ({ id: m.user_id, name: m.name }))} kind={document.kind}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents">Documents</Link><span aria-hidden="true">/</span><span>{document.title}</span></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>

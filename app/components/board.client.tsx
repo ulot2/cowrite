@@ -62,10 +62,13 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
 
   const card = (id: string) => sync.cards.get(id)!
   const lastPos = (group: string) => Math.max(0, ...cards.filter((c) => c.group === group).map((c) => c.pos))
+  const [fresh, setFresh] = useState<string | null>(null) // a card just added: its text field takes focus
   const addCard = (group: string) => {
     const c = new Y.Map<unknown>()
+    const id = crypto.randomUUID()
+    setFresh(id)
     sync.doc.transact(() => {
-      sync.cards.set(crypto.randomUUID(), c)
+      sync.cards.set(id, c)
       c.set('text', ''); c.set('group', group); c.set('pos', lastPos(group) + 1); c.set('votes', new Y.Map())
     })
   }
@@ -85,30 +88,40 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
   const renameGroup = (i: number, name: string) => sync.doc.transact(() => { const g = sync.groups.get(i); sync.groups.delete(i, 1); sync.groups.insert(i, [{ ...g, name }]) })
 
   const [dragging, setDragging] = useState<string | null>(null)
+  const [over, setOver] = useState<string | null>(null) // the column a card is dragged over
+  const votes = cards.reduce((n, c) => n + c.votes.length, 0)
   const makeDoc = useFetcher<{ created?: string }>()
   const pendingCard = useRef<string | null>(null)
   useEffect(() => { if (makeDoc.data?.created && pendingCard.current) { card(pendingCard.current).set('doc', makeDoc.data.created); pendingCard.current = null } }, [makeDoc.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    <>
+    <p className="board-summary muted" role="status">
+      {groups.length} {groups.length === 1 ? 'column' : 'columns'} · {cards.length} {cards.length === 1 ? 'card' : 'cards'} · {votes} {votes === 1 ? 'vote' : 'votes'}
+      {canEdit && <span className="board-hint"> · Drag cards between columns, or use a card's menu</span>}
+    </p>
     <div className="board" aria-label="Board">
       {groups.map((g, gi) => (
-        <section key={g.id} className="board-column" aria-labelledby={`col-${g.id}`}
-          onDragOver={(e) => { if (dragging) e.preventDefault() }}
-          onDrop={(e) => { e.preventDefault(); if (dragging) move(dragging, g.id); setDragging(null) }}>
+        <section key={g.id} className="board-column" aria-labelledby={`col-${g.id}`} data-over={(dragging && over === g.id) || undefined}
+          onDragOver={(e) => { if (dragging) { e.preventDefault(); setOver(g.id) } }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null) }}
+          onDrop={(e) => { e.preventDefault(); if (dragging) move(dragging, g.id); setDragging(null); setOver(null) }}>
           <header className="board-column-head">
+            <span className="board-dot" aria-hidden="true" />
             {canEdit ? <input id={`col-${g.id}`} className="board-column-name" defaultValue={g.name} key={g.name} aria-label="Column name" onBlur={(e) => e.target.value.trim() && e.target.value !== g.name && renameGroup(gi, e.target.value.trim())} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} />
               : <h2 id={`col-${g.id}`} className="board-column-name">{g.name}</h2>}
-            <span className="muted small">{cards.filter((c) => c.group === g.id).length}</span>
+            <span className="board-count" aria-label={`${cards.filter((c) => c.group === g.id).length} cards`}>{cards.filter((c) => c.group === g.id).length}</span>
           </header>
+          {!cards.some((c) => c.group === g.id) && <p className="board-empty">{canEdit ? 'No cards yet. Add one, or drop one here.' : 'No cards yet.'}</p>}
           <ol className="board-cards">
             {cards.filter((c) => c.group === g.id).map((c) => (
               <li key={c.id} className="board-card" draggable={canEdit} data-dragging={dragging === c.id || undefined} data-done={c.task?.done || undefined}
-                onDragStart={() => setDragging(c.id)} onDragEnd={() => setDragging(null)}
+                onDragStart={() => setDragging(c.id)} onDragEnd={() => { setDragging(null); setOver(null) }}
                 onDragOver={(e) => { if (dragging && dragging !== c.id) e.preventDefault() }}
-                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragging && dragging !== c.id) move(dragging, g.id, c.id); setDragging(null) }}>
+                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragging && dragging !== c.id) move(dragging, g.id, c.id); setDragging(null); setOver(null) }}>
                 <div className="board-card-body">
                   {c.task && <input type="checkbox" className="task-check" checked={!!c.task.done} disabled={!canEdit} aria-label={c.task.done ? 'Mark as not done' : 'Mark as done'} onChange={(e) => setTask(c.id, { done: e.target.checked })} />}
-                  {canEdit ? <textarea className="board-card-text" defaultValue={c.text} key={c.text} placeholder="Write an idea" aria-label="Card text" rows={2}
+                  {canEdit ? <textarea className="board-card-text" defaultValue={c.text} key={c.text} placeholder="Write an idea" aria-label="Card text" rows={2} autoFocus={c.id === fresh}
                     onBlur={(e) => e.target.value !== c.text && card(c.id).set('text', e.target.value)} />
                     : <p className="board-card-text">{c.text}</p>}
                 </div>
@@ -151,5 +164,6 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
       ))}
       {canEdit && <button type="button" className="board-add-column" onClick={addGroup}><Icon name="plus" />Add a column</button>}
     </div>
+    </>
   )
 }

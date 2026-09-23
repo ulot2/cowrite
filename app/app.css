@@ -2150,76 +2150,203 @@ h3.vb, h4.vb, h5.vb {
 .task-block {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem;
+  flex-wrap: wrap;
+  column-gap: 0.625rem;
+  row-gap: 0.25rem;
   width: 100%;
 }
-.task-check {
-  width: 1.05rem;
-  height: 1.05rem;
-  margin-top: 0.35em;
+.task-block .task-tick {
+  margin-top: 0.3em;
   flex: none;
-  accent-color: var(--accent);
-  cursor: pointer;
+}
+.task-block[data-done] .task-tick {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--bg);
+}
+.task-block[data-done] .task-tick svg {
+  opacity: 1;
 }
 .task-text {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
 }
 .task-block[data-done] .task-text {
   color: var(--fg-muted);
   text-decoration: line-through;
-  text-decoration-color: var(--border);
+  text-decoration-color: var(--fg-muted);
 }
 .task-meta {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
   flex: none;
-  font-size: 0.8125rem;
+  margin-top: 0.1em;
 }
-.task-meta .select-button {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.8125rem;
+/* An empty task or decision shows what to write. */
+:is(.task-text, .decision-text) .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  content: attr(data-placeholder);
+  color: var(--fg-muted);
+  pointer-events: none;
+  float: left;
+  height: 0;
 }
-.task-due {
-  width: auto;
-  padding: 0.15rem 0.375rem;
-  font: inherit;
+.task-text .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before { content: "Describe the task"; }
+.decision-text .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before { content: "What was decided, in one sentence?"; }
+
+/* Chips: small rounded pills for who and when. */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
   font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--fg);
+  background: var(--tint);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.chip:hover {
+  background: var(--tint-2);
+}
+.chip[data-empty] {
   color: var(--fg-muted);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
-.task-due:hover,
-.task-due:focus-visible {
-  border-color: var(--border);
-  color: var(--fg);
+.chip .icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
-.decision-block {
+.chip .avatar {
+  border: 0;
+  margin-left: -0.25rem;
+}
+.person-chip .select-button {
+  min-width: 0;
+  height: 1.75rem;
+  padding: 0 0.125rem;
+  font-size: 0.8125rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+.person-chip .select-button:hover {
+  background: transparent;
+}
+.person-chip .select-button .icon {
+  display: none;
+}
+.due-chip input[type="date"] {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  padding: 0.5rem 0.875rem 0.625rem;
-  border-radius: var(--radius);
-  background: var(--tint);
-  box-shadow: inset 3px 0 0 var(--fg-muted);
+  opacity: 0;
+  cursor: pointer;
 }
-.decision-block[data-status="decided"] { box-shadow: inset 3px 0 0 var(--ok); }
-.decision-block[data-status="dropped"] { opacity: 0.7; }
-.decision-block[data-status="dropped"] .decision-text { text-decoration: line-through; }
+.due-chip input[type="date"]:disabled {
+  cursor: default;
+}
+.due-chip:focus-within {
+  box-shadow: 0 0 0 2px var(--accent-soft), inset 0 0 0 1px var(--accent);
+}
+.due-chip[data-late] {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.chip-clear {
+  position: relative;
+  z-index: 1;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  margin-right: -0.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+}
+.chip-clear:hover {
+  opacity: 1;
+  background: var(--bg);
+}
+.chip-clear .icon {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.decision-block {
+  --tone: var(--warn);
+  width: 100%;
+  padding: 0.75rem 1rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(color-mix(in srgb, var(--tone) 5%, var(--bg)), var(--bg));
+}
+.decision-block[data-status="decided"] { --tone: var(--ok); }
+.decision-block[data-status="dropped"] { --tone: var(--fg-muted); }
 .decision-head {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.decision-mark {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
   font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+}
+.decision-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--fg-muted);
 }
-.decision-head .select-button {
-  padding: 0.1rem 0.4rem;
+.decision-status {
+  margin-left: auto;
+}
+.decision-status .select-button {
+  min-width: 0;
+  height: 1.625rem;
+  padding: 0 0.625rem;
+  border: 0;
+  border-radius: 999px;
   font-size: 0.75rem;
-  text-transform: none;
-  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+}
+.decision-status .select-button:hover {
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
+}
+.decision-status .select-button .icon {
+  color: inherit;
+}
+.decision-text {
+  font-size: 1.0625rem;
+  font-weight: 500;
+}
+.decision-block[data-status="dropped"] .decision-text {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+}
+.task-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 .read-task {
   display: flex;
@@ -2382,34 +2509,79 @@ kbd {
   color: var(--accent);
 }
 
-/* Board: columns that scroll sideways, cards that lift while dragged. */
+/* Board page: the board uses the whole width; the title lines up with the first column. */
+.document[data-kind="board"] {
+  max-width: none;
+}
+.document[data-kind="board"] > form,
+.document[data-kind="board"] > .title {
+  max-width: none;
+  margin-inline: 0;
+}
+.board-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin: -0.25rem 0 1.25rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.board-hint {
+  opacity: 0.8;
+}
+
+/* Board: columns in a row that scrolls sideways with a thin bar. */
 .board {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
   overflow-x: auto;
-  padding: 0.25rem 0.25rem 1rem;
+  padding: 0.25rem 0.25rem 1.25rem;
   margin-inline: -0.25rem;
   scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 .board-column {
-  flex: 0 0 17rem;
+  --c: var(--accent);
+  flex: 0 0 18.5rem;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.625rem;
   padding: 0.75rem;
-  border-radius: var(--radius-lg);
+  border-radius: 14px;
   background: var(--tint);
+  box-shadow: inset 0 0 0 1px transparent;
   scroll-snap-align: start;
+  transition: box-shadow var(--t-fast), background var(--t-fast);
+}
+.board-column:nth-child(6n + 2) { --c: var(--ok); }
+.board-column:nth-child(6n + 3) { --c: var(--warn); }
+.board-column:nth-child(6n + 4) { --c: #8b5cf6; }
+.board-column:nth-child(6n + 5) { --c: #d9467a; }
+.board-column:nth-child(6n + 6) { --c: #0e9f9a; }
+.board-column[data-over] {
+  background: color-mix(in srgb, var(--c) 8%, var(--tint));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent);
 }
 .board-column-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+  padding: 0 0.125rem;
+}
+.board-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
 }
 .board-column-name {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  padding: 0.2rem 0.375rem;
+  padding: 0.25rem 0.375rem;
   font: 600 0.9375rem var(--font);
   color: var(--fg);
   background: transparent;
@@ -2421,29 +2593,76 @@ input.board-column-name:focus-visible {
   border-color: var(--border);
   background: var(--bg);
 }
+.board-count {
+  min-width: 1.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--tint-2);
+}
+.board-empty {
+  margin: 0;
+  padding: 1.25rem 0.75rem;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
 .board-cards {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 0.5rem;
-  min-height: 2rem;
+}
+.board-cards:empty {
+  display: none;
 }
 .board-card {
+  position: relative;
   display: grid;
-  gap: 0.375rem;
-  padding: 0.625rem 0.625rem 0.375rem;
-  border-radius: var(--radius);
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 0.5rem;
+  border-radius: 10px;
   background: var(--bg);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.04);
   cursor: grab;
   animation: rise var(--t-base) var(--ease-out) both;
-  transition: box-shadow var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+  transition: box-shadow var(--t-fast), transform var(--t-fast), opacity var(--t-fast), border-color var(--t-fast);
 }
-.board-card:hover { box-shadow: var(--shadow); }
+.board-card::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--c);
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.board-card:hover,
+.board-card:focus-within {
+  border-color: color-mix(in srgb, var(--c) 35%, var(--border));
+  box-shadow: var(--shadow);
+}
+.board-card:hover::before,
+.board-card:focus-within::before {
+  opacity: 1;
+}
+.board-card:active {
+  cursor: grabbing;
+}
 .board-card[data-dragging] {
-  opacity: 0.5;
-  transform: rotate(-1.5deg);
+  opacity: 0.45;
+  transform: rotate(-1.5deg) scale(0.98);
 }
 .board-card[data-done] .board-card-text {
   color: var(--fg-muted);
@@ -2454,34 +2673,59 @@ input.board-column-name:focus-visible {
   gap: 0.5rem;
   align-items: flex-start;
 }
+.board-card-body .task-check {
+  margin-top: 0.2em;
+}
 .board-card-text {
   flex: 1;
+  width: 100%;
+  min-height: 1.5em;
   margin: 0;
   padding: 0;
   resize: none;
   border: 0;
   background: transparent;
   font: inherit;
-  line-height: 1.45;
+  font-size: 0.9375rem;
+  line-height: 1.5;
   color: var(--fg);
   field-sizing: content;
+}
+.board-card-text::placeholder {
+  color: var(--fg-muted);
 }
 .board-card-text:focus-visible {
   outline: none;
   box-shadow: none;
 }
+.board-card .task-meta {
+  flex-wrap: wrap;
+}
 .board-card-foot {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
+  min-height: 1.75rem;
 }
 .vote {
   gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
   font-size: 0.8125rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--tint);
 }
-.vote .icon { width: 0.9rem; height: 0.9rem; }
+.vote:hover {
+  color: var(--fg);
+  background: var(--tint-2);
+}
+.vote .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
 .vote[aria-pressed="true"] {
   color: var(--accent);
   background: var(--accent-soft);
@@ -2494,13 +2738,29 @@ input.board-column-name:focus-visible {
   color: var(--accent);
   text-decoration: none;
 }
-.board-card-link .icon { width: 0.9rem; height: 0.9rem; }
+.board-card-link .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
 .card-menu {
   margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.board-card:hover .card-menu,
+.board-card:focus-within .card-menu,
+.card-menu[open] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .card-menu {
+    opacity: 1;
+  }
 }
 .card-menu .popover {
   left: auto;
   right: 0;
+  min-width: 11rem;
 }
 .card-menu .popover .ghost {
   justify-content: flex-start;
@@ -2508,13 +2768,27 @@ input.board-column-name:focus-visible {
 .board-add {
   justify-content: flex-start;
   gap: 0.375rem;
+  width: 100%;
+  color: var(--fg-muted);
+}
+.board-add:hover {
+  color: var(--fg);
+  background: var(--bg);
 }
 .board-add-column {
-  flex: 0 0 12rem;
+  flex: 0 0 14rem;
+  align-self: stretch;
+  min-height: 7rem;
   gap: 0.375rem;
-  border-style: dashed;
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
   background: transparent;
   color: var(--fg-muted);
+}
+.board-add-column:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* The decision log on a space page. */
