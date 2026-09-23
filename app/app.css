@@ -1179,6 +1179,98 @@ dialog.share::backdrop {
   flex: none;
 }
 
+/* Confirm dialog: the consequence in plain words, Cancel first, the action colored by its weight. */
+dialog.confirm {
+  width: min(26rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+dialog.confirm[open] {
+  animation: rise var(--t-base) var(--ease-out);
+}
+dialog.confirm::backdrop {
+  background: rgba(10, 12, 20, 0.4);
+  backdrop-filter: blur(2px);
+  animation: fade var(--t-base);
+}
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 0.875rem;
+  border-radius: 12px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+dialog.confirm[data-tone="primary"] .confirm-icon {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+dialog.confirm h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.confirm-body {
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.confirm-body p,
+.confirm-body ul {
+  margin: 0 0 0.625rem;
+}
+.confirm-body ul {
+  padding-left: 1.125rem;
+}
+.confirm-body li + li {
+  margin-top: 0.375rem;
+}
+.confirm-body strong {
+  color: var(--fg);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+button.danger-solid {
+  color: var(--bg); /* white on red in light, near-black on the lighter red of dark */
+  background: var(--danger);
+  border-color: var(--danger);
+  font-weight: 600;
+}
+button.danger-solid:hover {
+  background: color-mix(in srgb, var(--danger) 88%, #000);
+  border-color: color-mix(in srgb, var(--danger) 88%, #000);
+}
+@media (max-width: 600px) {
+  dialog.confirm {
+    width: 100%;
+    max-width: none;
+    margin: auto 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  dialog.confirm[open] {
+    animation: sheet var(--t-base) var(--ease-out);
+  }
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+  .confirm-actions button {
+    width: 100%;
+  }
+}
+
 /* Buttons: an icon-only size, a quiet danger, and a busy state with a spinner. */
 .icon-only {
   padding: 0.45rem;

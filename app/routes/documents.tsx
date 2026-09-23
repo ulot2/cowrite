@@ -7,6 +7,7 @@ import { roleOnDocument } from '~/lib/access.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
+import { Confirm } from '~/components/confirm'
 import type { Route } from './+types/documents'
 
 export const meta = () => [{ title: 'Documents · cowrite' }]
@@ -65,10 +66,10 @@ export default function Documents({ loaderData }: Route.ComponentProps) {
             <div className="card-wrap" key={d.id}>
               <DocCard doc={d} owner={owner} index={i} hit={d.hit} />
               {d.role === 'owner' && (
-                <Form method="post" onSubmit={(e) => { if (!confirm(`Delete "${d.title}"? This cannot be undone.`)) e.preventDefault() }}>
-                  <input type="hidden" name="id" value={d.id} />
-                  <button className="ghost card-delete" name="intent" value="delete" aria-label={`Delete ${d.title}`}>Delete</button>
-                </Form>
+                <Confirm title={`Delete “${d.title}”?`} confirm="Delete document" busy="Deleting…" fields={{ intent: 'delete', id: d.id }}
+                  trigger={(open) => <button type="button" className="ghost card-delete" aria-label={`Delete ${d.title}`} onClick={open}>Delete</button>}>
+                  <p>The text, its comments, its versions, and its public page go away for everyone. This cannot be undone.</p>
+                </Confirm>
               )}
             </div>
           ))}

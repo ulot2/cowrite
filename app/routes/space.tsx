@@ -11,6 +11,7 @@ import { Avatar } from '~/components/avatar'
 import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
 import { NewMenu } from '~/components/new-menu'
+import { Confirm } from '~/components/confirm'
 import { ShareDialog } from '~/components/share-dialog'
 import type { Route } from './+types/space'
 
@@ -98,9 +99,14 @@ export default function Space({ loaderData, actionData }: Route.ComponentProps) 
             </Form>
           )}
           {isOwner && (
-            <Form method="post" onSubmit={(e) => { if (!confirm(`Delete the space “${space.name}”? Its documents are kept and move out of the space. People who could open them only through the space lose access.`)) e.preventDefault() }}>
-              <button className="tool danger" name="intent" value="delete-space" title="Delete space"><Icon name="trash" /><span className="tool-label">Delete space</span></button>
-            </Form>
+            <Confirm title={`Delete “${space.name}”?`} confirm="Delete space" busy="Deleting…" fields={{ intent: 'delete-space' }}
+              trigger={(open) => <button type="button" className="tool danger" title="Delete space" onClick={open}><Icon name="trash" /><span className="tool-label">Delete space</span></button>}>
+              <p>The space, its members, and its share link go away. This cannot be undone.</p>
+              <ul>
+                <li><strong>{documents.length} {documents.length === 1 ? 'document is' : 'documents are'} kept.</strong> They move out of the space and stay with the people added to them.</li>
+                <li>People who could open them only through this space lose access.</li>
+              </ul>
+            </Confirm>
           )}
           <ShareDialog target="space" isOwner={isOwner} members={members} link={link} className="tool" />
         </div>

@@ -9,6 +9,7 @@ import { timeAgo } from '~/lib/time'
 import { Activity } from '~/components/activity'
 import { ReadView } from '~/components/read-view'
 import { Select } from '~/components/select'
+import { Confirm } from '~/components/confirm'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { colorFor } from '~/lib/color'
@@ -134,11 +135,11 @@ export default function History({ loaderData, params }: Route.ComponentProps) {
                   <button>Compare</button>
                 </Form>
                 {canEdit && (
-                  <Form method="post" onSubmit={(e) => { if (!confirm('Restore this version? The text as it is now is saved first, so you can come back.')) e.preventDefault() }}>
-                    <input type="hidden" name="intent" value="restore" />
-                    <input type="hidden" name="id" value={selected.id} />
-                    <button className="primary">Restore</button>
-                  </Form>
+                  <Confirm tone="primary" title="Restore this version?" confirm="Restore" busy="Restoring…" fields={{ intent: 'restore', id: String(selected.id) }}
+                    trigger={(open) => <button type="button" className="primary" onClick={open}>Restore</button>}>
+                    <p>The document changes to <strong>{selected.name ?? 'this automatic version'}</strong> for everyone, and open tabs update at once.</p>
+                    <p>The text as it is now is saved as a version first, so you can come back to it.</p>
+                  </Confirm>
                 )}
               </div>
             </header>
