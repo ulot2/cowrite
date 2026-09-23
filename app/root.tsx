@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
 import type { Route } from './+types/root'
 import blocknoteCss from '@blocknote/mantine/style.css?url'
@@ -31,7 +32,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Every menu in the app is a native <details>, which only closes from its own button. Make them
+// behave like menus: a click or tap outside, Escape, or picking an item closes the open one.
+const useMenusClose = () => {
+  useEffect(() => {
+    const open = () => [...document.querySelectorAll<HTMLDetailsElement>('details[open]')]
+    const outside = (e: PointerEvent) => { for (const d of open()) if (!d.contains(e.target as Node)) d.open = false }
+    const picked = (e: MouseEvent) => {
+      const item = (e.target as HTMLElement).closest('a, button')
+      const menu = item?.closest<HTMLDetailsElement>('details[open]')
+      if (menu && !item!.closest('summary')) setTimeout(() => { menu.open = false }) // after the click has done its job
+    }
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      for (const d of open()) { d.open = false; d.querySelector('summary')?.focus() }
+    }
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('click', picked)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('click', picked); document.removeEventListener('keydown', escape) }
+  }, [])
+}
+
 export default function App() {
+  useMenusClose()
   return <Outlet />
 }
 
