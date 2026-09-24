@@ -70,7 +70,8 @@ export function Inbox() {
                     )
                     return (
                       <li key={e.id} data-new={e.at > since}>
-                        {e.document_id && e.title ? <Link to={`/doc/${e.document_id}`}>{body}</Link> : e.type === 'discussion' && e.space_id ? <Link to={`/space/${e.space_id}?tab=discussions`}>{body}</Link> : <div>{body}</div>}
+                        {/* The row opens what it is about: its discussion or decision, else its document, else its space. */}
+                        {e.link ? <Link to={e.link}>{body}</Link> : e.document_id && e.title ? <Link to={`/doc/${e.document_id}`}>{body}</Link> : e.space_id ? <Link to={`/space/${e.space_id}`}>{body}</Link> : <div>{body}</div>}
                       </li>
                     )
                   })}

@@ -16,7 +16,7 @@ export const syncWork = async (documentId: string, items: WorkItem[], actorId: s
   const decisions = items.filter((i) => i.kind === 'decision')
 
   // Tasks: who was assigned before, to tell the new assignee.
-  const before = new Map((await env.DB.prepare('SELECT id, assignee_id FROM tasks WHERE document_id = ?').bind(documentId).all<{ id: string; assignee_id: string | null }>()).results.map((r) => [r.id, r.assignee_id]))
+  const before = new Map((await env.DB.prepare('SELECT id, assignee_id, done FROM tasks WHERE document_id = ?').bind(documentId).all<{ id: string; assignee_id: string | null; done: number }>()).results.map((r) => [r.id, r]))
   const writes = [
     env.DB.prepare(`DELETE FROM tasks WHERE document_id = ?1 AND id NOT IN (SELECT value FROM json_each(?2))`).bind(documentId, JSON.stringify(tasks.map((t) => t.id))),
     ...tasks.map((t) => env.DB.prepare(
@@ -45,8 +45,13 @@ export const syncWork = async (documentId: string, items: WorkItem[], actorId: s
   await env.DB.batch(writes)
 
   // A new or changed assignee hears about it through the bell.
-  if (actorId) for (const t of tasks) if (t.assignee && t.assignee !== before.get(t.id) && t.assignee !== actorId)
-    await logEvent(documentId, actorId, 'task', `assigned ${t.assigneeName || 'someone'} a task: “${t.text.slice(0, 80)}”`)
+  // A task ticked in the editor is logged here; the Tasks page logs its own ticks and writes the row first.
+  if (actorId) for (const t of tasks) {
+    const prev = before.get(t.id)
+    if (t.assignee && t.assignee !== prev?.assignee_id && t.assignee !== actorId)
+      await logEvent(documentId, actorId, 'task', `assigned ${t.assigneeName || 'someone'} a task: “${t.text.slice(0, 80)}”`)
+    if (t.done && prev && !prev.done) await logEvent(documentId, actorId, 'task', `completed “${t.text.slice(0, 80)}”`)
+  }
   return numbered
 }
 

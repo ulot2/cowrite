@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import { ask, readJson } from './ai.server'
 import { spaceContext, type Source } from './search.server'
 import { listMembers } from './access.server'
+import { logEvent } from './events.server'
 
 // Nib's work across a space: answer a question, propose next steps from a discussion, and check a
 // document against the decisions in force. Prompts live in ai.server.ts; this file builds their
@@ -76,6 +77,8 @@ export const checkDocument = async (documentId: string, text: string) => {
       return [] // "None found.", or a line that names no decision or question we know
     }).slice(0, 12)
     await save('done', findings)
+    // A check that found something is part of the record; a clean one is not.
+    if (findings.length) await logEvent(documentId, 'ai', 'check', `found ${findings.length === 1 ? 'a conflict' : `${findings.length} conflicts`} with the decisions and open questions`)
   } catch (e) {
     console.error('Nib check failed', e)
     await save('failed')

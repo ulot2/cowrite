@@ -4,7 +4,8 @@ import * as sync from 'y-protocols/sync'
 import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
-import { logEvent, touchEvent } from '~/lib/events.server'
+import { logEvent, logSpaceEvent, touchEvent } from '~/lib/events.server'
+import { writeState } from '~/lib/state.server'
 import { indexBody, indexComments, indexSpace } from '~/lib/search.server'
 import { checkDocument } from '~/lib/nib.server'
 import { syncWork, type WorkItem } from '~/lib/work.server'
@@ -235,13 +236,19 @@ export class Doc extends DurableObject<Env> {
         due: str(t.due), done: t.done === true, discussionId: String(t.discussionId ?? ''), createdBy: String(t.createdBy ?? ''),
       }))
       const spaceId = name.slice(0, -6)
-      const numbered = await syncDiscussions(spaceId, items, tasks)
+      const numbered = await syncDiscussions(spaceId, items, tasks, editors[0] ?? null)
       if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) this.doc.getMap<Y.Map<unknown>>('discussions').get(id)?.set('decisionNumber', number) }, 'index')
       // What Nib searches when someone asks the space: each discussion's words, and the ideas board.
       const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''),
         ...((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => String(p.get('text') ?? ''))].filter(Boolean).join('\n') }))
       const ideas = cardsOf(this.doc).map((c) => c.text).filter(Boolean).join('\n')
       await indexSpace(spaceId, ideas ? [...said, { key: 'ideas', text: ideas }] : said)
+      await this.logIdeas(spaceId, editors[0] ?? null)
+      // The state of the space, asked for by a visit or Refresh.
+      if (await this.ctx.storage.get<boolean>('stateWanted')) {
+        await this.ctx.storage.delete('stateWanted')
+        await writeState(spaceId)
+      }
       return
     }
     if (name.endsWith(':threads')) {
@@ -273,6 +280,19 @@ export class Doc extends DurableObject<Env> {
     const last = this.ctx.storage.sql.exec<{ at: number | null }>('SELECT MAX(created_at) AS at FROM versions').one().at
     if (!last || Date.now() - last > AUTO_VERSION_EVERY) this.snapshot(null, null)
     for (const user of editors) await touchEvent(name, user, 'edited', 'edited the text')
+  }
+
+  // New ideas on a space's board become events. The room remembers the cards it has logged; the first
+  // run only learns them, so an old board does not flood the timeline. A card counts once it has text.
+  async logIdeas(spaceId: string, actor: string | null) {
+    const seen = await this.ctx.storage.get<string[]>('seenCards')
+    const cards = cardsOf(this.doc).filter((c) => c.text.trim())
+    const fresh = seen ? cards.filter((c) => !seen.includes(c.id)) : []
+    if (seen && !fresh.length) return
+    await this.ctx.storage.put('seenCards', cards.map((c) => c.id))
+    if (!actor || !fresh.length) return
+    const text = fresh.length === 1 ? `added an idea: “${fresh[0].text.slice(0, 80)}”` : `added ${fresh.length} ideas`
+    await logSpaceEvent(spaceId, actor, 'idea', text, `/space/${spaceId}?tab=ideas`)
   }
 
   // Comments written since the last scan that mention someone become "mentioned Bea" events.
@@ -432,6 +452,12 @@ export class Doc extends DurableObject<Env> {
         el('bulletListItem', {}, 'What could stop us, and what we will do about it'),
       ].map(container))
     })
+  }
+
+  // The state of a space is written from its room's alarm, like Nib's check. The caller marked it pending.
+  async requestState() {
+    await this.ctx.storage.put('stateWanted', true)
+    if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now())
   }
 
   // Nib's check runs from the alarm: now, or with the edit alarm already due. The caller marked it pending in D1.

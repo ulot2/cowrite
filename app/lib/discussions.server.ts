@@ -15,22 +15,25 @@ const day = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en', {
 
 // A reply within 30 minutes of the same person's last reply in the same space moves that event
 // forward instead of adding one, like edits do.
-const touchSpaceEvent = async (spaceId: string, actorId: string, text: string) => {
+const touchSpaceEvent = async (spaceId: string, actorId: string, text: string, link: string) => {
   const now = Date.now()
   const { meta } = await env.DB.prepare(
     "UPDATE events SET at = ?1, text = ?2 WHERE id = (SELECT id FROM events WHERE space_id = ?3 AND document_id IS NULL AND actor_id = ?4 AND type = 'discussion' AND text LIKE 'replied in%' AND at > ?5 ORDER BY at DESC LIMIT 1)",
   ).bind(now, text, spaceId, actorId, now - 30 * 60 * 1000).run()
-  if (meta.changes === 0) await logSpaceEvent(spaceId, actorId, 'discussion', text)
+  if (meta.changes === 0) await logSpaceEvent(spaceId, actorId, 'discussion', text, link)
 }
 
 // Rewrites this space's rows and logs what changed since the last run: new discussions and
 // questions, replies, decisions, and task assignments. An answered question becomes a decision
 // record ("q:<id>") in the space's log; the numbers it gets are returned, to write into the room.
-export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], tasks: SpaceTaskItem[]) => {
+// `actor` is who changed the room since the last run, when known: closing, reopening, and ticking
+// a task are logged in their name.
+export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], tasks: SpaceTaskItem[], actor: string | null = null) => {
   const space = await env.DB.prepare('SELECT owner_id FROM spaces WHERE id = ?').bind(spaceId).first<{ owner_id: string }>()
   if (!space) return []
   const before = new Map((await env.DB.prepare('SELECT id, status, posts FROM discussions WHERE space_id = ?').bind(spaceId).all<{ id: string; status: string; posts: number }>()).results.map((r) => [r.id, r]))
-  const assigned = new Map((await env.DB.prepare('SELECT id, assignee_id FROM tasks WHERE space_id = ? AND discussion_id IS NOT NULL').bind(spaceId).all<{ id: string; assignee_id: string | null }>()).results.map((r) => [r.id, r.assignee_id]))
+  const was = new Map((await env.DB.prepare('SELECT id, assignee_id, done FROM tasks WHERE space_id = ? AND discussion_id IS NOT NULL').bind(spaceId).all<{ id: string; assignee_id: string | null; done: number }>()).results.map((r) => [r.id, r]))
+  const thread = (id: string) => `/space/${spaceId}?tab=discussions&d=${id}`
   await env.DB.batch([
     env.DB.prepare('DELETE FROM discussions WHERE space_id = ?1 AND id NOT IN (SELECT value FROM json_each(?2))').bind(spaceId, JSON.stringify(items.map((d) => d.id))),
     ...items.map((d) => env.DB.prepare(
@@ -45,9 +48,13 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
   ])
 
   for (const d of items) {
-    const was = before.get(d.id)
-    if (!was) await logSpaceEvent(spaceId, d.createdBy, 'discussion', d.kind === 'question' ? `asked ${quote(d.title)}${d.due ? ` (decide by ${day(d.due)})` : ''}` : `started a discussion: ${quote(d.title)}`)
-    else if (d.posts > was.posts && d.lastBy && d.lastBy !== 'ai') await touchSpaceEvent(spaceId, d.lastBy, `replied in ${quote(d.title)}`)
+    const prev = before.get(d.id)
+    if (!prev) await logSpaceEvent(spaceId, d.createdBy, 'discussion', d.kind === 'question' ? `asked ${quote(d.title)}${d.due ? ` (decide by ${day(d.due)})` : ''}` : `started a discussion: ${quote(d.title)}`, thread(d.id))
+    else {
+      if (d.posts > prev.posts && d.lastBy && d.lastBy !== 'ai') await touchSpaceEvent(spaceId, d.lastBy, `replied in ${quote(d.title)}`, thread(d.id))
+      if (actor && prev.status !== 'closed' && d.status === 'closed') await logSpaceEvent(spaceId, actor, 'discussion', `closed the discussion ${quote(d.title)}`, thread(d.id))
+      if (actor && prev.status !== 'open' && d.status === 'open') await logSpaceEvent(spaceId, actor, 'discussion', `reopened ${quote(d.title)}`, thread(d.id))
+    }
   }
 
   // Decisions from questions. Once numbered, a record stays (reopened, if the question reopens).
@@ -68,10 +75,15 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
        ON CONFLICT(id) DO UPDATE SET text = ?5, outcome = ?6, status = ?7, updated_at = ?10,
          decided_by = CASE WHEN ?7 = 'decided' THEN ?9 ELSE decided_by END, decided_at = CASE WHEN ?7 = 'decided' THEN COALESCE(decided_at, ?10) ELSE decided_at END`,
     ).bind(`q:${d.id}`, spaceId, space.owner_id, n, d.title, d.answer, decided ? 'decided' : 'reopened', d.id, d.answeredBy, now).run()
-    if (!number && d.answeredBy) await logSpaceEvent(spaceId, d.answeredBy, 'decision', `decided ${quote(d.title)} as D-${n}: ${quote(d.answer)}`)
+    if (!number && d.answeredBy) await logSpaceEvent(spaceId, d.answeredBy, 'decision', `decided ${quote(d.title)} as D-${n}: ${quote(d.answer)}`, `/decision/q:${d.id}`)
   }
-  for (const t of tasks) if (t.assignee && t.assignee !== assigned.get(t.id) && t.assignee !== t.createdBy)
-    await logSpaceEvent(spaceId, t.createdBy, 'task', `assigned ${t.assigneeName || 'someone'} a task: ${quote(t.text)}`)
+  for (const t of tasks) {
+    const prev = was.get(t.id)
+    if (t.assignee && t.assignee !== prev?.assignee_id && t.assignee !== t.createdBy)
+      await logSpaceEvent(spaceId, t.createdBy, 'task', `assigned ${t.assigneeName || 'someone'} a task: ${quote(t.text)}`, thread(t.discussionId))
+    // Ticked in the thread. The Tasks page logs its own ticks and writes the row first, so none repeat.
+    if (actor && t.done && prev && !prev.done) await logSpaceEvent(spaceId, actor, 'task', `completed ${quote(t.text)}`, thread(t.discussionId))
+  }
   return numbered
 }
 

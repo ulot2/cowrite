@@ -2151,7 +2151,8 @@ h3.vb, h4.vb, h5.vb {
   stroke-width: 2.4;
 }
 .event-kind:is([data-type="commented"], [data-type="mention"], [data-type="discussion"]) { --k: var(--accent); }
-.event-kind:is([data-type="status"], [data-type="task"], [data-type="created"], [data-type="decision"]) { --k: var(--ok); }
+.event-kind:is([data-type="status"], [data-type="task"], [data-type="created"], [data-type="decision"], [data-type="signoff"]) { --k: var(--ok); }
+.event-kind:is([data-type="check"], [data-type="idea"]) { --k: var(--accent); }
 .event-kind:is([data-type="shared"], [data-type="joined"], [data-type="published"]) { --k: #8b5cf6; }
 .event-kind:is([data-type="deleted"]) { --k: var(--danger); }
 .event-kind:is([data-type="restored"], [data-type="version"], [data-type="moved"]) { --k: var(--warn); }
@@ -5226,4 +5227,88 @@ a.cite:hover { background: var(--accent); color: var(--accent-fg); }
   border-radius: 50%;
   background: var(--warn);
   box-shadow: 0 0 0 2px var(--bg);
+}
+
+/* "This week" on the space home: Nib's summary over live fact chips. */
+.this-week {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+  padding: 1.125rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background: linear-gradient(180deg, var(--accent-soft), transparent 70%), var(--bg);
+}
+.this-week .block-head { margin: 0; }
+.this-week .block-head .muted { display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
+.this-week[data-pending] .week-text { opacity: 0.6; }
+.week-text {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.week-text .ai-mark { color: var(--accent); }
+.week-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.week-facts :is(a, button) {
+  --t: var(--fg-muted);
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--t) 30%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--t) 8%, var(--bg));
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.week-facts :is(a, button):hover { border-color: var(--t); }
+.week-facts li[data-tone="ok"] :is(a, button) { --t: var(--ok); }
+.week-facts li[data-tone="warn"] :is(a, button) { --t: var(--warn); }
+.week-facts li[data-tone="danger"] :is(a, button) { --t: var(--danger); }
+
+/* Activity: what a row is about, Nib as an actor, and the filters on a space. */
+.event-links { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.event-links .event-doc { margin-top: 0.3rem; }
+.nib-avatar {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem;
+}
+.activity-filters button {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.activity-filters button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
 }

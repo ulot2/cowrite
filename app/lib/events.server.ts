@@ -1,18 +1,19 @@
 import { env } from 'cloudflare:workers'
 
-export type EventRow = { id: number; space_id: string | null; document_id: string | null; actor_id: string; actor: string; actor_color: string | null; actor_image: string | null; type: string; text: string; at: number; title: string | null }
+export type EventRow = { id: number; space_id: string | null; document_id: string | null; actor_id: string; actor: string; actor_color: string | null; actor_image: string | null; type: string; text: string; at: number; title: string | null; link: string | null }
 
 // How long the same person doing the same thing on the same document counts as one event.
 const COLLAPSE = 30 * 60 * 1000
 
 // Logs something that happened to a document. The space id is copied from the document row,
-// so a document that is already deleted logs nothing.
-export const logEvent = (documentId: string, actorId: string, type: string, text: string) =>
-  env.DB.prepare('INSERT INTO events (space_id, document_id, actor_id, type, text, at) SELECT space_id, id, ?1, ?2, ?3, ?4 FROM documents WHERE id = ?5')
-    .bind(actorId, type, text, Date.now(), documentId).run()
+// so a document that is already deleted logs nothing. `link` points at what the row is about when
+// that is not the document itself: a discussion, a decision, the ideas board.
+export const logEvent = (documentId: string, actorId: string, type: string, text: string, link: string | null = null) =>
+  env.DB.prepare('INSERT INTO events (space_id, document_id, actor_id, type, text, at, link) SELECT space_id, id, ?1, ?2, ?3, ?4, ?6 FROM documents WHERE id = ?5')
+    .bind(actorId, type, text, Date.now(), documentId, link).run()
 
-export const logSpaceEvent = (spaceId: string, actorId: string, type: string, text: string) =>
-  env.DB.prepare('INSERT INTO events (space_id, actor_id, type, text, at) VALUES (?, ?, ?, ?, ?)').bind(spaceId, actorId, type, text, Date.now()).run()
+export const logSpaceEvent = (spaceId: string, actorId: string, type: string, text: string, link: string | null = null) =>
+  env.DB.prepare('INSERT INTO events (space_id, actor_id, type, text, at, link) VALUES (?, ?, ?, ?, ?, ?)').bind(spaceId, actorId, type, text, Date.now(), link).run()
 
 // Edits and comments repeat. Within 30 minutes, the same actor and type moves the last event forward instead of adding one.
 export const touchEvent = async (documentId: string, actorId: string, type: string, text: string) => {
@@ -23,7 +24,8 @@ export const touchEvent = async (documentId: string, actorId: string, type: stri
   if (meta.changes === 0) await logEvent(documentId, actorId, type, text)
 }
 
-const columns = "e.id, e.space_id, e.document_id, e.actor_id, COALESCE(u.name, 'Deleted user') AS actor, us.color AS actor_color, u.image AS actor_image, e.type, e.text, e.at, d.title"
+// Nib acts as the user "ai", which has no account row.
+const columns = "e.id, e.space_id, e.document_id, e.actor_id, CASE WHEN e.actor_id = 'ai' THEN 'Nib' ELSE COALESCE(u.name, 'Deleted user') END AS actor, us.color AS actor_color, u.image AS actor_image, e.type, e.text, e.at, d.title, e.link"
 const joins = 'FROM events e LEFT JOIN "user" u ON u.id = e.actor_id LEFT JOIN user_settings us ON us.user_id = e.actor_id LEFT JOIN documents d ON d.id = e.document_id'
 
 export const listSpaceEvents = async (spaceId: string) =>

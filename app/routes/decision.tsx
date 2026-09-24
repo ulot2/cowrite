@@ -56,7 +56,8 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (await wouldCycle(decision.id, older.id)) return { error: `D-${older.number} already comes after this decision.` }
   await setSupersedes(decision.id, older.id)
   const text = `replaced D-${older.number} with D-${decision.number}: “${decision.text.slice(0, 80)}”`
-  await (decision.space_id ? logSpaceEvent(decision.space_id, user.id, 'decision', text) : logEvent(decision.document_id, user.id, 'decision', text))
+  const link = `/decision/${decision.id}`
+  await (decision.space_id ? logSpaceEvent(decision.space_id, user.id, 'decision', text, link) : logEvent(decision.document_id, user.id, 'decision', text, link))
   return { ok: true }
 }
 

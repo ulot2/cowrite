@@ -26,11 +26,12 @@ const prompts = {
   // The space: numbered sources between <document> tags, the question between <text> tags.
   space: `${nib} Answer the question between <text> and </text> using only the numbered sources between <document> and </document>. After each fact, cite its source as [1], [2]. If the sources do not answer the question, say that you could not find it in this space. At most six sentences. No Markdown.`,
   propose: `${nib} Read the discussion between <text> and </text>. The people who can be assigned are listed between <document> and </document>, with today's date. Propose the next steps. Reply with JSON only, in this shape: {"tasks": [{"text": "a short imperative task", "assignee": "a name from the list, or empty", "due": "YYYY-MM-DD, or empty"}], "decision": "what the discussion decided, in one sentence, or null"}. At most five tasks, only ones the discussion supports. Use null for the decision when nothing was decided.`,
+  state: `${nib} Write the state of a shared workspace for its members, from the facts and the recent activity between <text> and </text>. Three to five plain sentences: what moved, what was decided, and what needs someone now, naming people when the facts name them. Use only what is given; never invent names, dates, or numbers. If little happened, say so in one sentence. ${rules}`,
   check: `${nib} Compare the document between <text> and </text> with the decisions in force and the open questions between <document> and </document>. Report only real problems, one per line: "D-9: <what the document says>, but D-9 decided <what was decided>." for a statement that goes against a decision, and "Q: <the question, exactly as listed>: <what in the document depends on it>" for a part that assumes an answer to an open question. If there are none, reply exactly: None found. No other text.`,
 } as const
 export type Command = keyof typeof prompts
 // Commands the editor's Nib menu may send. The others run from the server only.
-export const isCommand = (c: string): c is Command => Object.hasOwn(prompts, c) && !['reply', 'space', 'propose', 'check'].includes(c)
+export const isCommand = (c: string): c is Command => Object.hasOwn(prompts, c) && !['reply', 'space', 'propose', 'check', 'state'].includes(c)
 
 // The first {...} in an answer, parsed; null when there is none or it is not JSON.
 export const readJson = (out: string): unknown => {
@@ -55,6 +56,7 @@ const fake = (command: Command, text: string) => {
   if (command === 'propose') return '{"tasks": [{"text": "Book the webinar room", "assignee": "Bea", "due": "2031-05-04"}, {"text": ""}], "decision": "Launch in November"}'
   if (command === 'check') return text ? 'D-1: The text says October, but D-1 decided November.' : 'None found.'
   if (command === 'space') return `AI space: ${text.length} [1] [2]`
+  if (command === 'state') return `AI state: ${text.length}`
   return `AI ${command}: ${text.length}`
 }
 

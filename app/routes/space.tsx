@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Form, Link, redirect, useFetcher, useSearchParams } from 'react-router'
+import { Form, Link, redirect, useFetcher, useRevalidator, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
 import { askSpace, proposeNextSteps } from '~/lib/nib.server'
 import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
 import type { Source } from '~/lib/search.server'
+import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState, type SpaceState } from '~/lib/state.server'
 import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
@@ -35,11 +36,20 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!role || !space) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
   // The ideas board lives in the space room. Its columns appear the first time a writer opens it.
-  if (new URL(request.url).searchParams.get('tab') === 'ideas' && atLeast(role, 'commenter')) await docStub(`${params.id}:space`).seed('ideas')
+  const tab = new URL(request.url).searchParams.get('tab')
+  if (tab === 'ideas' && atLeast(role, 'commenter')) await docStub(`${params.id}:space`).seed('ideas')
+  // The state of the space: live facts, and Nib's saved summary, written again in the room when due.
+  const saved = await getSavedState(params.id)
+  if ((!tab || tab === 'overview') && user.settings.nib && await stateDue(params.id, saved)) {
+    await markStatePending(params.id)
+    await docStub(`${params.id}:space`).requestState()
+    saved.state = 'pending'
+  }
   return {
     owner: { name: user.name, color: user.color, image: user.image },
     me: { id: user.id, name: user.name, color: user.color },
     nib: user.settings.nib,
+    state: { saved, facts: await spaceState(params.id) },
     space, role, isOwner,
     questions: await listOpenQuestions(params.id),
     discussions: await listRecentDiscussions(params.id),
@@ -59,6 +69,18 @@ export async function action({ request, params }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = String(f.get('intent'))
   const role = await roleOnSpace(user.id, params.id)
+  if (intent === 'state') {
+    // Refresh Nib's summary now, at most once every 10 minutes per space.
+    if (!role) throw new Response('Not found', { status: 404 })
+    if (!atLeast(role, 'commenter')) throw new Response('Commenters and up can refresh the summary', { status: 403 })
+    if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    const saved = await getSavedState(params.id)
+    if (saved.state === 'pending') return null
+    if (saved.at && Date.now() - saved.at < REFRESH_EVERY) return { error: 'Nib updated this a few minutes ago. Try again later.' }
+    await markStatePending(params.id)
+    await docStub(`${params.id}:space`).requestState()
+    return null
+  }
   if (intent === 'ask' || intent === 'propose') {
     // Nib reads the space. Any member may ask (it changes nothing); next steps need a writer.
     if (!role) throw new Response('Not found', { status: 404 })
@@ -167,13 +189,55 @@ function AskSpace() {
   )
 }
 
+// "This week": Nib's summary over the live facts, each fact a link to what needs attention.
+function ThisWeek({ saved, facts, spaceId, canRefresh, go }: { saved: SavedState; facts: SpaceState; spaceId: string; canRefresh: boolean; go: (t: Tab, d?: string | null) => void }) {
+  const refresh = useFetcher<{ error?: string } | null>()
+  const revalidator = useRevalidator()
+  const pending = saved.state === 'pending' || refresh.state !== 'idle'
+  useEffect(() => {
+    if (saved.state !== 'pending') return
+    const t = window.setInterval(() => { if (revalidator.state === 'idle') revalidator.revalidate() }, 3000)
+    return () => clearInterval(t)
+  }, [saved.state, revalidator])
+  const q = facts.questions
+  const chips: { key: string; label: string; tone?: 'warn' | 'danger' | 'ok'; to?: string; onClick?: () => void }[] = [
+    facts.decided.length ? { key: 'decided', label: `${facts.decided.length} decided`, tone: 'ok' as const, to: facts.decided.length === 1 ? `/decision/${facts.decided[0].id}` : undefined, onClick: facts.decided.length === 1 ? undefined : () => go('decisions') } : null,
+    q.open ? { key: 'questions', label: `${q.open} open ${q.open === 1 ? 'question' : 'questions'}${q.late ? ` · ${q.late} late` : ''}`, tone: q.late ? 'danger' as const : 'warn' as const, onClick: () => go('discussions', q.open === 1 ? q.next?.id : null) } : null,
+    facts.lateTasks.length ? { key: 'tasks', label: `${facts.lateTasks.length} late ${facts.lateTasks.length === 1 ? 'task' : 'tasks'}`, tone: 'danger' as const, onClick: () => go('tasks') } : null,
+    facts.review.length ? { key: 'review', label: `${facts.review.length} waiting for review${facts.review.some((d) => d.concerns) ? ' · concerns' : ''}`, tone: 'warn' as const, to: facts.review.length === 1 ? `/doc/${facts.review[0].id}` : undefined, onClick: facts.review.length === 1 ? undefined : () => go('documents') } : null,
+    facts.fresh.ideas ? { key: 'ideas', label: `${facts.fresh.ideas} new ${facts.fresh.ideas === 1 ? 'idea' : 'ideas'}`, onClick: () => go('ideas') } : null,
+  ].filter((c) => c !== null)
+  const quiet = chips.length === 0
+  return (
+    <section className="this-week" aria-labelledby="week-title" data-pending={pending || undefined}>
+      <div className="block-head">
+        <h2 id="week-title">This week</h2>
+        <span className="muted small">
+          {pending ? 'Nib is catching up…' : saved.at ? `Updated ${timeAgo(saved.at)}` : ''}
+          {canRefresh && !pending && <> · <button type="button" className="link-button" onClick={() => refresh.submit({ intent: 'state' }, { method: 'post' })}>Refresh</button></>}
+        </span>
+      </div>
+      {saved.text
+        ? <p className="week-text"><span className="ai-mark" aria-hidden="true">✦ </span>{saved.text}</p>
+        : !pending && <p className="week-text muted">{quiet ? 'A quiet week. Nothing was decided, and nothing is late.' : 'Nib has not summed up this space yet.'}</p>}
+      {saved.state === 'failed' && !pending && <p className="muted small" role="status">Nib could not update this summary. The facts below are current.</p>}
+      {refresh.data?.error && <p className="error small" role="alert">{refresh.data.error}</p>}
+      {chips.length > 0 && (
+        <ul className="week-facts" aria-label="This week in numbers">
+          {chips.map((c) => <li key={c.key} data-tone={c.tone}>{c.to ? <Link to={c.to}>{c.label}</Link> : <button type="button" onClick={c.onClick}>{c.label}</button>}</li>)}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
 type Tab = (typeof tabs)[number][0]
 const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function Space({ loaderData }: Route.ComponentProps) {
-  const { owner, me, nib, space, role, isOwner, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
+  const { owner, me, nib, state, space, role, isOwner, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
   const [params, setParams] = useSearchParams()
   const tab = (tabs.some(([t]) => t === params.get('tab')) ? params.get('tab') : 'overview') as Tab
   const go = (t: Tab, d?: string | null) => setParams(d ? { tab: t, d } : t === 'overview' ? {} : { tab: t }, { preventScrollReset: true })
@@ -264,6 +328,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
       {tab === 'overview' && (
         <div className="overview">
           {nib && <AskSpace />}
+          <ThisWeek saved={state.saved} facts={state.facts} spaceId={space.id} canRefresh={nib && atLeast(role, 'commenter')} go={go} />
           <section className="overview-block questions" aria-labelledby="q-title">
             <div className="block-head"><h2 id="q-title">Open questions</h2><button type="button" className="link-button" onClick={() => go('discussions')}>All discussions</button></div>
             {questions.length === 0 ? <p className="muted">No question is waiting for a decision. Ask one in Discussions when something needs deciding.</p> : (
@@ -308,7 +373,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
               )}
             </section>
           </div>
-          <Activity events={events} />
+          <Activity events={events} filtered />
         </div>
       )}
 
