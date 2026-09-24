@@ -4206,15 +4206,177 @@ button.link-button .icon,
 }
 .overview {
   display: grid;
-  gap: 1.5rem;
+  gap: 2.5rem;
 }
-.overview-grid {
+.overview .activity {
+  margin-top: 0;
+}
+.activity-toggle {
+  margin-left: auto;
+}
+
+/* Needs attention: the first thing on a space. One hairline row per thing that waits for someone,
+   led by a verb. What waits for you says "You"; late dates are red. */
+.attention h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+}
+.attention-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.attention-rows li {
+  border-bottom: 1px solid var(--border);
+}
+.attention-rows :is(a, button) {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
 }
-.overview-block {
-  min-width: 0;
+.attention-rows :is(a, button):hover {
+  background: var(--tint);
+}
+.verb {
+  justify-self: start;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--tint);
+}
+.verb[data-verb="Decide"] { color: var(--warn); background: var(--warn-soft); }
+.verb[data-verb="Review"] { color: var(--accent); background: var(--accent-soft); }
+.attention-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.attention-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.attention-note {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attention-meta .you {
+  color: var(--accent);
+  font-weight: 700;
+}
+.attention-meta time[data-late] {
+  color: var(--danger);
+  font-weight: 600;
+}
+.attention-empty {
+  margin: 0;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+.attention-more {
+  margin-top: 0.625rem;
+}
+@media (max-width: 600px) {
+  .attention-rows :is(a, button) {
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    gap: 0.25rem 0.75rem;
+  }
+  .attention-meta {
+    grid-column: 2;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
+
+/* Nib's card: the summary of the week, and the Ask field under it. Quieter than what needs attention. */
+.nib-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background: var(--tint);
+}
+.nib-card .block-head { margin: 0; }
+.nib-card .block-head .muted { display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
+.nib-card h2 .ai-mark { color: var(--accent); }
+.week-text {
+  margin: 0;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.nib-card[data-pending] .week-text { opacity: 0.6; }
+.nib-card .ask-space-form { box-shadow: none; }
+.nib-card .ask-answer { background: var(--bg); }
+
+/* Get started: an empty space's three first steps. */
+.get-started {
+  display: grid;
+  gap: 0.5rem;
+}
+.get-started h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.get-started > p {
+  margin: 0 0 0.75rem;
+  max-width: 60ch;
+}
+.get-started ol {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.get-started li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.get-started li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.get-started li div {
+  display: grid;
+  gap: 0.125rem;
+}
+.get-started li .muted { font-size: 0.875rem; }
+@media (max-width: 600px) {
+  .get-started li { grid-template-columns: 1.75rem minmax(0, 1fr); }
+  .get-started li > :last-child { grid-column: 2; justify-self: start; }
 }
 .block-head {
   display: flex;
@@ -4227,14 +4389,6 @@ button.link-button .icon,
   margin: 0;
   font-size: 1rem;
 }
-.overview-block > p.muted {
-  margin: 0;
-  font-size: 0.875rem;
-}
-.overview .activity {
-  margin-top: 1rem;
-}
-
 /* Questions: the "?" mark, who decides, and the deadline; late ones in red. */
 .q-mark {
   display: inline-grid;
@@ -4251,68 +4405,6 @@ button.link-button .icon,
 [data-late] .q-mark {
   color: #fff;
   background: var(--danger);
-}
-.question-rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-.question-rows button {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem 0.875rem;
-  text-align: left;
-  white-space: normal;
-  border-color: color-mix(in srgb, var(--warn) 30%, var(--border));
-  background: color-mix(in srgb, var(--warn-soft) 45%, var(--bg));
-}
-.question-rows li[data-late] button {
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
-  background: color-mix(in srgb, var(--danger) 5%, var(--bg));
-}
-.question-rows strong {
-  font-weight: 600;
-}
-.question-who,
-.question-due {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--fg-muted);
-  white-space: nowrap;
-}
-.question-rows li[data-late] .question-due {
-  color: var(--danger);
-  font-weight: 600;
-}
-.recent-discussions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-}
-.recent-discussions li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.875rem;
-}
-.recent-discussions a {
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-.recent-discussions .muted {
-  flex: none;
-  font-size: 0.8125rem;
 }
 .space-tasks {
   list-style: none;
@@ -4738,13 +4830,6 @@ button.link-button .icon,
   margin: 0;
 }
 @media (max-width: 600px) {
-  .question-rows button {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .question-who,
-  .question-due {
-    grid-column: 2;
-  }
   .discussion-side {
     display: none;
   }
@@ -5045,11 +5130,6 @@ a.decision-label:hover {
 }
 
 /* Ask the space: a field on the Overview, the answer with numbered citations and its sources. */
-.ask-space {
-  display: grid;
-  gap: 0.625rem;
-  margin-bottom: 1.5rem;
-}
 .ask-space-form {
   display: flex;
   align-items: center;
@@ -5228,56 +5308,6 @@ a.cite:hover { background: var(--accent); color: var(--accent-fg); }
   background: var(--warn);
   box-shadow: 0 0 0 2px var(--bg);
 }
-
-/* "This week" on the space home: Nib's summary over live fact chips. */
-.this-week {
-  display: grid;
-  gap: 0.75rem;
-  margin-bottom: 1.75rem;
-  padding: 1.125rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 6px);
-  background: linear-gradient(180deg, var(--accent-soft), transparent 70%), var(--bg);
-}
-.this-week .block-head { margin: 0; }
-.this-week .block-head .muted { display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; }
-.this-week[data-pending] .week-text { opacity: 0.6; }
-.week-text {
-  margin: 0;
-  max-width: 68ch;
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  text-wrap: pretty;
-}
-.week-text .ai-mark { color: var(--accent); }
-.week-facts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-.week-facts :is(a, button) {
-  --t: var(--fg-muted);
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--t) 30%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--t) 8%, var(--bg));
-  color: var(--fg);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-}
-.week-facts :is(a, button):hover { border-color: var(--t); }
-.week-facts li[data-tone="ok"] :is(a, button) { --t: var(--ok); }
-.week-facts li[data-tone="warn"] :is(a, button) { --t: var(--warn); }
-.week-facts li[data-tone="danger"] :is(a, button) { --t: var(--danger); }
 
 /* Activity: what a row is about, Nib as an actor, and the filters on a space. */
 .event-links { display: flex; flex-wrap: wrap; gap: 0.375rem; }

@@ -45,21 +45,25 @@ const filters = [
 ] as const
 
 // The timeline. `here` is the document the page is about, so its own rows do not link back to it.
-// `filtered` adds the filter chips (the space page).
-export function Activity({ events: all, here, filtered = false }: { events: EventRow[]; here?: string; filtered?: boolean }) {
+// `limit` shows only the newest rows until "Show all activity"; `filtered` adds the filter chips
+// to the full timeline (the space page).
+export function Activity({ events: all, here, filtered = false, limit, title = 'Activity' }: { events: EventRow[]; here?: string; filtered?: boolean; limit?: number; title?: string }) {
   const [filter, setFilter] = useState<(typeof filters)[number][0]>('all')
+  const [open, setOpen] = useState(!limit)
   if (all.length === 0) return null
   const types = filters.find(([k]) => k === filter)![2] as readonly string[]
-  const events = filter === 'all' ? all : all.filter((e) => types.includes(e.type))
+  const kept = filter === 'all' || !open ? all : all.filter((e) => types.includes(e.type))
+  const events = open ? kept : kept.slice(0, limit)
   const days = new Map<string, EventRow[]>()
   for (const e of events) { const day = dayOf(e.at); days.set(day, [...(days.get(day) ?? []), e]) }
   return (
     <section className="activity" aria-labelledby="activity-title">
       <div className="activity-head">
-        <h2 id="activity-title">Activity</h2>
-        <span className="muted">{events.length === 1 ? '1 update' : `${events.length} updates`}</span>
+        <h2 id="activity-title">{title}</h2>
+        {open && <span className="muted">{events.length === 1 ? '1 update' : `${events.length} updates`}</span>}
+        {limit && all.length > limit && <button type="button" className="link-button activity-toggle" aria-expanded={open} onClick={() => { setOpen(!open); setFilter('all') }}>{open ? 'Show less' : 'Show all activity'}</button>}
       </div>
-      {filtered && (
+      {filtered && open && (
         <div className="activity-filters" role="group" aria-label="Show">
           {filters.map(([k, label]) => <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>)}
         </div>

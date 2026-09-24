@@ -6,7 +6,7 @@ import { docStub } from '~/lib/versions.server'
 import { askSpace, proposeNextSteps } from '~/lib/nib.server'
 import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
 import type { Source } from '~/lib/search.server'
-import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState, type SpaceState } from '~/lib/state.server'
+import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState } from '~/lib/state.server'
 import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
@@ -49,7 +49,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     owner: { name: user.name, color: user.color, image: user.image },
     me: { id: user.id, name: user.name, color: user.color },
     nib: user.settings.nib,
-    state: { saved, facts: await spaceState(params.id) },
+    state: { saved, review: (await spaceState(params.id)).review },
     space, role, isOwner,
     questions: await listOpenQuestions(params.id),
     discussions: await listRecentDiscussions(params.id),
@@ -155,20 +155,41 @@ export async function action({ request, params }: Route.ActionArgs) {
 const sourceIcon = { decision: 'check', question: 'comment', document: 'docs', discussion: 'comment', ideas: 'board' } as const
 
 // "Ask Nib about this space": the answer cites its sources as [1], [2]; each becomes a link.
-function AskSpace() {
-  const fetcher = useFetcher<{ question?: string; answer?: string; sources?: Source[]; error?: string }>()
-  const busy = fetcher.state !== 'idle'
-  const out = fetcher.data
+// Nib's part of the Overview: the saved summary of the week, and the Ask field under it. The answer
+// cites its sources as [1], [2]; each becomes a link.
+function NibCard({ saved, nib, canRefresh }: { saved: SavedState; nib: boolean; canRefresh: boolean }) {
+  const ask = useFetcher<{ question?: string; answer?: string; sources?: Source[]; error?: string }>()
+  const refresh = useFetcher<{ error?: string } | null>()
+  const revalidator = useRevalidator()
+  const pending = saved.state === 'pending' || refresh.state !== 'idle'
+  useEffect(() => {
+    if (saved.state !== 'pending') return
+    const t = window.setInterval(() => { if (revalidator.state === 'idle') revalidator.revalidate() }, 3000)
+    return () => clearInterval(t)
+  }, [saved.state, revalidator])
+  if (!nib && !saved.text) return null
+  const busy = ask.state !== 'idle'
+  const out = ask.data
   const link = (n: number) => out?.sources?.find((x) => x.n === n)
   return (
-    <section className="ask-space" aria-labelledby="ask-title">
-      <h2 id="ask-title" className="sr-only">Ask Nib about this space</h2>
-      <fetcher.Form method="post" className="ask-space-form">
-        <input type="hidden" name="intent" value="ask" />
-        <span className="ai-mark" aria-hidden="true">✦</span>
-        <input name="question" required maxLength={500} placeholder="Ask Nib about this space, like “When do we launch?”" aria-label="Ask Nib about this space" disabled={busy} />
-        <button className="primary" disabled={busy} aria-busy={busy}>{busy ? <span className="spinner" aria-hidden="true" /> : 'Ask'}</button>
-      </fetcher.Form>
+    <section className="nib-card" aria-labelledby="nib-title" data-pending={pending || undefined}>
+      <div className="block-head">
+        <h2 id="nib-title"><span className="ai-mark" aria-hidden="true">✦</span> This week</h2>
+        <span className="muted small">
+          {pending ? 'Nib is catching up…' : saved.at ? `Updated ${timeAgo(saved.at)}` : ''}
+          {canRefresh && !pending && <> · <button type="button" className="link-button" onClick={() => refresh.submit({ intent: 'state' }, { method: 'post' })}>Refresh</button></>}
+        </span>
+      </div>
+      {saved.text ? <p className="week-text">{saved.text}</p> : !pending && <p className="muted small">Nib has not summed up this space yet.</p>}
+      {saved.state === 'failed' && !pending && <p className="muted small" role="status">Nib could not update this summary.</p>}
+      {refresh.data?.error && <p className="error small" role="alert">{refresh.data.error}</p>}
+      {nib && (
+        <ask.Form method="post" className="ask-space-form">
+          <input type="hidden" name="intent" value="ask" />
+          <input name="question" required maxLength={500} placeholder="Ask Nib about this space" aria-label="Ask Nib about this space" disabled={busy} />
+          <button className="ghost" disabled={busy} aria-busy={busy}>{busy ? <span className="spinner" aria-hidden="true" /> : 'Ask'}</button>
+        </ask.Form>
+      )}
       {busy && <p className="muted small" role="status">Nib is reading the space…</p>}
       {!busy && out?.error && <p className="error small" role="alert">{out.error}</p>}
       {!busy && out?.answer && (
@@ -189,44 +210,54 @@ function AskSpace() {
   )
 }
 
-// "This week": Nib's summary over the live facts, each fact a link to what needs attention.
-function ThisWeek({ saved, facts, spaceId, canRefresh, go }: { saved: SavedState; facts: SpaceState; spaceId: string; canRefresh: boolean; go: (t: Tab, d?: string | null) => void }) {
-  const refresh = useFetcher<{ error?: string } | null>()
-  const revalidator = useRevalidator()
-  const pending = saved.state === 'pending' || refresh.state !== 'idle'
-  useEffect(() => {
-    if (saved.state !== 'pending') return
-    const t = window.setInterval(() => { if (revalidator.state === 'idle') revalidator.revalidate() }, 3000)
-    return () => clearInterval(t)
-  }, [saved.state, revalidator])
-  const q = facts.questions
-  const chips: { key: string; label: string; tone?: 'warn' | 'danger' | 'ok'; to?: string; onClick?: () => void }[] = [
-    facts.decided.length ? { key: 'decided', label: `${facts.decided.length} decided`, tone: 'ok' as const, to: facts.decided.length === 1 ? `/decision/${facts.decided[0].id}` : undefined, onClick: facts.decided.length === 1 ? undefined : () => go('decisions') } : null,
-    q.open ? { key: 'questions', label: `${q.open} open ${q.open === 1 ? 'question' : 'questions'}${q.late ? ` · ${q.late} late` : ''}`, tone: q.late ? 'danger' as const : 'warn' as const, onClick: () => go('discussions', q.open === 1 ? q.next?.id : null) } : null,
-    facts.lateTasks.length ? { key: 'tasks', label: `${facts.lateTasks.length} late ${facts.lateTasks.length === 1 ? 'task' : 'tasks'}`, tone: 'danger' as const, onClick: () => go('tasks') } : null,
-    facts.review.length ? { key: 'review', label: `${facts.review.length} waiting for review${facts.review.some((d) => d.concerns) ? ' · concerns' : ''}`, tone: 'warn' as const, to: facts.review.length === 1 ? `/doc/${facts.review[0].id}` : undefined, onClick: facts.review.length === 1 ? undefined : () => go('documents') } : null,
-    facts.fresh.ideas ? { key: 'ideas', label: `${facts.fresh.ideas} new ${facts.fresh.ideas === 1 ? 'idea' : 'ideas'}`, onClick: () => go('ideas') } : null,
-  ].filter((c) => c !== null)
-  const quiet = chips.length === 0
+// One thing that waits for a person: a question to decide, a document to review, a task to do.
+type Waiting = { key: string; verb: 'Decide' | 'Review' | 'Do'; title: string; who: string | null; whoId: string | null; due: string | null; note?: string; to?: string; open?: () => void }
+
+// The starting point of the Overview. What waits for you comes first, then late things, then by date.
+function NeedsAttention({ rows, me, people }: { rows: Waiting[]; me: string; people: { id: string; color: string; image?: string | null }[] }) {
+  const [all, setAll] = useState(false)
+  const shown = all ? rows : rows.slice(0, 6)
   return (
-    <section className="this-week" aria-labelledby="week-title" data-pending={pending || undefined}>
+    <section className="attention" aria-labelledby="attention-title">
       <div className="block-head">
-        <h2 id="week-title">This week</h2>
-        <span className="muted small">
-          {pending ? 'Nib is catching up…' : saved.at ? `Updated ${timeAgo(saved.at)}` : ''}
-          {canRefresh && !pending && <> · <button type="button" className="link-button" onClick={() => refresh.submit({ intent: 'state' }, { method: 'post' })}>Refresh</button></>}
-        </span>
+        <h2 id="attention-title">Needs attention{rows.length > 0 && <span className="count">{rows.length}</span>}</h2>
       </div>
-      {saved.text
-        ? <p className="week-text"><span className="ai-mark" aria-hidden="true">✦ </span>{saved.text}</p>
-        : !pending && <p className="week-text muted">{quiet ? 'A quiet week. Nothing was decided, and nothing is late.' : 'Nib has not summed up this space yet.'}</p>}
-      {saved.state === 'failed' && !pending && <p className="muted small" role="status">Nib could not update this summary. The facts below are current.</p>}
-      {refresh.data?.error && <p className="error small" role="alert">{refresh.data.error}</p>}
-      {chips.length > 0 && (
-        <ul className="week-facts" aria-label="This week in numbers">
-          {chips.map((c) => <li key={c.key} data-tone={c.tone}>{c.to ? <Link to={c.to}>{c.label}</Link> : <button type="button" onClick={c.onClick}>{c.label}</button>}</li>)}
+      {rows.length === 0 ? <p className="attention-empty">Nothing needs anyone right now.</p> : (
+        <ul className="attention-rows">
+          {shown.map((r) => {
+            const late = !!r.due && r.due < today()
+            const body = (
+              <>
+                <span className="verb" data-verb={r.verb}>{r.verb}</span>
+                <span className="attention-title">{r.title}</span>
+                <span className="attention-meta">
+                  {r.whoId === me ? <span className="you">You</span> : r.who && <>{r.whoId && <Avatar name={r.who} color={people.find((p) => p.id === r.whoId)?.color ?? 'var(--fg-muted)'} image={people.find((p) => p.id === r.whoId)?.image} size={20} />}{r.who}</>}
+                  {r.note && <span className="attention-note">{r.note}</span>}
+                  {r.due && <time dateTime={r.due} data-late={late || undefined}>{late ? `Was due ${day(r.due)}` : day(r.due)}</time>}
+                </span>
+              </>
+            )
+            return <li key={r.key} data-late={late || undefined}>{r.to ? <Link to={r.to}>{body}</Link> : <button type="button" onClick={r.open}>{body}</button>}</li>
+          })}
         </ul>
       )}
+      {rows.length > 6 && <button type="button" className="link-button attention-more" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show ${rows.length - 6} more`}</button>}
+    </section>
+  )
+}
+
+// A space with nothing in it yet: the chain the product is built on, as three first steps.
+function GetStarted({ role, go }: { role: Role; go: (t: Tab) => void }) {
+  if (!atLeast(role, 'commenter')) return <p className="attention-empty">Nothing here yet. The people who can edit this space have not started.</p>
+  return (
+    <section className="get-started" aria-labelledby="start-title">
+      <h2 id="start-title">Get started</h2>
+      <p className="muted">A space holds one piece of work: the ideas, the talk that decides them, and the documents that come out of it.</p>
+      <ol>
+        <li><div><strong>Add an idea</strong><span className="muted">Put a thought on the board before it is a plan.</span></div><button type="button" onClick={() => go('ideas')}>Open Ideas</button></li>
+        <li><div><strong>Start a discussion</strong><span className="muted">Talk it through, or ask a question that needs a decision by a date.</span></div><button type="button" onClick={() => go('discussions')}>Open Discussions</button></li>
+        {atLeast(role, 'editor') && <li><div><strong>Write a document</strong><span className="muted">A plan, a brief, or notes, shared with everyone here.</span></div><NewMenu action="" /></li>}
+      </ol>
     </section>
   )
 }
@@ -266,6 +297,17 @@ export default function Space({ loaderData }: Route.ComponentProps) {
     </ol>
   )
   const [allDecisions, setAllDecisions] = useState(false)
+  // A space with no discussion, document, or idea yet opens on Get started.
+  const empty = discussions.length === 0 && documents.length === 0 && !events.some((e) => e.type === 'idea')
+  const soon = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)
+  const waiting: Waiting[] = [
+    ...questions.map((q): Waiting => ({ key: `q${q.id}`, verb: 'Decide', title: q.title, who: q.owner, whoId: q.owner_id, due: q.due, open: () => go('discussions', q.id) })),
+    ...state.review.map((d): Waiting => ({ key: `r${d.id}`, verb: 'Review', title: d.title, who: null, whoId: null, due: null, note: d.concerns ? (d.concerns === 1 ? '1 concern' : `${d.concerns} concerns`) : 'Waiting for sign-off', to: `/doc/${d.id}` })),
+    ...tasks.filter((t) => t.assignee_id === me.id || (t.due && t.due <= soon)).map((t): Waiting => ({
+      key: `t${t.id}`, verb: 'Do', title: t.text || 'Untitled task', who: t.assignee, whoId: t.assignee_id, due: t.due,
+      ...(t.discussion_id ? { open: () => go('discussions', t.discussion_id) } : { to: `/doc/${t.document_id}` }),
+    })),
+  ].sort((a, b) => Number(b.whoId === me.id) - Number(a.whoId === me.id) || Number(!!b.due && b.due < today()) - Number(!!a.due && a.due < today()) || (a.due ?? '9999').localeCompare(b.due ?? '9999'))
   const inForce = decisions.filter((d) => !d.replaced_by)
   const taskList = (list: typeof tasks) => (
     <ul className="space-tasks">
@@ -308,7 +350,6 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
       <header className="page-title">
-        <p className="eyebrow">{space.visibility === 'public' ? 'Public space' : 'Private space'}</p>
         <h1>{space.name}</h1>
         <div className="title-meta">
           <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id, m.color)} image={m.image} size={26} />)}</span>
@@ -325,57 +366,13 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         ))}
       </nav>
 
-      {tab === 'overview' && (
+      {tab === 'overview' && (empty ? <GetStarted role={role} go={go} /> : (
         <div className="overview">
-          {nib && <AskSpace />}
-          <ThisWeek saved={state.saved} facts={state.facts} spaceId={space.id} canRefresh={nib && atLeast(role, 'commenter')} go={go} />
-          <section className="overview-block questions" aria-labelledby="q-title">
-            <div className="block-head"><h2 id="q-title">Open questions</h2><button type="button" className="link-button" onClick={() => go('discussions')}>All discussions</button></div>
-            {questions.length === 0 ? <p className="muted">No question is waiting for a decision. Ask one in Discussions when something needs deciding.</p> : (
-              <ul className="question-rows">
-                {questions.map((q) => {
-                  const late = q.due && q.due < today()
-                  return (
-                    <li key={q.id} data-late={late || undefined}>
-                      <button type="button" onClick={() => go('discussions', q.id)}>
-                        <span className="q-mark" aria-hidden="true">?</span>
-                        <strong>{q.title}</strong>
-                        <span className="question-who">{q.owner_id && <Avatar name={q.owner ?? '?'} color={colorFor(q.owner_id, members.find((m) => m.user_id === q.owner_id)?.color)} size={20} />}{q.owner ?? 'Nobody'}</span>
-                        <span className="question-due">{q.due ? `${late ? 'Was due' : 'Decide by'} ${day(q.due)}` : 'No date'}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
-          <div className="overview-grid">
-            <section className="overview-block" aria-labelledby="t-title">
-              <div className="block-head"><h2 id="t-title">Open tasks</h2><button type="button" className="link-button" onClick={() => go('tasks')}>All</button></div>
-              {tasks.length === 0 ? <p className="muted">No open tasks. Make one from a message in a discussion, or type /task in a document.</p> : taskList(tasks.slice(0, 5))}
-            </section>
-            <section className="overview-block" aria-labelledby="d-title">
-              <div className="block-head"><h2 id="d-title">Recent discussions</h2></div>
-              {discussions.length === 0 ? <p className="muted">Nothing discussed yet.</p> : (
-                <ul className="recent-discussions">
-                  {discussions.map((d) => <li key={d.id}><button type="button" className="link-button" onClick={() => go('discussions', d.id)}>{d.title}</button><span className="muted">{d.posts === 1 ? '1 message' : `${d.posts} messages`} · {timeAgo(d.last_at)}</span></li>)}
-                </ul>
-              )}
-            </section>
-            <section className="overview-block" aria-labelledby="dec-title">
-              <div className="block-head"><h2 id="dec-title">Latest decisions</h2><button type="button" className="link-button" onClick={() => go('decisions')}>All</button></div>
-              {decisions.length === 0 ? <p className="muted">No decisions yet. Answer a question, or type /decision in a document.</p> : decisionList(inForce.slice(0, 3))}
-            </section>
-            <section className="overview-block" aria-labelledby="doc-title">
-              <div className="block-head"><h2 id="doc-title">Documents</h2><button type="button" className="link-button" onClick={() => go('documents')}>All</button></div>
-              {documents.length === 0 ? <p className="muted">No documents yet.</p> : (
-                <ul className="recent-discussions">{documents.slice(0, 4).map((d) => <li key={d.id}><Link to={`/doc/${d.id}`}>{d.title}</Link><span className="muted">{timeAgo(d.updated_at)}</span></li>)}</ul>
-              )}
-            </section>
-          </div>
-          <Activity events={events} filtered />
+          <NeedsAttention rows={waiting} me={me.id} people={people} />
+          <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />
+          <Activity events={events} filtered limit={5} title="Latest" />
         </div>
-      )}
+      ))}
 
       {tab === 'ideas' && (mounted
         ? <Suspense fallback={<p className="muted">Loading ideas…</p>}><Board documentId={space.id} room={`space/${space.id}`} space user={me} canEdit={atLeast(role, 'commenter')} canMakeDoc={atLeast(role, 'editor')} people={people} /></Suspense>

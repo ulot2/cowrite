@@ -61,7 +61,7 @@ test('decisions get numbers per space, written back into the blocks and listed o
   await until(() => Number(a.getAttribute('number')) > 0 && Number(b.getAttribute('number')) > 0, 'numbers written back', 8000)
   assert.deepEqual([Number(a.getAttribute('number')), Number(b.getAttribute('number'))].sort(), [1, 2])
   tab.close()
-  const html = await get(`/space/${spaceId}`, ada.cookie)
+  const html = await get(`/space/${spaceId}?tab=decisions`, ada.cookie)
   assert.match(html, /D-1/)
   assert.match(html, /D-2/)
   assert.match(html, /Free plan stays free/)

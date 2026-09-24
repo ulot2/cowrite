@@ -8,10 +8,11 @@ import { startApp, until } from './harness.js'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const ALARM = 3800
 
-let app, ada, bea, cy, dee, spaceId, docId, room
+let app, ada, bea, cy, dee, adaId, spaceId, docId, room
 before(async () => {
   app = await startApp()
   ;[ada, bea, cy, dee] = await Promise.all(['Ada', 'Bea', 'Cy', 'Dee'].map((n) => app.signUpUser(n)))
+  adaId = (await (await fetch(`${app.base}/api/auth/get-session`, { headers: { cookie: ada.cookie } })).json()).user.id
   spaceId = (await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Launch' })).headers.get('location').split('/').pop()
   await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'add', email: bea.email, role: 'editor' })
   await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'add', email: cy.email, role: 'viewer' })
@@ -26,7 +27,7 @@ before(async () => {
     d.set('posts', posts)
     m.set('id', 'p1'); m.set('userId', 'x'); m.set('text', 'Security needs two more weeks.'); m.set('createdAt', Date.now())
     posts.push([m])
-    room.doc.getMap('tasks').set('t1', { text: 'Send the brief', assignee: '', assigneeName: '', due: '2020-01-01', done: false, discussionId: 'q1', postId: 'p1', createdBy: 'x' })
+    room.doc.getMap('tasks').set('t1', { text: 'Send the brief', assignee: adaId, assigneeName: 'Ada', due: '2020-01-01', done: false, discussionId: 'q1', postId: 'p1', createdBy: 'x' })
   })
   await until(() => d.get('decisionNumber') === 1, 'D-1')
   docId = (await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'create', mode: 'write' })).headers.get('location').split('/').pop()
@@ -49,12 +50,21 @@ const waitFor = async (path, cookie, re, what) => {
   return html
 }
 
-test('the facts count this week\'s decision, the late task, and the document in review', async () => {
+test('needs attention lists the late task and the document in review, once each; an empty space starts with Get started', async () => {
   const { html } = await page(`/space/${spaceId}`, bea.cookie)
-  assert.match(html, />1 decided</)
-  assert.match(html, />1 late task</)
-  assert.match(html, />1 waiting for review/)
+  assert.match(html, /Needs attention/)
+  assert.match(html, /data-verb="Do">Do<\/span><span class="attention-title">Send the brief</)
+  assert.match(html, /data-verb="Review">Review<\/span><span class="attention-title">Untitled</)
+  assert.equal(html.match(/class="attention-title">Send the brief</g).length, 1, 'the task is listed once')
+  assert.doesNotMatch(html, /Get started/)
+  assert.match((await page(`/space/${spaceId}`, ada.cookie)).html, /Send the brief<\/span><span class="attention-meta"><span class="you">You</, 'the assignee sees You')
   assert.equal((await page(`/space/${spaceId}`, dee.cookie)).status, 404, 'a stranger')
+
+  // A space with nothing in it yet opens on Get started instead.
+  const fresh = (await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Empty' })).headers.get('location')
+  const empty = (await page(fresh, ada.cookie)).html
+  assert.match(empty, /Get started/)
+  assert.doesNotMatch(empty, /Needs attention/)
 })
 
 test('a visit writes Nib\'s summary in the room; a second visit within hours does not start another', async () => {

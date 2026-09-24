@@ -34,7 +34,7 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 - A space ideas board; an idea becomes a discussion or a document.
 - A document lifecycle: Idea, Draft, In review, Approved, Done. Reviewers sign off section by section, and an open concern blocks approval.
 - Nib: improve, fix, shorten, continue, summarize, extract action items, find contradictions, any free instruction (`@nib …`), and replies to `@Nib` in comments.
-- The space home opens with "This week": live facts that need attention, and a short summary Nib keeps current. The activity timeline records ideas, closed and reopened discussions, completed tasks, and Nib's findings, and each row links to what it is about.
+- The space home opens with what needs attention (questions to decide, documents to review, tasks to do, yours first), then a short summary Nib keeps current, then the latest activity. An empty space opens on three first steps. The activity timeline records ideas, closed and reopened discussions, completed tasks, and Nib's findings, and each row links to what it is about.
 - Nib across a space: answers questions with cited sources, proposes tasks and a decision from a discussion for people to accept, and checks a document against the decisions in force and the open questions, automatically when it is submitted for review.
 - Runs entirely on Cloudflare's free plan (Workers, Durable Objects, D1, R2, Workers AI) at $0. Nib shares a free daily allowance of a few hundred requests.
 - Sign in with email and password; GitHub sign-in only when its secrets are set.
