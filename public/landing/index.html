@@ -1,0 +1,674 @@
+<!doctype html>
+<!--
+THESIS: A team's work lives in five places; CoWrite puts it in one space and remembers why. The page
+  refuses the category's split hero with a screenshot and three icon pillars: its first viewport performs
+  the collapse instead of describing it.
+OWN-WORLD: CoWrite "Studio": white page, one cobalt accent, Manrope; the serif wordmark. The scattered
+  pieces are drawn in the grey of other tools (plain chat, a file icon, a spreadsheet), and everything
+  that lands in the space takes CoWrite's own parts: the verb tags of Needs attention, the status pill,
+  suggestion washes, avatars, and the D-number decision with its "Why".
+STORY: see your mess, see it land in one space, learn where each piece went, meet Nib, check that it is
+  real (live, offline, how it is built), start a space.
+FIRST VIEWPORT: headline and the start button left; right, the stage: the scattered stack, whose
+  pieces each fly to the row they become in one space, on a loop, with a quiet player to jump or pause.
+FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's world. Seed 04ef0dcf.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoWrite: every decision, with the conversation that made it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap">
+<link rel="stylesheet" href="/landing/landing.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="description" content="CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways. Free and open source.">
+<script>try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch {}</script>
+</head>
+<body class="landing">
+
+<header class="nav">
+  <a class="brand" href="#top"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></a>
+  <nav aria-label="Page">
+    <a href="#pieces">How it works</a>
+    <a href="#nib">Nib</a>
+    <a href="#built">How it is built</a>
+    <a href="https://github.com/ulot2/cowrite">GitHub</a>
+  </nav>
+  <div class="nav-actions">
+    <a class="link" href="/login">Sign in</a>
+    <a class="btn primary" href="/login">Start a space</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 1. The collapse -->
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Every decision, <span>with the conversation that made it.</span></h1>
+      <p class="lede">CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways.</p>
+      <div class="hero-actions">
+        <a class="btn primary big" href="/login">Start a space, free</a>
+        <a class="btn big" href="#pieces">See how it works</a>
+      </div>
+      <p class="fine">Free and open source.</p>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage" data-state="scattered" aria-label="Example: a launch spread over four tools, then in one CoWrite space">
+        <!-- The scattered pieces: other tools, drawn plain. Each one flies to the row it becomes. -->
+        <div class="piece chat" data-to="chat" style="--x:-2%;--y:4%;--r:-4deg;--i:0">
+          <p class="piece-head"># launch</p>
+          <p><b>Maria</b> which one is final? plan_v3_FINAL (2).docx or the one Tom sent?</p>
+          <p><b>Tom</b> I left my notes in the other file 🙃</p>
+          <p><b>Ade</b> did we say March 3 or April 10?</p>
+        </div>
+        <div class="piece file" data-to="file" style="--x:52%;--y:0%;--r:3deg;--i:1">
+          <span class="file-icon" aria-hidden="true">W</span>
+          <span><b>plan_v3_FINAL (2).docx</b><small>Edited by Maria · 2 days ago</small></span>
+        </div>
+        <div class="piece sheet" data-to="sheet" style="--x:48%;--y:34%;--r:-2deg;--i:2">
+          <p class="piece-head">Review comments.xlsx</p>
+          <table><tr><th>Change</th><th>By</th><th>OK?</th></tr><tr><td>Launch → April 10</td><td>Tom</td><td>?</td></tr><tr><td>Cut the FAQ</td><td>Ade</td><td>yes</td></tr></table>
+        </div>
+        <div class="piece todo" data-to="todo" style="--x:4%;--y:56%;--r:2.5deg;--i:3">
+          <p class="piece-head">To do (someone’s notes app)</p>
+          <p>☐ book the venue — who decides?</p>
+          <p>☐ store screenshots — Maria?</p>
+        </div>
+
+        <!-- The same things in one space: fewer, larger, and the reason kept with the decision. -->
+        <article class="doc space" aria-hidden="true">
+          <div class="doc-bar">
+            <span class="crumb">Q4 launch</span>
+            <span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i></span>
+          </div>
+          <p class="attn-h land" style="--d:0">Needs attention</p>
+          <div class="attn morph" data-from="todo" style="--d:1"><span class="verb decide">Decide</span><b>Who books the venue?</b><span class="who"><i style="background:#1565c0">T</i>Tom · Mar 28</span></div>
+          <div class="attn morph" data-from="file sheet" style="--d:2"><span class="verb review">Review</span><b>Launch plan</b><span class="who concern">1 concern</span></div>
+          <div class="dec-card morph" data-from="chat" style="--d:3">
+            <p class="dec-top"><span class="dec-num">D-4</span><span class="dec-state"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Decided</span></p>
+            <p class="dec-title">Launch on April 10</p>
+            <div class="dec-why">
+              <p class="dec-why-h">Why · from #launch</p>
+              <p class="msg"><i style="background:#2e7d32">A</i><span><b>Ade</b> Did we say March 3 or April 10?</span></p>
+              <p class="msg"><i style="background:#1565c0">T</i><span><b>Tom</b> April 10, after the security review.</span></p>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="player">
+        <button type="button" class="pp" aria-pressed="false" aria-label="Pause the animation"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause" d="M5 3.5v9M11 3.5v9"/><path class="play" d="M5 3.5l7.5 4.5L5 12.5z"/></svg></button>
+        <button type="button" class="step" data-to="scattered" aria-current="true" style="--hold:3000ms"><span>Scattered</span><i></i></button>
+        <button type="button" class="step" data-to="together" style="--hold:6500ms"><span>In CoWrite</span><i></i></button>
+        <span class="caption">Example. Names are made up.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. How it works: one piece of work followed through the space, as a chain that draws itself -->
+  <section class="how" id="pieces">
+    <h2 class="section-title">How it works</h2>
+    <p class="section-lede">Follow one piece of the Q4 launch from a thought to a signed-off plan. Every step links back to the one before it.</p>
+    <ol class="chain" style="--p:0">
+      <li class="chain-step">
+        <span class="link-n" aria-hidden="true">1</span>
+        <div class="link-text"><h3>It starts as an idea</h3><p>Put it on the space's board. The team votes.</p></div>
+        <div class="link-card">
+          <div class="c-idea">
+            <p class="c-kicker">Ideas · New</p>
+            <p class="c-title">Host a launch party at the venue</p>
+            <p class="c-foot"><span class="votes">▲ 4</span><span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i></span><span class="to">Turned into a discussion →</span></p>
+          </div>
+        </div>
+      </li>
+      <li class="chain-step">
+        <span class="link-n" aria-hidden="true">2</span>
+        <div class="link-text"><h3>It becomes a question with a deadline</h3><p>Someone owns the answer, by a date. Any message can become a task.</p></div>
+        <div class="link-card">
+          <div class="c-q">
+            <p class="from">↩ From the idea “Host a launch party”</p>
+            <p class="c-q-head"><span class="q-mark" aria-hidden="true">?</span><b>Who books the venue?</b></p>
+            <p class="c-q-meta"><i style="background:#1565c0">T</i>Tom decides · by Mar 28</p>
+            <p class="msg"><i style="background:#c2185b">M</i><span><b>Maria</b> The Harbor Room holds 80 and is free that night.</span></p>
+            <p class="msg"><i style="background:#1565c0">T</i><span><b>Tom</b> Good. I'll call them today.</span></p>
+            <p class="c-task"><span class="tick"></span>Call the Harbor Room<span class="chip"><i style="background:#1565c0">T</i>Mar 26</span></p>
+          </div>
+        </div>
+      </li>
+      <li class="chain-step">
+        <span class="link-n" aria-hidden="true">3</span>
+        <div class="link-text"><h3>The answer becomes a decision</h3><p>It gets a number and keeps its reasons, so “why?” always has an answer.</p></div>
+        <div class="link-card">
+          <div class="dec-card">
+            <p class="from">↩ From the question “Who books the venue?”</p>
+            <p class="dec-top"><span class="dec-num">D-5</span><span class="dec-state"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Decided</span></p>
+            <p class="dec-title">Tom books the Harbor Room</p>
+            <div class="dec-why">
+              <p class="dec-why-h">Why · 2 messages</p>
+              <p class="msg"><i style="background:#c2185b">M</i><span><b>Maria</b> It holds 80 and is free that night.</span></p>
+            </div>
+          </div>
+        </div>
+      </li>
+      <li class="chain-step">
+        <span class="link-n" aria-hidden="true">4</span>
+        <div class="link-text"><h3>It lands in the plan</h3><p>Reviewers suggest changes and sign off section by section, until it is agreed.</p></div>
+        <div class="link-card">
+          <div class="c-doc">
+            <p class="from">↩ Uses decision D-5</p>
+            <p class="c-doc-bar"><b>Launch plan</b><span class="pill review">● In review</span></p>
+            <p class="c-doc-h">Venue</p>
+            <p class="c-doc-p">The party is at <del>a venue to be decided</del><ins>the Harbor Room</ins> on April 10.</p>
+            <p class="c-sign"><span>Sign-off</span><span class="ok-dots"><i class="on"></i><i class="on"></i><i></i></span><span class="muted">2 of 3 sections</span></p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 3. Nib -->
+  <section class="nib" id="nib">
+    <div class="nib-copy">
+      <p class="kicker"><span aria-hidden="true">✦</span> Nib, the assistant</p>
+      <h2 class="section-title">Nib suggests. You decide.</h2>
+      <p class="section-lede">Nib reads the whole space, and nothing it writes changes anything until someone accepts it.</p>
+      <ol class="nib-acts" aria-label="What Nib does">
+        <li><button type="button" data-scene-to="0" aria-current="true"><b>Ask the space</b><span>Ask a question. The answer names its sources.</span></button></li>
+        <li><button type="button" data-scene-to="1"><b>Suggest next steps</b><span>Nib proposes tasks from a discussion. You add or dismiss them.</span></button></li>
+        <li><button type="button" data-scene-to="2"><b>Check before review</b><span>Nib compares a draft with the decisions in force.</span></button></li>
+      </ol>
+      <p class="nib-also">It also improves, shortens, and summarizes text, as suggestions.</p>
+    </div>
+
+    <div class="nib-stage">
+      <div class="nw" aria-hidden="true">
+        <p class="nw-bar"><b>Q4 launch</b><span data-where>Overview</span><span class="nw-mark">✦ Nib</span></p>
+
+        <!-- 1. Ask the space -->
+        <div class="nw-scene" data-scene="ask">
+          <p class="nw-ask"><span class="nw-ai">✦</span><span class="nw-input" data-input data-placeholder="Ask Nib about this space"></span><span class="nw-btn" data-ask>Ask</span></p>
+          <p class="nw-status" data-status></p>
+          <div class="nw-answer" data-answer>
+            <p class="nw-q">When is the launch party?</p>
+            <p class="nw-a" data-stream></p>
+            <p class="nw-sources" data-sources><span><i>1</i>D-5 · Tom books the Harbor Room</span><span><i>2</i>#launch</span></p>
+          </div>
+        </div>
+
+        <!-- 2. Suggest next steps -->
+        <div class="nw-scene" data-scene="steps">
+          <p class="nw-t"><span class="q-mark">?</span><b>Who books the venue?</b></p>
+          <p class="msg"><i style="background:#c2185b">M</i><span><b>Maria</b> The Harbor Room holds 80 and is free that night.</span></p>
+          <p class="msg"><i style="background:#1565c0">T</i><span><b>Tom</b> Let's take it. Someone needs to call them.</span></p>
+          <p class="msg nib-msg" data-added><i class="nib-av">✦</i><span><b>Nib</b> Next step: Call the Harbor Room<span class="nw-chip"><span class="tick"></span>Tom · Mar 26</span></span></p>
+          <p class="nw-row"><span class="nw-btn ghost" data-suggest>✦ Suggest next steps</span><span class="nw-status" data-status></span></p>
+          <div class="nw-proposal" data-proposal>
+            <p class="nw-kind">Task</p>
+            <p class="nw-ptext">Call the Harbor Room</p>
+            <p class="nw-prow"><span class="nw-who"><i style="background:#1565c0">T</i>Tom · Mar 26</span><span class="nw-btn ghost small">Dismiss</span><span class="nw-btn small" data-add>Add task</span></p>
+          </div>
+        </div>
+
+        <!-- 3. Check before review -->
+        <div class="nw-scene" data-scene="check">
+          <p class="nw-doc-bar"><b>Launch plan</b><span class="nw-pill" data-pill>● Draft</span></p>
+          <p class="nw-menu" data-menu><span data-submit>Submit for review</span></p>
+          <p class="nw-doc-h">Timeline</p>
+          <p class="nw-doc-p">We launch on <span class="nw-conflict" data-conflict>March 3</span>, after the security review.</p>
+          <div class="nw-check" data-check>
+            <p><b><span class="nw-ai">✦</span> Nib's check</b><span class="nw-muted">just now</span></p>
+            <p>“We launch on March 3”, but <b>D-4</b> decided April 10. <span class="nw-link" data-open>Open the decision</span></p>
+          </div>
+        </div>
+        <svg class="nw-cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.6L10 19z"/></svg>
+      </div>
+      <p class="nib-foot"><button type="button" class="nib-pp" aria-pressed="false" aria-label="Pause the demo"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause" d="M5 3.5v9M11 3.5v9"/><path class="play" d="M5 3.5l7.5 4.5L5 12.5z"/></svg></button><span>Example. Names are made up.</span></p>
+    </div>
+  </section>
+
+  <!-- 4. Live and offline -->
+  <section class="live">
+    <div class="live-copy">
+      <h2 class="section-title">Write together. Keep writing offline.</h2>
+      <p class="section-lede">Every cursor carries a name. Lose the connection and keep typing: your words merge with everyone else's when you are back, with nothing to fix by hand.</p>
+      <p class="sync-state" data-sync><span class="dot"></span><span data-sync-text>In sync</span></p>
+    </div>
+    <div class="sync" aria-hidden="true">
+        <div class="sw" data-win="maria">
+          <p class="sw-bar"><span class="sw-who"><i style="background:#c2185b">M</i>Maria's laptop</span><span class="sw-pill" data-pill>● Live</span></p>
+          <p class="sw-h">Launch plan</p>
+          <p class="sw-p"><span>The launch party </span><span class="sw-ins" data-part="m1"></span><span>is on </span><span class="sw-ins" data-part="m2"></span><span>April 10 at the Harbor Room.</span><span class="sw-ins" data-part="t1"></span></p>
+        </div>
+        <div class="sw" data-win="tom">
+          <p class="sw-bar"><span class="sw-who"><i style="background:#1565c0">T</i>Tom's laptop</span><span class="sw-pill" data-pill>● Live</span></p>
+          <p class="sw-h">Launch plan</p>
+          <p class="sw-p"><span>The launch party </span><span class="sw-ins" data-part="m1"></span><span>is on </span><span class="sw-ins" data-part="m2"></span><span>April 10 at the Harbor Room.</span><span class="sw-ins" data-part="t1"></span></p>
+        </div>
+    </div>
+  </section>
+
+  <!-- 5. Start from a mode -->
+  <section class="begin" id="start">
+    <h2 class="section-title">What happens when you start</h2>
+    <p class="section-lede">Three steps, about a minute. You can skip any of them.</p>
+    <ol class="begin-steps">
+      <li>
+        <p class="bs-n" aria-hidden="true">1</p>
+        <h3>Name your space</h3>
+        <p class="bs-t">One space holds one piece of work.</p>
+        <div class="bs-ui" aria-hidden="true">
+          <p class="bs-label">Space name</p>
+          <p class="bs-field">Q4 launch<span class="bs-caret"></span></p>
+          <p class="bs-chips"><span>Hiring a designer</span><span>Website rewrite</span></p>
+        </div>
+      </li>
+      <li>
+        <p class="bs-n" aria-hidden="true">2</p>
+        <h3>Add who works on it</h3>
+        <p class="bs-t">Give each person a role. You can change it later.</p>
+        <div class="bs-ui" aria-hidden="true">
+          <p class="bs-person"><i style="background:#2e7d32">B</i><span>bea@example.com</span><b>Editor</b></p>
+          <p class="bs-person"><i style="background:#1565c0">S</i><span>sara@example.com</span><b>Reviewer</b></p>
+          <p class="bs-note">No email is sent yet, so tell them yourself.</p>
+        </div>
+      </li>
+      <li>
+        <p class="bs-n" aria-hidden="true">3</p>
+        <h3>Make the first move</h3>
+        <p class="bs-t">Start wherever the work is today.</p>
+        <div class="bs-ui" aria-hidden="true">
+          <p class="bs-move"><span class="bs-ic idea">✦</span><span><b>Put up an idea</b><small>On the space's board, for votes</small></span></p>
+          <p class="bs-move"><span class="bs-ic ask">?</span><span><b>Ask a question</b><small>Who decides, and by when</small></span></p>
+          <p class="bs-move"><span class="bs-ic plan">≡</span><span><b>Write a plan</b><small>Goal, tasks, a decision, ready to fill</small></span></p>
+        </div>
+      </li>
+    </ol>
+    <p class="begin-cta"><a class="btn primary big" href="/login">Start a space, free</a><span>Free and open source.</span></p>
+  </section>
+
+  <!-- 6. For the engineers -->
+  <section class="built" id="built">
+    <div>
+      <h2 class="section-title">How it is built</h2>
+      <p class="section-lede">For the curious. Every document and every space is its own small server that holds its content as a CRDT, so edits from any number of people and devices merge the same way everywhere.</p>
+      <ul class="facts"><li><b>$0</b> to run, on Cloudflare’s free plan</li><li><b>61</b> automated tests on every push</li><li><b>MIT</b> licensed, on GitHub</li></ul>
+      <a class="btn" href="https://github.com/ulot2/cowrite">Read the code on GitHub</a>
+    </div>
+    <figure class="arch" aria-label="Architecture: the browser talks to one Worker; each document is a Durable Object; D1, R2, and Workers AI sit behind the Worker.">
+      <div class="node">Browser<small>React Router · BlockNote · Yjs</small></div>
+      <div class="wire"><span>HTTP</span><span>WebSocket</span></div>
+      <div class="node strong">Worker<small>pages, API, auth, roles</small></div>
+      <div class="fan">
+        <div class="node">Durable Object<small>one per document and space · Yjs</small></div>
+        <div class="node">D1<small>people, decisions, search</small></div>
+        <div class="node">R2<small>images</small></div>
+        <div class="node">Workers AI<small>Nib</small></div>
+      </div>
+    </figure>
+  </section>
+
+  <!-- 7. Close -->
+  <section class="close">
+    <h2>Your next piece of work, decided in one place.</h2>
+    <a class="btn primary big" href="/login">Start a space, free</a>
+    <p class="fine">Already have an account? <a href="/login">Sign in</a></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="brand small"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></span>
+  <span>Open source · <a href="https://github.com/ulot2/cowrite">GitHub</a></span>
+  <div class="theme" role="group" aria-label="Theme">
+    <button type="button" data-theme-to="system" aria-label="Use the system theme" title="System"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
+    <button type="button" data-theme-to="light" aria-label="Light theme" title="Light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+    <button type="button" data-theme-to="dark" aria-label="Dark theme" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button>
+  </div>
+</footer>
+
+<script>
+// The collapse plays by itself: scattered for a beat, then the space for longer, so it can be read.
+// Each scattered piece flies to the row it becomes; its path is measured when it leaves. The player
+// shows where the loop is, jumps on a click, and pauses. The loop rests while the hero is off screen;
+// under reduced motion the space simply shows.
+const stage = document.querySelector('.stage')
+const player = document.querySelector('.player')
+const steps = [...player.querySelectorAll('.step')]
+const pp = player.querySelector('.pp')
+const HOLD = { scattered: 3000, together: 6500 }
+let timer = 0, paused = false, visible = true
+
+// The morph. Each row starts exactly on top of the piece it comes from (same place, tilt and size),
+// then both travel together to the row's place while the piece's content fades out and the row's
+// fades in. Piece and row share one path: the piece moves by D and scales by s while the row starts
+// at -D and 1/s, so they overlap at every moment. Layout offsets, not screen rects, because offsets
+// ignore transforms; the space is centred with `translate: 0 -50%`, so its top is lifted by half.
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+const pieces = [...stage.querySelectorAll('.piece')]
+let running = []
+const stop = () => { running.forEach((a) => a.cancel()); running = [] }
+const morph = () => {
+  stop()
+  const doc = stage.querySelector('.doc')
+  const top = doc.offsetTop - doc.offsetHeight / 2
+  stage.querySelectorAll('.morph').forEach((row, k) => {
+    const rx = doc.offsetLeft + row.offsetLeft + row.offsetWidth / 2, ry = top + row.offsetTop + row.offsetHeight / 2
+    row.dataset.from.split(' ').forEach((name, n) => {
+      const p = stage.querySelector(`.piece[data-to="${name}"]`)
+      const tilt = parseFloat(p.style.getPropertyValue('--r')) || 0
+      const dx = rx - (p.offsetLeft + p.offsetWidth / 2), dy = ry - (p.offsetTop + p.offsetHeight / 2)
+      const sx = row.offsetWidth / p.offsetWidth, sy = row.offsetHeight / p.offsetHeight
+      const timing = { duration: 1000, delay: k * 320 + n * 120, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'both' }
+      running.push(p.animate([
+        { transform: `rotate(${tilt}deg)`, opacity: 1 },
+        { opacity: 1, offset: 0.25 },
+        { opacity: 0, offset: 0.7 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(${sx}, ${sy})`, opacity: 0 },
+      ], timing))
+      if (n === 0) running.push(row.animate([
+        { transform: `translate(${-dx}px, ${-dy}px) rotate(${tilt}deg) scale(${1 / sx}, ${1 / sy})`, opacity: 0 },
+        { opacity: 0, offset: 0.3 },
+        { opacity: 1, offset: 0.75 },
+        { transform: 'none', opacity: 1 },
+      ], timing))
+    })
+  })
+}
+// Back to scattered: the pieces fade in where they lie, one after another.
+const scatter = () => {
+  stop()
+  pieces.forEach((p, i) => {
+    const tilt = parseFloat(p.style.getPropertyValue('--r')) || 0
+    running.push(p.animate([{ opacity: 0, transform: `rotate(${tilt}deg) scale(0.96)` }, { opacity: 1, transform: `rotate(${tilt}deg)` }],
+      { duration: 500, delay: 150 + i * 70, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' }))
+  })
+}
+const show = (to) => {
+  if (!reduce) { if (to === 'together') morph(); else if (stage.dataset.state === 'together') scatter() }
+  stage.dataset.state = to
+  // Re-set the current step so its progress line starts again from zero.
+  steps.forEach((b) => b.removeAttribute('aria-current'))
+  void player.offsetWidth
+  steps.find((b) => b.dataset.to === to).setAttribute('aria-current', 'true')
+}
+const next = () => {
+  clearTimeout(timer)
+  if (paused || !visible) return
+  timer = setTimeout(() => { show(stage.dataset.state === 'together' ? 'scattered' : 'together'); next() }, HOLD[stage.dataset.state])
+}
+steps.forEach((b) => b.addEventListener('click', () => { show(b.dataset.to); next() }))
+pp.addEventListener('click', () => {
+  paused = !paused
+  pp.setAttribute('aria-pressed', String(paused))
+  pp.setAttribute('aria-label', paused ? 'Play the animation' : 'Pause the animation')
+  player.toggleAttribute('data-paused', paused)
+  if (!paused) show(stage.dataset.state)
+  next()
+})
+if (reduce) { show('together'); player.classList.add('still') }
+else {
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; player.toggleAttribute('data-offscreen', !visible); next() }).observe(stage)
+  next()
+}
+
+// "How it works": each step comes in as it nears the middle of the screen, and the chain's line fills
+// down to the step reached. Under reduced motion every step is simply there.
+const chain = document.querySelector('.chain')
+const links = [...chain.querySelectorAll('.chain-step')]
+// The line runs from the first circle to the last one.
+const ends = () => {
+  const first = links[0].querySelector('.link-n'), last = links.at(-1).querySelector('.link-n'), box = chain.getBoundingClientRect()
+  chain.style.setProperty('--top', `${first.getBoundingClientRect().top + first.offsetHeight / 2 - box.top}px`)
+  chain.style.setProperty('--bottom', `${box.bottom - (last.getBoundingClientRect().top + last.offsetHeight / 2)}px`)
+}
+ends(); addEventListener('resize', ends)
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) { links.forEach((l) => l.classList.add('in')); chain.style.setProperty('--p', 1) }
+else {
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in') }), { rootMargin: '0px 0px -35% 0px' })
+  links.forEach((l) => io.observe(l))
+  let queued = false
+  const fill = () => {
+    queued = false
+    const r = chain.getBoundingClientRect()
+    chain.style.setProperty('--p', Math.min(1, Math.max(0, (innerHeight * 0.65 - r.top) / r.height)).toFixed(3))
+  }
+  addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(fill) } }, { passive: true })
+  fill()
+}
+
+// Nib's demo: a person using Nib, played by a pointer. Each scene resets its window, then runs its
+// steps; a newer run (a click, a pause, the demo leaving the screen) stops the older one at its next
+// wait. Under reduced motion there is no pointer: each scene shows its finished state.
+const nw = document.querySelector('.nw')
+const pointer = nw.querySelector('.nw-cursor')
+const acts = [...document.querySelectorAll('[data-scene-to]')]
+const scenes = [...nw.querySelectorAll('.nw-scene')]
+const where = nw.querySelector('[data-where]')
+const nibPP = document.querySelector('.nib-pp')
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+let run = 0, current = 0, nibPaused = false, nibSeen = false, playing = false
+let px = 0, py = 0
+const q = (scene, sel) => scene.querySelector(`[data-${sel}]`)
+const wait = (ms, gen) => new Promise((ok, stop) => setTimeout(() => (gen === run ? ok() : stop('stopped')), ms))
+const at = (el) => {
+  const a = nw.getBoundingClientRect(), b = el.getBoundingClientRect()
+  return [b.left - a.left + Math.min(b.width * 0.5, 60), b.top - a.top + b.height * 0.55]
+}
+const moveTo = async (el, gen, ms = 700) => {
+  const [x, y] = at(el)
+  pointer.animate([{ transform: `translate(${px}px, ${py}px)` }, { transform: `translate(${x}px, ${y}px)` }], { duration: ms, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' })
+  px = x; py = y
+  await wait(ms, gen)
+}
+const press = async (el, gen) => {
+  pointer.classList.add('down'); el.classList.add('pressed')
+  await wait(170, gen)
+  pointer.classList.remove('down'); el.classList.remove('pressed')
+}
+const typeInto = async (el, text, gen) => {
+  el.textContent = ''
+  el.classList.add('typing')
+  for (const ch of text) { el.textContent += ch; await wait(ch === ' ' ? 90 : 55, gen) }
+  el.classList.remove('typing')
+}
+
+const answer = ['The', 'launch', 'party', 'is', 'on', 'April', '10', 'at', 'the', 'Harbor', 'Room', '[1].', 'Tom', 'booked', 'it', 'after', 'the', 'team', 'agreed', 'in', '#launch', '[2].']
+const cite = (w) => w.replace(/\[(\d)\](.*)/, '<span class="nw-nb"><i class="nw-cite">$1</i>$2</span>')
+
+// Each scene: where the window says it is, a reset, the steps, and the finished state.
+const play = [
+  {
+    where: 'Overview',
+    reset(sc) { q(sc, 'input').textContent = ''; q(sc, 'status').textContent = ''; q(sc, 'stream').innerHTML = ''; sc.classList.remove('answered', 'sourced') },
+    async steps(sc, gen) {
+      await moveTo(q(sc, 'input'), gen); await press(q(sc, 'input'), gen)
+      await typeInto(q(sc, 'input'), 'When is the launch party?', gen)
+      await wait(300, gen); await moveTo(q(sc, 'ask'), gen, 500); await press(q(sc, 'ask'), gen)
+      q(sc, 'status').textContent = 'Nib is reading the space…'
+      await wait(1100, gen)
+      q(sc, 'status').textContent = ''; sc.classList.add('answered')
+      const out = q(sc, 'stream')
+      for (const w of answer) { out.innerHTML += (out.innerHTML ? ' ' : '') + cite(w); await wait(85, gen) }
+      sc.classList.add('sourced')
+    },
+    done(sc) { q(sc, 'input').textContent = 'When is the launch party?'; q(sc, 'stream').innerHTML = answer.map(cite).join(' '); sc.classList.add('answered', 'sourced') },
+  },
+  {
+    where: 'Discussions',
+    reset(sc) { q(sc, 'status').textContent = ''; sc.classList.remove('proposed', 'added') },
+    async steps(sc, gen) {
+      await moveTo(q(sc, 'suggest'), gen); await press(q(sc, 'suggest'), gen)
+      q(sc, 'status').textContent = 'Nib is reading the thread…'
+      await wait(1200, gen)
+      q(sc, 'status').textContent = ''; sc.classList.add('proposed')
+      await wait(900, gen)
+      await moveTo(q(sc, 'add'), gen, 600); await press(q(sc, 'add'), gen)
+      sc.classList.remove('proposed'); sc.classList.add('added')
+    },
+    done(sc) { sc.classList.add('added') },
+  },
+  {
+    where: 'Launch plan',
+    reset(sc) { q(sc, 'pill').textContent = '● Draft'; sc.classList.remove('menu', 'review', 'checked') },
+    async steps(sc, gen) {
+      await moveTo(q(sc, 'pill'), gen); await press(q(sc, 'pill'), gen)
+      sc.classList.add('menu')
+      await wait(350, gen)
+      await moveTo(q(sc, 'submit'), gen, 450); await press(q(sc, 'submit'), gen)
+      sc.classList.remove('menu'); sc.classList.add('review'); q(sc, 'pill').textContent = '● In review'
+      await wait(1300, gen)
+      sc.classList.add('checked')
+      await wait(700, gen)
+      await moveTo(q(sc, 'open'), gen, 650)
+    },
+    done(sc) { q(sc, 'pill').textContent = '● In review'; sc.classList.add('review', 'checked') },
+  },
+]
+
+const showScene = (i) => {
+  current = i
+  scenes.forEach((sc, k) => sc.toggleAttribute('data-on', k === i))
+  acts.forEach((b, k) => (k === i ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current')))
+  where.textContent = play[i].where
+  play[i].reset(scenes[i])
+}
+const loop = async (from) => {
+  const gen = ++run
+  playing = true
+  try {
+    for (let i = from; ; i = (i + 1) % play.length) {
+      showScene(i)
+      pointer.classList.add('on')
+      await wait(500, gen)
+      await play[i].steps(scenes[i], gen)
+      await wait(2600, gen)
+    }
+  } catch { /* a newer run took over */ }
+}
+const stopNib = () => { run++; playing = false; pointer.classList.remove('on') }
+
+acts.forEach((b, i) => b.addEventListener('click', () => {
+  if (still || nibPaused) { stopNib(); showScene(i); play[i].done(scenes[i]); return }
+  loop(i)
+}))
+if (still) { nibPP.hidden = true; showScene(0); play[0].done(scenes[0]) }
+else {
+  showScene(0)
+  nibPP.addEventListener('click', () => {
+    nibPaused = !nibPaused
+    nibPP.setAttribute('aria-pressed', String(nibPaused))
+    nibPP.setAttribute('aria-label', nibPaused ? 'Play the demo' : 'Pause the demo')
+    if (nibPaused) stopNib(); else if (nibSeen) loop(current)
+  })
+  new IntersectionObserver(([e]) => {
+    nibSeen = e.isIntersecting
+    if (!nibSeen) stopNib(); else if (!nibPaused && !playing) loop(current)
+  }, { threshold: 0.4 }).observe(nw)
+}
+
+// Live and offline: two windows on one paragraph. Maria types and both windows show it; Tom goes
+// offline and keeps typing while Maria edits too; Tom reconnects and each side receives what it
+// missed, lit up for a moment. Same stop-by-generation pattern as Nib's demo; under reduced motion
+// the merged paragraph simply shows.
+const sync = document.querySelector('.sync')
+const syncState = document.querySelector('[data-sync]')
+const syncText = document.querySelector('[data-sync-text]')
+const wins = { maria: sync.querySelector('[data-win="maria"]'), tom: sync.querySelector('[data-win="tom"]') }
+const colors = { maria: '#c2185b', tom: '#1565c0' }
+const texts = { m1: 'for 80 guests ', m2: 'the evening of ', t1: ' Doors open at 7 pm.' }
+let syncRun = 0, syncPlaying = false
+const sWait = (ms, gen) => new Promise((ok, stop) => setTimeout(() => (gen === syncRun ? ok() : stop('stopped')), ms))
+const part = (who, key) => wins[who].querySelector(`[data-part="${key}"]`)
+const caret = (who, name) => {
+  let c = wins[who].querySelector(`.cursor[data-name="${name}"]`)
+  if (!c) { c = document.createElement('span'); c.className = 'cursor'; c.dataset.name = name; c.style.setProperty('--c', colors[name.toLowerCase()]) }
+  return c
+}
+const place = (who, name, key) => part(who, key).after(caret(who, name))
+const pill = (who, state, label) => { const el = wins[who].querySelector('[data-pill]'); el.dataset.state = state; el.textContent = '● ' + label }
+const say = (state, text) => { syncState.dataset.state = state; syncText.textContent = text }
+const syncReset = () => {
+  for (const who of ['maria', 'tom']) {
+    for (const key of Object.keys(texts)) { part(who, key).textContent = ''; part(who, key).classList.remove('arrived') }
+    wins[who].querySelectorAll('.cursor').forEach((c) => c.remove())
+    pill(who, 'live', 'Live')
+  }
+  wins.tom.classList.remove('off'); say('ok', 'In sync')
+}
+// Types into the writer's window; `mirror` is the other window when it is online.
+const typeText = async (writer, key, gen, mirror) => {
+  const name = writer === 'maria' ? 'Maria' : 'Tom'
+  place(writer, name, key)
+  if (mirror) place(mirror, name, key)
+  for (const ch of texts[key]) {
+    part(writer, key).textContent += ch
+    if (mirror) part(mirror, key).textContent += ch
+    await sWait(ch === ' ' ? 95 : 60, gen)
+  }
+}
+const syncLoop = async () => {
+  const gen = ++syncRun
+  syncPlaying = true
+  try {
+    for (;;) {
+      syncReset()
+      await sWait(900, gen)
+      // 1. Live: Maria types, and Tom's window shows it as she types.
+      await typeText('maria', 'm1', gen, 'tom')
+      await sWait(900, gen)
+      // 2. Tom loses the connection and keeps writing; Maria edits her side too.
+      wins.tom.classList.add('off'); pill('tom', 'off', 'Offline'); say('wait', 'Tom is offline · 2 changes waiting')
+      await sWait(700, gen)
+      await typeText('tom', 't1', gen)
+      await sWait(300, gen)
+      await typeText('maria', 'm2', gen)
+      await sWait(1100, gen)
+      // 3. Tom is back: each side receives what it missed.
+      pill('tom', 'sync', 'Syncing'); say('wait', 'Merging…')
+      await sWait(800, gen)
+      wins.tom.classList.remove('off'); pill('tom', 'live', 'Live')
+      part('maria', 't1').textContent = texts.t1; part('maria', 't1').classList.add('arrived'); place('maria', 'Tom', 't1')
+      part('tom', 'm2').textContent = texts.m2; part('tom', 'm2').classList.add('arrived'); place('tom', 'Maria', 'm2')
+      say('ok', 'In sync · nothing to resolve')
+      await sWait(5200, gen)
+    }
+  } catch { /* stopped */ }
+}
+const syncStop = () => { syncRun++; syncPlaying = false }
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  syncReset()
+  for (const who of ['maria', 'tom']) for (const key of Object.keys(texts)) part(who, key).textContent = texts[key]
+  place('maria', 'Maria', 'm2'); place('tom', 'Tom', 't1')
+  say('ok', 'In sync · nothing to resolve')
+} else {
+  new IntersectionObserver(([e]) => { if (!e.isIntersecting) syncStop(); else if (!syncPlaying) syncLoop() }, { threshold: 0.4 }).observe(sync)
+}
+
+// A hidden tab plays nothing: the demos stop, and start again when the tab is shown and on screen.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { stopNib(); syncStop() }
+  else {
+    const on = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight }
+    if (!still && !nibPaused && on(nw)) loop(current)
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && on(sync)) syncLoop()
+  }
+})
+
+// The footer's theme toggle. "System" follows the device; light and dark pin the page.
+const themeButtons = document.querySelectorAll('[data-theme-to]')
+const markTheme = () => {
+  const now = document.documentElement.dataset.theme ?? 'system'
+  themeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeTo === now)))
+}
+themeButtons.forEach((b) => b.addEventListener('click', () => {
+  const to = b.dataset.themeTo
+  if (to === 'system') delete document.documentElement.dataset.theme
+  else document.documentElement.dataset.theme = to
+  try { to === 'system' ? localStorage.removeItem('theme') : localStorage.setItem('theme', to) } catch {}
+  markTheme()
+}))
+markTheme()
+</script>
+</body>
+</html>

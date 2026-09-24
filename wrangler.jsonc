@@ -12,6 +12,8 @@
     "bindings": [{ "name": "DOC", "class_name": "Doc" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Doc"] }],
+  // env.ASSETS: the built static files, so the Worker can serve the landing page at "/".
+  "assets": { "binding": "ASSETS" },
   // env.FILES: object storage for uploaded images. 10 GB free, no download fees.
   // env.AI: Workers AI. The free daily allowance is the only cap; calls fail, never bill, past it.
   "ai": { "binding": "AI" },

@@ -15,6 +15,11 @@ export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url)
 
+    // "/" is the landing page for visitors, and home for people signed in. Only the cookie is
+    // checked (no database call); a stale one falls through to home, which sends it to /login.
+    if (pathname === '/' && request.method === 'GET' && !request.headers.get('cookie')?.includes('better-auth.session_token'))
+      return env.ASSETS.fetch(new URL('/landing/', request.url))
+
     // POST /upload: an image from the editor. Session required. Stored in R2 under a random key.
     if (pathname === '/upload' && request.method === 'POST') {
       if (!(await getAuth().api.getSession({ headers: request.headers }))) return new Response('Sign in first', { status: 401 })
