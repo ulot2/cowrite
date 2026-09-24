@@ -60,11 +60,30 @@ test('needs attention lists the late task and the document in review, once each;
   assert.match((await page(`/space/${spaceId}`, ada.cookie)).html, /Send the brief<\/span><span class="attention-meta"><span class="you">You</, 'the assignee sees You')
   assert.equal((await page(`/space/${spaceId}`, dee.cookie)).status, 404, 'a stranger')
 
-  // A space with nothing in it yet opens on Get started instead.
+  // A space with nothing in it yet shows Get started above the rest.
   const fresh = (await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Empty' })).headers.get('location')
-  const empty = (await page(fresh, ada.cookie)).html
-  assert.match(empty, /Get started/)
-  assert.doesNotMatch(empty, /Needs attention/)
+  assert.match((await page(fresh, ada.cookie)).html, /Get started/)
+})
+
+test('the welcome steps make a space with its welcome document, and add only people who have an account', async () => {
+  const space = (await app.post('/welcome', dee.cookie, { intent: 'space', name: 'Hiring' })).headers.get('location').split('=').pop()
+  const people = new URLSearchParams([['space', space], ['email', 'nobody@example.test'], ['role', 'editor'], ['email', bea.email], ['role', 'editor']])
+  assert.equal((await app.post('/welcome', dee.cookie, people)).status, 200, 'an unknown email stops the step')
+  const html = (await page(`/space/${space}`, dee.cookie)).html
+  assert.match(html, /Welcome to CoWrite/)
+  assert.doesNotMatch(html, /title="Bea"/, 'nobody was added')
+  assert.match(html, /<strong>1 of 5 done\.<\/strong>/)
+  const doc = html.match(/href="\/doc\/([\w-]+)"/)[1]
+  await page(`/doc/${doc}`, dee.cookie)
+  assert.match((await page(`/space/${space}`, dee.cookie)).html, /<strong>2 of 5 done\.<\/strong>/, 'opening the welcome document ticks its step')
+})
+
+test('a member can leave a space; the owner cannot', async () => {
+  const space = (await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Leaving' })).headers.get('location').split('/').pop()
+  await app.post(`/space/${space}`, ada.cookie, { intent: 'add', email: cy.email, role: 'viewer' })
+  assert.equal((await app.post(`/space/${space}`, ada.cookie, { intent: 'leave' })).status, 403, 'the owner')
+  assert.equal((await app.post(`/space/${space}`, cy.cookie, { intent: 'leave' })).status, 302)
+  assert.equal((await page(`/space/${space}`, cy.cookie)).status, 404, 'gone after leaving')
 })
 
 test('a visit writes Nib\'s summary in the room; a second visit within hours does not start another', async () => {

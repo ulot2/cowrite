@@ -412,25 +412,60 @@ export class Doc extends DurableObject<Env> {
     return true
   }
 
-  // New content for a new document: a plan template, or the columns of a board. A space's ideas
-  // board is seeded when first opened, so it does nothing once columns exist.
-  seed(kind: 'plan' | 'board' | 'ideas') {
+  // New content for a new document: a plan template, the welcome document (its task goes to `who`),
+  // or the columns of a board. A space's ideas board is seeded when first opened, so it does nothing
+  // once columns exist.
+  seed(kind: 'plan' | 'welcome' | 'board' | 'ideas', who?: { id: string; name: string }) {
     if (kind === 'board' || kind === 'ideas') {
       const groups = this.doc.getArray('groups')
       if (groups.length === 0) groups.push((kind === 'ideas' ? ['New', 'Exploring', 'Picked'] : ['Ideas', 'Maybe', 'Next']).map((name) => ({ id: crypto.randomUUID(), name })))
       return
     }
     const container = (content: Y.XmlElement) => { const c = new Y.XmlElement('blockContainer'); c.setAttribute('id', crypto.randomUUID()); c.insert(0, [content]); return c }
-    const el = (type: string, attrs: Record<string, unknown>, text = '') => {
+    // Text is a string, or runs of [text, marks]. Marks are stored the way y-prosemirror stores them.
+    const el = (type: string, attrs: Record<string, unknown>, text: string | [string, object?][] = '') => {
       const e = new Y.XmlElement(type)
       for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v as string)
-      if (text) e.insert(0, [new Y.XmlText(text)])
+      const runs = typeof text === 'string' ? (text ? [[text]] as [string][] : []) : text
+      if (runs.length) {
+        const t = new Y.XmlText()
+        let at = 0
+        for (const [s, marks] of runs) { t.insert(at, s, marks ?? {}); at += s.length }
+        e.insert(0, [t])
+      }
       return e
     }
+    const task = (text: string, assignee = '', assigneeName = '', due = '') => el('task', { taskId: crypto.randomUUID(), assignee, assigneeName, due, done: false }, text)
     const group = new Y.XmlElement('blockGroup')
+    if (kind === 'welcome') {
+      const b = (s: string): [string, object] => [s, { bold: {} }]
+      const code = (s: string): [string, object] => [s, { code: {} }]
+      const by = { id: 'ai~welcome' } // "ai" authors show as Nib
+      this.doc.transact(() => {
+        this.doc.getXmlFragment('document-store').insert(0, [group])
+        group.insert(0, [
+          el('paragraph', {}, 'Everything here works, so try it as you read. It is in your space, so its members can see it too. Delete it when you are done.'),
+          el('heading', { level: 2 }, 'Accept a suggestion'),
+          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits for you. Accept this one from the bar at the top.'),
+          el('paragraph', {}, [['CoWrite is where a team '], ['writes', { deletion: by }], ['writes, reviews, and decides', { insertion: by }], ['.']]),
+          el('heading', { level: 2 }, 'Ask Nib'),
+          el('paragraph', {}, [['Select the sentence below, click '], b('✦ Ask Nib'), [' in the toolbar, and choose '], b('Make shorter'), ['. Or type '], code('@nib'), [' on an empty line and tell it what to write.']]),
+          el('paragraph', {}, 'We are writing this particular sentence in a way that is a great deal longer than it really needs to be.'),
+          el('heading', { level: 2 }, 'Tick a task'),
+          el('paragraph', {}, [['Type '], code('/task'), [' to add one. Tasks show on the Tasks page of the person they are for.']]),
+          task('Finish the welcome document', who?.id, who?.name, new Date().toISOString().slice(0, 10)),
+          el('heading', { level: 2 }, 'Comment and mention'),
+          el('paragraph', {}, [['Select any words and click the comment button. Type '], code('@'), [' to mention someone. They hear about it in their bell.']]),
+          el('heading', { level: 2 }, 'Record a decision'),
+          el('paragraph', {}, [['Type '], code('/decision'), ['. A decision gets a number and a page of its own, so a team can say “we settled that in D-12” and see why.']]),
+          el('decision', { decisionId: crypto.randomUUID(), status: 'proposed', number: 0 }, 'Use CoWrite for our next plan'),
+          el('paragraph', {}, [['Type '], code('/'), [' on an empty line for every kind of block: headings, lists, tables, images, tasks, and decisions. When you are done, keep this page as a cheat sheet, or delete it.']]),
+        ].map(container))
+      })
+      return
+    }
     this.doc.transact(() => {
       this.doc.getXmlFragment('document-store').insert(0, [group])
-      const task = (text: string) => el('task', { taskId: crypto.randomUUID(), assignee: '', assigneeName: '', due: '', done: false }, text)
       group.insert(0, [
         el('paragraph', {}, 'One page for what we are doing, why, who does what, and by when. Replace each line below.'),
         el('heading', { level: 2 }, 'Goal'),

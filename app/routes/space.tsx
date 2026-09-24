@@ -7,7 +7,7 @@ import { askSpace, proposeNextSteps } from '~/lib/nib.server'
 import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
 import type { Source } from '~/lib/search.server'
 import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState } from '~/lib/state.server'
-import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { deleteSpace, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
 import { atLeast } from '~/lib/roles'
@@ -91,7 +91,9 @@ export async function action({ request, params }: Route.ActionArgs) {
         const question = String(f.get('question') ?? '').trim()
         if (!question) return { error: 'Ask a question first.' }
         if (question.length > MAX_INSTRUCTION) return { error: `Keep the question under ${MAX_INSTRUCTION} characters.` }
-        return { question, ...(await askSpace(params.id, question)) }
+        const answer = await askSpace(params.id, question)
+        await markStart('id', params.id, 'asked')
+        return { question, ...answer }
       }
       const discussion = String(f.get('discussion') ?? '')
       const proposal = await proposeNextSteps(params.id, discussion)
@@ -101,6 +103,11 @@ export async function action({ request, params }: Route.ActionArgs) {
       console.error(e)
       return { error: 'Nib did not answer. Try again.' }
     }
+  }
+  if (intent === 'hide-start') {
+    if (!atLeast(role, 'commenter')) throw new Response('Not found', { status: 404 })
+    await markStart('id', params.id, 'hidden')
+    return null
   }
   if (intent === 'create') {
     if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
@@ -114,6 +121,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     const { id, title } = await createInMode(user.id, 'write', params.id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled', 'idea')
     await logEvent(id, user.id, 'created', `created “${title}” from an idea`)
     return { created: id }
+  }
+  if (intent === 'leave') {
+    // Any member but the owner. Documents shared with them directly stay theirs.
+    if (!role) throw new Response('Not found', { status: 404 })
+    if (role === 'owner') throw new Response('The owner cannot leave. Delete the space instead.', { status: 403 })
+    await removeMember('space', params.id, user.id)
+    await logSpaceEvent(params.id, user.id, 'shared', 'left the space')
+    throw redirect('/')
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
   if (intent === 'delete-space') {
@@ -246,17 +261,30 @@ function NeedsAttention({ rows, me, people }: { rows: Waiting[]; me: string; peo
   )
 }
 
-// A space with nothing in it yet: the chain the product is built on, as three first steps.
-function GetStarted({ role, go }: { role: Role; go: (t: Tab) => void }) {
-  if (!atLeast(role, 'commenter')) return <p className="attention-empty">Nothing here yet. The people who can edit this space have not started.</p>
+// A space made from the welcome steps: five first steps. Each is ticked by doing it, not by the card.
+type Step = { title: string; hint: string; done: boolean; act?: React.ReactNode }
+function GetStarted({ steps }: { steps: Step[] }) {
+  const hide = useFetcher()
+  const done = steps.filter((s) => s.done).length
+  if (hide.state !== 'idle' || done === steps.length) return null
   return (
-    <section className="get-started" aria-labelledby="start-title">
-      <h2 id="start-title">Get started</h2>
-      <p className="muted">A space holds one piece of work: the ideas, the talk that decides them, and the documents that come out of it.</p>
+    <section className="start-card" aria-labelledby="start-title">
+      <header>
+        <div>
+          <h2 id="start-title">Get started</h2>
+          <p className="muted"><strong>{`${done} of ${steps.length} done.`}</strong> Each step ticks itself when you do it.</p>
+        </div>
+        <span className="steps-bar" aria-hidden="true">{steps.map((s, i) => <i key={i} data-on={s.done || undefined} />)}</span>
+        <hide.Form method="post"><input type="hidden" name="intent" value="hide-start" /><button className="ghost small">Hide</button></hide.Form>
+      </header>
       <ol>
-        <li><div><strong>Add an idea</strong><span className="muted">Put a thought on the board before it is a plan.</span></div><button type="button" onClick={() => go('ideas')}>Open Ideas</button></li>
-        <li><div><strong>Start a discussion</strong><span className="muted">Talk it through, or ask a question that needs a decision by a date.</span></div><button type="button" onClick={() => go('discussions')}>Open Discussions</button></li>
-        {atLeast(role, 'editor') && <li><div><strong>Write a document</strong><span className="muted">A plan, a brief, or notes, shared with everyone here.</span></div><NewMenu action="" /></li>}
+        {steps.map((s) => (
+          <li key={s.title} data-done={s.done || undefined}>
+            <span className="start-tick" aria-hidden="true">{s.done && <Icon name="check" />}</span>
+            <span className="start-text"><strong>{s.title}</strong><span className="muted">{s.hint}</span></span>
+            {s.done ? <span className="sr-only">Done</span> : s.act}
+          </li>
+        ))}
       </ol>
     </section>
   )
@@ -297,8 +325,22 @@ export default function Space({ loaderData }: Route.ComponentProps) {
     </ol>
   )
   const [allDecisions, setAllDecisions] = useState(false)
-  // A space with no discussion, document, or idea yet opens on Get started.
   const empty = discussions.length === 0 && documents.length === 0 && !events.some((e) => e.type === 'idea')
+  const started = space.start_done.split(',')
+  const others = members.filter((m) => m.user_id !== me.id).map((m) => m.name.split(' ')[0])
+  const steps: Step[] = [
+    { title: 'Name your space', hint: others.length ? `${space.name}, with ${others.slice(0, 3).join(' and ')}${others.length > 3 ? ` and ${others.length - 3} more` : ''}.` : `${space.name}.`, done: true },
+    ...(space.welcome_doc ? [{ title: 'Open the welcome document', hint: 'It is in this space, and everything in it works.', done: started.includes('opened') || !documents.some((d) => d.id === space.welcome_doc),
+      act: <Link className="button small" to={`/doc/${space.welcome_doc}`}>Open</Link> }] : []),
+    { title: 'Add an idea', hint: 'Put a thought on the board before it is a plan.', done: events.some((e) => e.type === 'idea'),
+      act: <button type="button" className="small" onClick={() => go('ideas')}>Open Ideas</button> },
+    { title: 'Ask a question that needs a decision', hint: 'Say who decides and by when. It waits on this page until it is answered.', done: discussions.some((d) => d.kind === 'question') || decisions.some((d) => d.source_type === 'discussion'),
+      act: <button type="button" className="small" onClick={() => go('discussions')}>Ask</button> },
+    ...(nib ? [{ title: 'Ask Nib about the space', hint: 'Try “What is still open?” once there is something to read.', done: started.includes('asked'),
+      act: <button type="button" className="small" onClick={() => document.querySelector<HTMLInputElement>('.ask-space-form input')?.focus()}>Try it</button> }] : []),
+  ]
+  // Spaces made from the welcome steps keep the card until it is done or hidden; others, while empty.
+  const showStart = (!!space.welcome_doc || empty) && !started.includes('hidden') && atLeast(role, 'commenter')
   const soon = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)
   const waiting: Waiting[] = [
     ...questions.map((q): Waiting => ({ key: `q${q.id}`, verb: 'Decide', title: q.title, who: q.owner, whoId: q.owner_id, due: q.due, open: () => go('discussions', q.id) })),
@@ -346,6 +388,13 @@ export default function Space({ loaderData }: Route.ComponentProps) {
               </ul>
             </Confirm>
           )}
+          {!isOwner && members.some((m) => m.user_id === me.id) && (
+            <Confirm title={`Leave “${space.name}”?`} confirm="Leave space" busy="Leaving…" fields={{ intent: 'leave' }}
+              trigger={(open) => <button type="button" className="tool" title="Leave space" onClick={open}><Icon name="back" /><span className="tool-label">Leave space</span></button>}>
+              <p>You can no longer open its discussions, ideas, and documents. Documents that were shared with you directly stay with you.</p>
+              <p>To come back, ask the owner to add you again.</p>
+            </Confirm>
+          )}
           <ShareDialog target="space" isOwner={isOwner} members={members} link={link} className="tool" />
         </div>
       </div>
@@ -366,8 +415,9 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         ))}
       </nav>
 
-      {tab === 'overview' && (empty ? <GetStarted role={role} go={go} /> : (
+      {tab === 'overview' && (empty && !atLeast(role, 'commenter') ? <p className="attention-empty">Nothing here yet. The people who can edit this space have not started.</p> : (
         <div className="overview">
+          {showStart && <GetStarted steps={steps} />}
           <NeedsAttention rows={waiting} me={me.id} people={people} />
           <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />
           <Activity events={events} filtered limit={5} title="Latest" />

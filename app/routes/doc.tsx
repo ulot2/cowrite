@@ -4,7 +4,7 @@ import { clearPublished, clearSignoff, clearSignoffs, createInMode, getDocument,
 import { docStub } from '~/lib/versions.server'
 import { markCheckPending, type Finding } from '~/lib/nib.server'
 import { canMove, moves, statusLabel, type Move } from '~/lib/status'
-import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, markStart, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
@@ -23,6 +23,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const document = role && await getDocument(params.id)
   if (!role || !document) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
+  if (document.space_id) await markStart('welcome_doc', params.id, 'opened') // a "Get started" step
   return {
     user: { id: user.id, name: user.name, color: user.color },
     nib: user.settings.nib,

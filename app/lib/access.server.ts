@@ -7,7 +7,7 @@ import { getDocument } from './db.server'
 export type { Role }
 const higher = (a: Role | null | undefined, b: Role | null | undefined) => (rank(a) >= rank(b) ? a ?? null : b ?? null)
 
-export type SpaceRow = { id: string; name: string; owner_id: string; visibility: 'private' | 'public'; created_at: number }
+export type SpaceRow = { id: string; name: string; owner_id: string; visibility: 'private' | 'public'; created_at: number; welcome_doc: string | null; start_done: string }
 export type Member = { user_id: string; name: string; email: string; role: Role; color: string | null; image: string | null }
 export type ShareLink = { token: string; target_type: 'document' | 'space'; target_id: string; role: Role; created_at: number }
 
@@ -43,6 +43,11 @@ export const createSpace = async (userId: string, name: string) => {
   ])
   return id
 }
+
+// A "Get started" step done by an action no table records. `by` finds the space: its id, or its welcome document.
+export type StartStep = 'opened' | 'asked' | 'hidden'
+export const markStart = (by: 'id' | 'welcome_doc', value: string, step: StartStep) =>
+  env.DB.prepare(`UPDATE spaces SET start_done = start_done || ?2 || ',' WHERE ${by} = ?1 AND instr(start_done, ?2) = 0`).bind(value, step).run()
 
 // Deleting a space keeps its documents: they leave the space and stay with their own members.
 // People who could open them only through the space lose access. Space members and links go.
