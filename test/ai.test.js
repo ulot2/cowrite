@@ -73,3 +73,14 @@ test('@Nib in a comment gets a reply by Nib in the same thread', async () => {
   assert.match(comments()[1].get('body')[0].content[0].text, /^AI reply: /)
   tab.close()
 })
+
+test('a visitor asks the landing page a question without an account, at most five a day', async () => {
+  const faq = (question) => fetch(`${app.base}/api/faq`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question }) })
+  assert.equal((await faq('')).status, 400, 'an empty question')
+  assert.equal((await faq('x'.repeat(301))).status, 400, 'a long question')
+  const first = await faq('Is it free?')
+  assert.equal(first.status, 200)
+  assert.deepEqual(await first.json(), { question: 'Is it free?', answer: 'AI faq: 11' })
+  for (let i = 0; i < 4; i++) assert.equal((await faq('Again?')).status, 200)
+  assert.equal((await faq('One more?')).status, 429, 'the sixth question today')
+})

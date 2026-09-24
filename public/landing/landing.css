@@ -278,7 +278,7 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .player .step span { white-space: nowrap; }
 @media (max-width: 560px) {
   .player { flex-wrap: wrap; }
-  .player .caption { flex-basis: 100%; margin-left: 2.75rem; }
+  .player .caption { flex-basis: 100%; margin-left: 0; padding-left: 2.75rem; }
 }
 
 /* The theme toggle in the footer: three icons, the chosen one on the tint. */
@@ -312,8 +312,8 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .c-idea p, .c-q p, .c-doc p { margin: 0; }
 .c-kicker { font-size: 0.75rem; font-weight: 700; color: var(--fg-muted); }
 .c-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.015em; }
-.c-foot { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; }
-.votes { padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.c-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; font-size: 0.85rem; }
+.votes { flex: none; white-space: nowrap; padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .c-foot .faces i { width: 1.35rem; height: 1.35rem; }
 .to { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 0.82rem; }
 .from { justify-self: start; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--tint); color: var(--fg-muted); font-size: 0.75rem; font-weight: 600; }
@@ -500,9 +500,34 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .faq-code { margin: 1.5rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
 .faq-code a { font-weight: 700; }
 .faq-list { margin: 0; border-top: 1px solid var(--border); }
-.faq-list > div { display: grid; gap: 0.35rem; padding: 1.1rem 0; border-bottom: 1px solid var(--border); }
-.faq-list dt { font-weight: 800; font-size: 1.02rem; }
-.faq-list dd { margin: 0; max-width: 40rem; color: var(--fg-muted); line-height: 1.6; }
+/* Each question opens and shuts (one at a time); the answer folds open where the browser can animate it. */
+.faq-list details { border-bottom: 1px solid var(--border); }
+.faq-list summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 0; font-weight: 800; font-size: 1.02rem; cursor: pointer; list-style: none; }
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary::after { content: ""; flex: none; width: 0.55rem; height: 0.55rem; margin-right: 0.3rem; border-right: 2px solid var(--fg-muted); border-bottom: 2px solid var(--fg-muted); rotate: 45deg; translate: 0 -25%; transition: rotate 200ms var(--ease-out), translate 200ms var(--ease-out); }
+.faq-list details[open] summary::after { rotate: 225deg; translate: 0 25%; }
+.faq-list summary:hover::after { border-color: var(--fg); }
+.faq-list details p { margin: 0; padding: 0 2rem 1.2rem 0; max-width: 40rem; color: var(--fg-muted); line-height: 1.6; }
+:root { interpolate-size: allow-keywords; }
+.faq-list details::details-content { block-size: 0; overflow: hidden; transition: block-size 260ms var(--ease-out), content-visibility 260ms allow-discrete; }
+.faq-list details[open]::details-content { block-size: auto; }
+@media (prefers-reduced-motion: reduce) { .faq-list details::details-content, .faq-list summary::after { transition: none; } }
+/* The visitor's own questions: a tag, Nib's answer, a note that it can be wrong, and Remove. */
+.faq-list .mine summary > span { display: grid; gap: 0.2rem; }
+.mine-tag { justify-self: start; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.7rem; font-weight: 700; }
+.faq-list .mine p { white-space: pre-line; }
+.faq-list .mine .mine-note { padding-bottom: 0.5rem; font-size: 0.8rem; }
+.faq-remove { margin: 0 0 1.1rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.faq-remove:hover { color: var(--fg); }
+.faq-ask { display: grid; gap: 0.5rem; margin-top: 1.75rem; }
+.faq-ask label { font-weight: 800; }
+.faq-ask-row { display: flex; gap: 0.5rem; }
+.faq-ask input { flex: 1; min-width: 0; min-height: 2.9rem; padding: 0 0.9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--fg); font: inherit; }
+.faq-ask input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.faq-ask .btn:disabled { opacity: 0.6; cursor: default; }
+.faq-ask-note { margin: 0; font-size: 0.82rem; color: var(--fg-muted); }
+.faq-ask-note[data-state="busy"]::before { content: "✦ "; color: var(--accent); }
+.faq-ask-note[data-state="error"] { color: var(--danger); }
 @media (max-width: 860px) {
   .faq { grid-template-columns: minmax(0, 1fr); }
   .faq-head { position: static; }

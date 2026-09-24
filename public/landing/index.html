@@ -295,15 +295,26 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <p class="section-lede">What people ask before they start.</p>
       <p class="faq-code">Curious how it works inside? <a href="https://github.com/ulot2/cowrite">Read the code on GitHub →</a></p>
     </div>
-    <dl class="faq-list">
-      <div><dt>Is it free?</dt><dd>Yes. There is no paid plan today, and nothing asks for a card.</dd></div>
-      <div><dt>Who can see my space?</dt><dd>Only the people you add. If you make a space public, anyone signed in who has its link can read it.</dd></div>
-      <div><dt>What does Nib do with my text?</dt><dd>Nib runs on Cloudflare Workers AI. It reads your work when you ask it something, when a document goes to review, and to write a space's weekly summary. It never changes your text by itself, and you can switch it off in Settings.</dd></div>
-      <div><dt>Can I take my work out?</dt><dd>Yes. Download any document as Markdown, Word, or plain text, or print it to PDF.</dd></div>
-      <div><dt>What if I lose the connection?</dt><dd>Keep writing. Your edits are saved on your device and merge with everyone else's when you are back.</dd></div>
-      <div><dt>How do I bring my team in?</dt><dd>Add people by the email they sign up with, or share the space's link. CoWrite does not send emails yet, so tell them yourself.</dd></div>
-      <div><dt>Is the code open?</dt><dd>Yes, under the MIT license. You can read it, run it yourself, or open an issue.</dd></div>
-    </dl>
+    <div class="faq-main">
+    <div class="faq-list">
+      <details name="faq" open><summary>Is it free?</summary><p>Yes. There is no paid plan today, and nothing asks for a card.</p></details>
+      <details name="faq"><summary>Who can see my space?</summary><p>Only the people you add. If you make a space public, anyone signed in who has its link can read it.</p></details>
+      <details name="faq"><summary>What does Nib do with my text?</summary><p>Nib runs on Cloudflare Workers AI. It reads your work when you ask it something, when a document goes to review, and to write a space's weekly summary. It never changes your text by itself, and you can switch it off in Settings.</p></details>
+      <details name="faq"><summary>Can I take my work out?</summary><p>Yes. Download any document as Markdown, Word, or plain text, or print it to PDF.</p></details>
+      <details name="faq"><summary>What if I lose the connection?</summary><p>Keep writing. Your edits are saved on your device and merge with everyone else's when you are back.</p></details>
+      <details name="faq"><summary>How do I bring my team in?</summary><p>Add people by the email they sign up with, or share the space's link. CoWrite does not send emails yet, so tell them yourself.</p></details>
+      <details name="faq"><summary>Is the code open?</summary><p>Yes, under the MIT license. You can read it, run it yourself, or open an issue.</p></details>
+    </div>
+    <!-- Ask your own question: Nib answers from the facts about CoWrite; the row is kept in this browser only. -->
+    <form class="faq-ask">
+      <label for="faq-q">Ask your own question</label>
+      <div class="faq-ask-row">
+        <input id="faq-q" name="question" maxlength="300" required autocomplete="off" placeholder="Can I use it for a class project?" aria-describedby="faq-ask-note">
+        <button class="btn primary">Ask</button>
+      </div>
+      <p class="faq-ask-note" id="faq-ask-note" aria-live="polite">Nib answers from what CoWrite says about itself. Your questions stay in this browser.</p>
+    </form>
+    </div>
   </section>
 
   <!-- 7. Close: the page's last decision is the reader's own, drawn as a D-number card still waiting. -->
@@ -677,6 +688,57 @@ document.addEventListener('visibilitychange', () => {
     const on = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight }
     if (!still && !nibPaused && on(nw)) loop(current)
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches && on(sync)) syncLoop()
+  }
+})
+
+// "Ask your own question": Nib answers, and the question joins the list as the visitor's own row.
+// The rows are kept in this browser only. The answer is model output, so it is set as text, never HTML.
+const faqList = document.querySelector('.faq-list')
+const faqForm = document.querySelector('.faq-ask')
+const faqNote = document.querySelector('.faq-ask-note')
+const faqNoteText = faqNote.textContent
+const mine = {
+  read: () => { try { return JSON.parse(localStorage.getItem('faq-mine') ?? '[]') } catch { return [] } },
+  write: (rows) => { try { localStorage.setItem('faq-mine', JSON.stringify(rows.slice(0, 20))) } catch { /* private window: the row still shows */ } },
+}
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e }
+const addRow = (row, open) => {
+  const d = el('details', 'mine')
+  d.name = 'faq'
+  const s = el('summary')
+  const q = el('span')
+  q.append(el('span', 'mine-tag', 'Your question'), el('span', '', row.q))
+  s.append(q)
+  const remove = el('button', 'faq-remove', 'Remove')
+  remove.type = 'button'
+  remove.addEventListener('click', () => { mine.write(mine.read().filter((r) => r.at !== row.at)); d.remove() })
+  d.append(s, el('p', '', row.a), el('p', 'mine-note', 'Answered by Nib from what CoWrite says about itself. It can be wrong.'), remove)
+  faqList.prepend(d)
+  d.open = open
+  return d
+}
+mine.read().slice().reverse().forEach((row) => addRow(row, false))
+faqForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const input = faqForm.elements.question, button = faqForm.querySelector('button')
+  const question = input.value.trim()
+  if (!question) return
+  button.disabled = input.disabled = true
+  faqNote.dataset.state = 'busy'; faqNote.textContent = 'Nib is reading…'
+  try {
+    const res = await fetch('/api/faq', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question }) })
+    const out = await res.json().catch(() => ({ error: 'Nib did not answer. Try again.' }))
+    if (out.error) { faqNote.dataset.state = 'error'; faqNote.textContent = out.error; return }
+    const row = { q: out.question, a: out.answer, at: Date.now() }
+    mine.write([row, ...mine.read()])
+    addRow(row, true).scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+    input.value = ''
+    delete faqNote.dataset.state; faqNote.textContent = faqNoteText
+  } catch {
+    faqNote.dataset.state = 'error'; faqNote.textContent = 'Nib did not answer. Check the connection and try again.'
+  } finally {
+    button.disabled = input.disabled = false
+    input.focus()
   }
 })
 
