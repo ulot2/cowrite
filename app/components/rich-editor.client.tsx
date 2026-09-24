@@ -8,6 +8,7 @@ import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteViewEditor, ComponentsContext, FloatingComposerController, FloatingThreadController, FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController, ThreadsSidebar, useCreateBlockNote } from '@blocknote/react'
 import { People, schema, slashItems, TurnIntoTask } from './blocks.client'
 import { Icon } from './icon'
+import { Avatar } from './avatar'
 import { AiMenu, AskAiButton, NIB, nibItems, NibSuggestion } from './ai-menu.client'
 import { BlockNoteView } from '@blocknote/mantine'
 import { commentSchema, componentsWithMentions, type Person } from './mentions.client'
@@ -17,6 +18,9 @@ import { applySuggestion, applySuggestions, disableSuggestChanges, enableSuggest
 export type Panel = 'none' | 'open' | 'resolved' | 'outline' | 'ai'
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected'
 export type Presence = { name: string; color: string; editing?: boolean }
+export type Signoff = { block_id: string; user_id: string; name: string; state: 'agree' | 'concern'; note: string; heading: string; text_hash: string }
+// While a document is in review: every sign-off, and whether this person may sign.
+export type Review = { signoffs: Signoff[]; canSign: boolean }
 type Props = {
   documentId: string
   user: { id: string; name: string; color: string }
@@ -30,7 +34,12 @@ type Props = {
   panel: Panel
   onPanel: (panel: Panel) => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
+  review?: Review
+  onSections?: (total: number, signed: number, concerns: number) => void
 }
+
+// A short hash of a section's text (FNV-1a), to tell when it changed after a sign-off.
+const hash = (text: string) => { let h = 0x811c9dc5; for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193); return (h >>> 0).toString(36) }
 
 // Sends the picked image to the Worker, which stores it in R2 and answers with its URL.
 const uploadFile = async (file: File) => {
@@ -77,7 +86,7 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, nib, people, panel, onPanel, onStatus }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, nib, people, panel, onPanel, onStatus, review, onSections }: Props) {
   const canNib = canEdit && nib
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
@@ -209,21 +218,42 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   }
 
   // The outline: the document's headings, live. A click puts the cursor there and scrolls to it.
-  const [headings, setHeadings] = useState<{ id: string; level: number; text: string }[]>([])
+  // In review, each heading is a section (it runs to the next heading of the same or a higher
+  // level), with a hash of its text, so a sign-off can tell that the section changed since.
+  const [headings, setHeadings] = useState<{ id: string; level: number; text: string; hash: string }[]>([])
   useEffect(() => {
-    if (panel !== 'outline') return
+    if (panel !== 'outline' && !review) return
     const read = () => {
-      const out: { id: string; level: number; text: string }[] = []
+      const flat: { id: string; heading: number; text: string }[] = []
+      const words = (c: unknown) => Array.isArray(c) ? c.map((x: { text?: string }) => x.text ?? '').join('') : ''
       const walk = (blocks: typeof editor.document) => blocks.forEach((b) => {
-        if (b.type === 'heading') out.push({ id: b.id, level: Number((b.props as { level?: number }).level ?? 1), text: (b.content as { text?: string }[]).map((c) => c.text ?? '').join('') })
+        flat.push({ id: b.id, heading: b.type === 'heading' ? Number((b.props as { level?: number }).level ?? 1) : 0, text: words(b.content) })
         walk(b.children)
       })
       walk(editor.document)
-      setHeadings(out)
+      setHeadings(flat.flatMap((b, i) => {
+        if (!b.heading) return []
+        const end = flat.findIndex((x, j) => j > i && x.heading && x.heading <= b.heading)
+        return [{ id: b.id, level: b.heading, text: b.text, hash: hash(flat.slice(i, end < 0 ? undefined : end).map((x) => x.text).join('\n')) }]
+      }))
     }
     read()
     return editor.onChange(read)
-  }, [editor, panel])
+  }, [editor, panel, review])
+  // Per section: who agreed, who has a concern, and whether the text moved on since.
+  const sections = headings.map((h) => {
+    const rows = (review?.signoffs ?? []).filter((x) => x.block_id === h.id).map((x) => ({ ...x, stale: x.text_hash !== h.hash }))
+    return { ...h, rows, mine: rows.find((x) => x.user_id === user.id), signed: rows.some((x) => x.state === 'agree' && !x.stale) && !rows.some((x) => x.state === 'concern') }
+  })
+  const orphans = (review?.signoffs ?? []).filter((x) => x.state === 'concern' && !headings.some((h) => h.id === x.block_id))
+  const signedCount = sections.filter((x) => x.signed).length
+  const concernCount = (review?.signoffs ?? []).filter((x) => x.state === 'concern').length
+  useEffect(() => { if (review) onSections?.(headings.length, signedCount, concernCount) }, [review, onSections, headings.length, signedCount, concernCount])
+  const sign = useFetcher()
+  const [concerning, setConcerning] = useState<string | null>(null)
+  const signOff = (h: { id: string; text: string; hash: string }, state: 'agree' | 'concern' | null, note = '') =>
+    sign.submit(state ? { intent: 'signoff', block: h.id, heading: h.text, hash: h.hash, state, note } : { intent: 'unsignoff', block: h.id }, { method: 'post' })
+  const colorOf = (id: string) => people.find((p) => p.id === id)?.color ?? 'var(--fg-muted)'
   const goTo = (id: string) => {
     editor.setTextCursorPosition(id, 'start')
     editor.focus()
@@ -288,9 +318,51 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
         </div>
         {panel === 'outline' && (
           <aside className="comments-panel outline" aria-label="Outline">
-            <div className="panel-head"><strong>Outline</strong><button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close outline">✕</button></div>
-            {headings.length === 0 ? <p className="muted small">No headings yet. Type # and a space at the start of a line to make one.</p> : (
-              <ol>{headings.map((h) => <li key={h.id} data-level={h.level}><button type="button" className="ghost" onClick={() => goTo(h.id)}>{h.text || 'Untitled heading'}</button></li>)}</ol>
+            <div className="panel-head"><strong>{review ? 'Outline and sign-off' : 'Outline'}</strong><button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close outline">✕</button></div>
+            {review && headings.length > 0 && <p className="signoff-summary small" role="status">{signedCount} of {headings.length} {headings.length === 1 ? 'section' : 'sections'} signed{concernCount > 0 && <> · <span className="concern-text">{concernCount === 1 ? '1 concern' : `${concernCount} concerns`}</span></>}</p>}
+            {headings.length === 0 ? <p className="muted small">{review ? 'Reviewers sign off each heading and the text under it. ' : ''}No headings yet. Type # and a space at the start of a line to make one.</p> : (
+              <ol>{sections.map((h) => (
+                <li key={h.id} data-level={h.level} data-signed={(review && h.signed) || undefined}>
+                  <button type="button" className="ghost" onClick={() => goTo(h.id)}>{h.text || 'Untitled heading'}</button>
+                  {review && (
+                    <div className="signoff">
+                      {h.rows.length > 0 && (
+                        <ul className="signoff-people" aria-label="Sign-offs">
+                          {h.rows.map((x) => (
+                            <li key={x.user_id} data-state={x.state} data-stale={x.stale || undefined}
+                              title={`${x.name}: ${x.state === 'agree' ? 'agrees' : 'has a concern'}${x.stale ? ' (the section changed since)' : ''}`}>
+                              <Avatar name={x.name} color={colorOf(x.user_id)} size={20} />
+                              <span className="sr-only">{x.state === 'agree' ? 'agrees' : 'has a concern'}{x.stale ? ', the section changed since' : ''}</span>
+                              {x.state === 'concern' && <span className="signoff-note">{x.note || 'Concern'}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {review.canSign && (concerning === h.id ? (
+                        <form className="concern-form" onSubmit={(e) => { e.preventDefault(); signOff(h, 'concern', String(new FormData(e.currentTarget).get('note') ?? '')); setConcerning(null) }}>
+                          <textarea name="note" rows={2} maxLength={300} placeholder="What needs to change?" aria-label={`Your concern on “${h.text}”`} autoFocus />
+                          <span className="form-actions"><button type="button" className="ghost" onClick={() => setConcerning(null)}>Cancel</button><button className="primary">Raise concern</button></span>
+                        </form>
+                      ) : (
+                        <span className="signoff-actions">
+                          {h.mine?.state === 'agree' && !h.mine.stale
+                            ? <button type="button" className="ghost" aria-pressed="true" onClick={() => signOff(h, null)}><Icon name="check" />Agreed</button>
+                            : <button type="button" className="ghost" onClick={() => signOff(h, 'agree')}><Icon name="check" />{h.mine?.state === 'agree' ? 'Agree again' : 'Agree'}</button>}
+                          {h.mine?.state === 'concern'
+                            ? <button type="button" className="ghost" onClick={() => signOff(h, null)}>Withdraw concern</button>
+                            : <button type="button" className="ghost" onClick={() => setConcerning(h.id)}>Concern…</button>}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}</ol>
+            )}
+            {orphans.length > 0 && (
+              <div className="signoff-orphans">
+                <p className="small muted">Concerns on sections that are gone:</p>
+                <ul>{orphans.map((x) => <li key={x.block_id + x.user_id}><strong>{x.name}</strong> on “{x.heading || 'a section'}”{x.note && `: ${x.note}`} {x.user_id === user.id && <button type="button" className="link-button" onClick={() => signOff({ id: x.block_id, text: x.heading, hash: '' }, null)}>Withdraw</button>}</li>)}</ul>
+              </div>
             )}
           </aside>
         )}

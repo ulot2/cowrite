@@ -39,9 +39,11 @@ const useMenusClose = () => {
     const open = () => [...document.querySelectorAll<HTMLDetailsElement>('details[open]')]
     const outside = (e: PointerEvent) => { for (const d of open()) if (!d.contains(e.target as Node)) d.open = false }
     const picked = (e: MouseEvent) => {
-      const item = (e.target as HTMLElement).closest('a, button')
-      const menu = item?.closest<HTMLDetailsElement>('details[open]')
-      if (menu && !item!.closest('summary')) setTimeout(() => { menu.open = false }) // after the click has done its job
+      // The path is kept from the moment of the click, so an item that its own click removed still counts.
+      const path = e.composedPath().filter((n): n is HTMLElement => n instanceof HTMLElement)
+      const item = path.find((n) => n.matches('a, button'))
+      const menu = path.find((n): n is HTMLDetailsElement => n instanceof HTMLDetailsElement && n.open)
+      if (menu && item && !path.some((n) => n.tagName === 'SUMMARY')) setTimeout(() => { menu.open = false }) // after the click has done its job
     }
     const escape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return

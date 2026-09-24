@@ -374,10 +374,12 @@ export class Doc extends DurableObject<Env> {
     return true
   }
 
-  // New content for a new document: a plan template, or the columns of a board.
-  seed(kind: 'plan' | 'board') {
-    if (kind === 'board') {
-      this.doc.getArray('groups').push(['Ideas', 'Maybe', 'Next'].map((name) => ({ id: crypto.randomUUID(), name })))
+  // New content for a new document: a plan template, or the columns of a board. A space's ideas
+  // board is seeded when first opened, so it does nothing once columns exist.
+  seed(kind: 'plan' | 'board' | 'ideas') {
+    if (kind === 'board' || kind === 'ideas') {
+      const groups = this.doc.getArray('groups')
+      if (groups.length === 0) groups.push((kind === 'ideas' ? ['New', 'Exploring', 'Picked'] : ['Ideas', 'Maybe', 'Next']).map((name) => ({ id: crypto.randomUUID(), name })))
       return
     }
     const container = (content: Y.XmlElement) => { const c = new Y.XmlElement('blockContainer'); c.setAttribute('id', crypto.randomUUID()); c.insert(0, [content]); return c }

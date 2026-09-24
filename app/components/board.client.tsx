@@ -9,24 +9,39 @@ import { Select } from './select'
 
 type Group = { id: string; name: string }
 type Task = { assignee?: string; assigneeName?: string; due?: string; done?: boolean }
-type Card = { id: string; text: string; group: string; pos: number; votes: string[]; task?: Task; doc?: string }
+type Card = { id: string; text: string; group: string; pos: number; votes: string[]; task?: Task; doc?: string; discussion?: string }
+
+// The board scrolls sideways, which clips anything that overflows it. An open card menu is pinned to
+// the screen under its button instead, or above it when there is no room below.
+const pinMenu = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+  const menu = e.currentTarget, pop = menu.querySelector<HTMLElement>('.popover')
+  if (!menu.open || !pop) return
+  const r = menu.getBoundingClientRect()
+  const below = r.bottom + 4 + pop.offsetHeight <= innerHeight
+  Object.assign(pop.style, { position: 'fixed', left: 'auto', right: `${innerWidth - r.right}px`, top: below ? `${r.bottom + 4}px` : 'auto', bottom: below ? 'auto' : `${innerHeight - r.top + 4}px` })
+}
 
 type Props = {
   documentId: string
   user: { id: string; name: string; color: string }
   canEdit: boolean
   people: Person[]
-  onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
+  onStatus?: (state: ConnectionState, others: Presence[], openComments: number) => void
+  // A space's ideas board: the space room instead of a document, ideas become discussions (not tasks),
+  // and only space editors can turn one into a document.
+  room?: string
+  space?: boolean
+  canMakeDoc?: boolean
 }
 
 // A brainstorm board. Same object and socket as a document; the content is `groups` (columns) and
 // `cards` (one Y.Map per card), so cards sync live, work offline, and merge like text.
 // ponytail: a card's text is one value, last writer wins; a Y.Text per card if two people type in one card.
-export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
+export function Board({ documentId, user, canEdit, people, onStatus, room = documentId, space = false, canMakeDoc = canEdit }: Props) {
   const [sync] = useState(() => {
     const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
     const doc = new Y.Doc()
-    const provider = new WebsocketProvider(url, documentId, doc, { disableBc: true, connect: false })
+    const provider = new WebsocketProvider(url, room, doc, { disableBc: true, connect: false })
     provider.awareness.setLocalStateField('user', { name: user.name, color: user.color })
     return { doc, provider, groups: doc.getArray<Group>('groups'), cards: doc.getMap<Y.Map<unknown>>('cards') }
   })
@@ -43,13 +58,13 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
       setGroups(groups.toArray())
       setCards([...cards.entries()].map(([id, c]) => ({
         id, text: String(c.get('text') ?? ''), group: String(c.get('group') ?? ''), pos: Number(c.get('pos') ?? 0),
-        votes: [...((c.get('votes') as Y.Map<boolean> | undefined)?.keys() ?? [])], task: c.get('task') as Task | undefined, doc: c.get('doc') as string | undefined,
+        votes: [...((c.get('votes') as Y.Map<boolean> | undefined)?.keys() ?? [])], task: c.get('task') as Task | undefined, doc: c.get('doc') as string | undefined, discussion: c.get('discussion') as string | undefined,
       })).sort((a, b) => a.pos - b.pos))
     }
     const report = () => {
       const state: ConnectionState = provider.wsconnected ? 'connected' : provider.shouldConnect ? 'connecting' : 'disconnected'
       const others = [...provider.awareness.getStates()].filter(([id]) => id !== doc.clientID).map(([, s]) => s.user).filter(Boolean)
-      onStatus(state, others, 0)
+      onStatus?.(state, others, 0)
     }
     groups.observe(read); cards.observeDeep(read); provider.on('status', report); provider.awareness.on('change', report)
     read(); report()
@@ -84,6 +99,20 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
     if (votes.has(user.id)) votes.delete(user.id); else votes.set(user.id, true)
   }
   const setTask = (id: string, patch: Task | null) => card(id).set('task', patch && { ...(card(id).get('task') as Task | undefined), ...patch })
+  // An idea becomes a discussion in the same room, in one change: the card's text is its first message.
+  const discuss = (c: Card) => {
+    const id = crypto.randomUUID()
+    const d = new Y.Map<unknown>(), posts = new Y.Array<Y.Map<unknown>>(), first = new Y.Map<unknown>()
+    const now = Date.now()
+    sync.doc.transact(() => {
+      sync.doc.getMap<Y.Map<unknown>>('discussions').set(id, d)
+      for (const [k, v] of Object.entries({ title: c.text.split('\n')[0].slice(0, 200), kind: 'talk', status: 'open', createdBy: user.id, createdAt: now, idea: c.id })) d.set(k, v)
+      d.set('posts', posts)
+      first.set('id', crypto.randomUUID()); first.set('userId', user.id); first.set('text', c.text); first.set('createdAt', now)
+      posts.push([first])
+      card(c.id).set('discussion', id)
+    })
+  }
   const addGroup = () => sync.groups.push([{ id: crypto.randomUUID(), name: 'New column' }])
   const renameGroup = (i: number, name: string) => sync.doc.transact(() => { const g = sync.groups.get(i); sync.groups.delete(i, 1); sync.groups.insert(i, [{ ...g, name }]) })
 
@@ -137,9 +166,10 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
                   <button type="button" className="ghost vote" aria-pressed={c.votes.includes(user.id)} disabled={!canEdit} onClick={() => vote(c.id)} aria-label={`Vote. ${c.votes.length} ${c.votes.length === 1 ? 'vote' : 'votes'}`}>
                     <Icon name="up" />{c.votes.length}
                   </button>
+                  {c.discussion && <Link to={`?tab=discussions&d=${c.discussion}`} className="board-card-link"><Icon name="comment" />Discussion</Link>}
                   {c.doc && <Link to={`/doc/${c.doc}`} className="board-card-link"><Icon name="docs" />Document</Link>}
                   {canEdit && (
-                    <details className="status-menu card-menu">
+                    <details className="status-menu card-menu" onToggle={pinMenu}>
                       <summary className="tool icon-only" aria-label="Card actions"><Icon name="more" /></summary>
                       <div className="popover">
                         {groups.length > 1 && (
@@ -148,9 +178,10 @@ export function Board({ documentId, user, canEdit, people, onStatus }: Props) {
                             {groups.filter((o) => o.id !== g.id).map((o) => <button key={o.id} type="button" className="ghost" onClick={() => move(c.id, o.id)}>{o.name}</button>)}
                           </>
                         )}
-                        <p className="menu-label">Turn into</p>
-                        <button type="button" className="ghost" onClick={() => setTask(c.id, c.task ? null : { assignee: '', assigneeName: '', due: '', done: false })}>{c.task ? 'An idea again' : 'A task'}</button>
-                        {!c.doc && <button type="button" className="ghost" disabled={!c.text.trim() || makeDoc.state !== 'idle'} onClick={() => { pendingCard.current = c.id; makeDoc.submit({ intent: 'card-doc', title: c.text.slice(0, 120) }, { method: 'post' }) }}>A document</button>}
+                        {(!space || !c.discussion || (!c.doc && canMakeDoc)) && <p className="menu-label">Turn into</p>}
+                        {!space && <button type="button" className="ghost" onClick={() => setTask(c.id, c.task ? null : { assignee: '', assigneeName: '', due: '', done: false })}>{c.task ? 'An idea again' : 'A task'}</button>}
+                        {space && !c.discussion && <button type="button" className="ghost" disabled={!c.text.trim()} onClick={() => discuss(c)}>A discussion</button>}
+                        {!c.doc && canMakeDoc && <button type="button" className="ghost" disabled={!c.text.trim() || makeDoc.state !== 'idle'} onClick={() => { pendingCard.current = c.id; makeDoc.submit({ intent: 'card-doc', title: c.text.slice(0, 120) }, { method: 'post' }) }}>A document</button>}
                         <button type="button" className="ghost danger" onClick={() => sync.cards.delete(c.id)}>Delete card</button>
                       </div>
                     </details>

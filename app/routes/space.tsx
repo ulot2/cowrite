@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Form, Link, redirect, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
+import { docStub } from '~/lib/versions.server'
 import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
@@ -20,6 +21,7 @@ import { ShareDialog } from '~/components/share-dialog'
 import type { Route } from './+types/space'
 
 const SpaceRoom = lazy(() => import('~/components/space-room.client').then((m) => ({ default: m.SpaceRoom })))
+const Board = lazy(() => import('~/components/board.client').then((m) => ({ default: m.Board })))
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.space.name ?? 'Space'} · cowrite` }]
 
@@ -29,9 +31,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const space = role && await getSpace(params.id)
   if (!role || !space) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
+  // The ideas board lives in the space room. Its columns appear the first time a writer opens it.
+  if (new URL(request.url).searchParams.get('tab') === 'ideas' && atLeast(role, 'commenter')) await docStub(`${params.id}:space`).seed('ideas')
   return {
     owner: { name: user.name, color: user.color, image: user.image },
-    me: { id: user.id, name: user.name },
+    me: { id: user.id, name: user.name, color: user.color },
     space, role, isOwner,
     questions: await listOpenQuestions(params.id),
     discussions: await listRecentDiscussions(params.id),
@@ -56,6 +60,13 @@ export async function action({ request, params }: Route.ActionArgs) {
     const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, params.id)
     await logEvent(id, user.id, 'created', `created “${title}”`)
     throw redirect(`/doc/${id}`)
+  }
+  if (intent === 'card-doc') {
+    // An idea on the board becomes a document in the space, in the Idea state.
+    if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
+    const { id, title } = await createInMode(user.id, 'write', params.id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled', 'idea')
+    await logEvent(id, user.id, 'created', `created “${title}” from an idea`)
+    return { created: id }
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
   if (intent === 'delete-space') {
@@ -94,7 +105,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   return null
 }
 
-const tabs = [['overview', 'Overview'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
+const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
 type Tab = (typeof tabs)[number][0]
 const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
 const today = () => new Date().toISOString().slice(0, 10)
@@ -237,6 +248,10 @@ export default function Space({ loaderData }: Route.ComponentProps) {
           <Activity events={events} />
         </div>
       )}
+
+      {tab === 'ideas' && (mounted
+        ? <Suspense fallback={<p className="muted">Loading ideas…</p>}><Board documentId={space.id} room={`space/${space.id}`} space user={me} canEdit={atLeast(role, 'commenter')} canMakeDoc={atLeast(role, 'editor')} people={people} /></Suspense>
+        : <p className="muted">Loading ideas…</p>)}
 
       {tab === 'discussions' && (mounted
         ? <Suspense fallback={<p className="muted">Loading discussions…</p>}><SpaceRoom spaceId={space.id} user={me} canWrite={atLeast(role, 'commenter')} people={people} open={params.get('d')} onOpen={(d) => go('discussions', d)} /></Suspense>

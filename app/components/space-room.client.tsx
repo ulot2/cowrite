@@ -11,7 +11,7 @@ type Post = { id: string; userId: string; text: string; createdAt: number; taskI
 type Task = { text: string; assignee: string; assigneeName: string; due: string; done: boolean; discussionId: string; postId: string; createdBy: string }
 type Discussion = {
   id: string; title: string; kind: 'talk' | 'question'; status: 'open' | 'answered' | 'closed'
-  owner: string; due: string; answer: string; answeredBy: string; createdBy: string; createdAt: number; posts: Post[]; lastAt: number; decisionNumber: number
+  owner: string; due: string; answer: string; answeredBy: string; createdBy: string; createdAt: number; posts: Post[]; lastAt: number; decisionNumber: number; idea: string
 }
 
 type Props = {
@@ -54,7 +54,7 @@ export function SpaceRoom({ spaceId, user, canWrite, people, open, onOpen }: Pro
         return {
           id, title: String(d.get('title') ?? ''), kind: d.get('kind') === 'question' ? 'question' : 'talk', status: (d.get('status') as Discussion['status']) ?? 'open',
           owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: String(d.get('answeredBy') ?? ''),
-          createdBy: String(d.get('createdBy') ?? ''), createdAt, posts, lastAt: posts.at(-1)?.createdAt ?? createdAt, decisionNumber: Number(d.get('decisionNumber') ?? 0),
+          createdBy: String(d.get('createdBy') ?? ''), createdAt, posts, lastAt: posts.at(-1)?.createdAt ?? createdAt, decisionNumber: Number(d.get('decisionNumber') ?? 0), idea: String(d.get('idea') ?? ''),
         } satisfies Discussion
       }).sort((a, b) => b.lastAt - a.lastAt))
       setTasks(Object.fromEntries(tasks.entries()))
@@ -214,7 +214,7 @@ function Thread({ d, tasks, canWrite, people, person, user, onBack, onReply, onS
       <button type="button" className="ghost back" onClick={onBack}><Icon name="collapse" />All discussions</button>
       <header className="thread-head">
         <h2>{d.title || 'Untitled'}</h2>
-        <p className="muted">Started by {person(d.createdBy).name} · {timeAgo(d.createdAt)}</p>
+        <p className="muted">Started by {person(d.createdBy).name} · {timeAgo(d.createdAt)}{d.idea && <> · <a href="?tab=ideas">From an idea</a></>}</p>
       </header>
 
       {d.kind === 'question' && (

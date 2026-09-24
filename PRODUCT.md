@@ -31,6 +31,8 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 - Rich text editor (BlockNote on Yjs) with live cursors, comments with @mentions, suggestions, version history with compare and restore, activity timelines, a notification bell, search across text and comments.
 - Tasks with an assignee and a due date, a Tasks page; decisions numbered per space (D-1, D-2) and a decision log.
+- A space ideas board; an idea becomes a discussion or a document.
+- A document lifecycle: Idea, Draft, In review, Approved, Done. Reviewers sign off section by section, and an open concern blocks approval.
 - Nib: improve, fix, shorten, continue, summarize, extract action items, find contradictions, any free instruction (`@nib …`), and replies to `@Nib` in comments.
 - Runs entirely on Cloudflare's free plan (Workers, Durable Objects, D1, R2, Workers AI) at $0. Nib shares a free daily allowance of a few hundred requests.
 - Sign in with email and password; GitHub sign-in only when its secrets are set.

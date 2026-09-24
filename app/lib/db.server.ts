@@ -1,9 +1,10 @@
 import { env } from 'cloudflare:workers'
 import type { Role } from './roles'
+import type { Status } from './status'
 import { indexTitle, unindex } from './search.server'
 import { unindexWork } from './work.server'
 
-export type Status = 'draft' | 'review' | 'approved'
+export type { Status }
 export type Kind = 'doc' | 'board'
 export type DocumentRow = { id: string; title: string; kind: Kind; preview: string; open_comments: number; updated_at: number; space_id: string | null; space_name: string | null; status: Status; role: Role }
 
@@ -45,6 +46,20 @@ export const createDocument = async (userId: string, title: string, spaceId: str
 export const setStatus = (id: string, status: Status) =>
   env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind(status, id).run()
 
+// Section sign-off, per person per heading, while the document is in review.
+export type SignoffRow = { block_id: string; user_id: string; name: string; state: 'agree' | 'concern'; note: string; heading: string; text_hash: string; at: number }
+export const listSignoffs = async (documentId: string) =>
+  (await env.DB.prepare(`SELECT s.block_id, s.user_id, COALESCE(u.name, 'Someone') AS name, s.state, s.note, s.heading, s.text_hash, s.at FROM signoffs s LEFT JOIN "user" u ON u.id = s.user_id WHERE s.document_id = ? ORDER BY s.at`)
+    .bind(documentId).all<SignoffRow>()).results
+export const setSignoff = (documentId: string, userId: string, s: { block: string; state: 'agree' | 'concern'; note: string; heading: string; hash: string }) =>
+  env.DB.prepare(`INSERT INTO signoffs (document_id, block_id, user_id, state, note, heading, text_hash, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+    ON CONFLICT DO UPDATE SET state = ?4, note = ?5, heading = ?6, text_hash = ?7, at = ?8`).bind(documentId, s.block, userId, s.state, s.note, s.heading, s.hash, Date.now()).run()
+export const clearSignoff = (documentId: string, userId: string, block: string) =>
+  env.DB.prepare('DELETE FROM signoffs WHERE document_id = ? AND user_id = ? AND block_id = ?').bind(documentId, userId, block).run()
+export const clearSignoffs = (documentId: string) => env.DB.prepare('DELETE FROM signoffs WHERE document_id = ?').bind(documentId).run()
+export const openConcern = (documentId: string) =>
+  env.DB.prepare("SELECT heading FROM signoffs WHERE document_id = ? AND state = 'concern' LIMIT 1").bind(documentId).first<{ heading: string }>()
+
 // The four ways to start. Write: empty. Plan: a template of Goal, Tasks, Decisions, Timeline.
 // Brainstorm: a board with three columns. (Review is a queue, not a new document.)
 export type Mode = 'write' | 'plan' | 'brainstorm'
@@ -53,9 +68,10 @@ const starts: Record<Mode, { title: string; kind: Kind; seed?: 'plan' | 'board' 
   plan: { title: 'Untitled plan', kind: 'doc', seed: 'plan' },
   brainstorm: { title: 'Untitled board', kind: 'board', seed: 'board' },
 }
-export const createInMode = async (userId: string, mode: Mode, spaceId: string | null = null, title?: string) => {
+export const createInMode = async (userId: string, mode: Mode, spaceId: string | null = null, title?: string, status?: Status) => {
   const start = starts[mode] ?? starts.write
   const id = await createDocument(userId, title || start.title, spaceId, start.kind)
+  if (status) await setStatus(id, status)
   if (start.seed) await env.DOC.get(env.DOC.idFromName(id)).seed(start.seed)
   return { id, title: title || start.title }
 }

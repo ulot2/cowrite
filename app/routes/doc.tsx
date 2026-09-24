@@ -1,10 +1,10 @@
 import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
-import { clearPublished, createInMode, getDocument, renameDocument, setPublished, setStatus } from '~/lib/db.server'
+import { clearPublished, clearSignoff, clearSignoffs, createInMode, getDocument, listSignoffs, openConcern, renameDocument, setPublished, setSignoff, setStatus } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
-import { moves, statusLabel, type Move } from '~/lib/status'
+import { canMove, moves, statusLabel, type Move } from '~/lib/status'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
-import { logEvent } from '~/lib/events.server'
+import { logEvent, touchEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
 import { Editor } from '~/components/editor'
@@ -27,6 +27,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     nib: user.settings.nib,
     role, document, isOwner,
     members: await listMembers('document', params.id),
+    signoffs: await listSignoffs(params.id),
     link: isOwner ? await getShareLink('document', params.id) : null,
     spaces: isOwner ? (await listSpaces(user.id)).filter((s) => s.owner_id === user.id) : [],
     error: new URL(request.url).searchParams.get('error'),
@@ -45,11 +46,31 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (!role || !document) throw new Response('Not found', { status: 404 })
   if (intent === 'status') {
     // One move at a time, from the status the document has now, by a role that may make it.
-    const move = moves[String(f.get('move')) as Move]
+    const key = String(f.get('move')) as Move
+    const move = Object.hasOwn(moves, key) ? moves[key] : null
     if (!move || !atLeast(role, move.need)) throw new Response('You cannot make this change', { status: 403 })
-    if (document.status !== move.from) return { error: `The document is not ${statusLabel[move.from].toLowerCase()} any more.` }
+    if (!canMove(key, document.status)) return { error: `The document is ${statusLabel[document.status].toLowerCase()} now. Reload to see the change.` }
+    if (key === 'approve') {
+      const concern = await openConcern(params.id)
+      if (concern) return { error: `Resolve the concern on “${concern.heading || 'a section'}” first.` }
+    }
     await setStatus(params.id, move.to)
+    if (move.to === 'draft') await clearSignoffs(params.id) // a new review starts clean
     await logEvent(params.id, user.id, 'status', move.text)
+    return null
+  }
+  if (intent === 'signoff' || intent === 'unsignoff') {
+    // Reviewers and up sign off one section at a time, while the document is in review.
+    if (!atLeast(role, 'reviewer')) throw new Response('Reviewers sign off', { status: 403 })
+    if (document.status !== 'review') return { error: 'Sections are signed off while the document is in review.' }
+    const block = String(f.get('block') ?? '').slice(0, 100)
+    if (!block) return null
+    if (intent === 'unsignoff') { await clearSignoff(params.id, user.id, block); return null }
+    const state = f.get('state') === 'concern' ? 'concern' : 'agree'
+    const heading = String(f.get('heading') ?? '').slice(0, 120)
+    await setSignoff(params.id, user.id, { block, state, heading, note: String(f.get('note') ?? '').trim().slice(0, 300), hash: String(f.get('hash') ?? '').slice(0, 20) })
+    if (state === 'concern') await logEvent(params.id, user.id, 'signoff', `raised a concern on “${heading || 'a section'}”`)
+    else await touchEvent(params.id, user.id, 'signoff', 'signed off sections')
     return null
   }
   if (intent === 'suggestion') {
@@ -63,7 +84,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (intent === 'card-doc') {
     // A board card becomes a document of its own, in the same space, titled with the card's text.
     if (!atLeast(role, 'reviewer')) throw new Response('You cannot change this board', { status: 403 })
-    const { id, title } = await createInMode(user.id, 'write', document.space_id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled')
+    const { id, title } = await createInMode(user.id, 'write', document.space_id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled', 'idea')
     await logEvent(id, user.id, 'created', `created “${title}” from a card`)
     return { created: id }
   }
@@ -123,12 +144,13 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
-  const { user, role, document, isOwner, members, link, spaces, nib } = loaderData
+  const { user, role, document, isOwner, members, link, spaces, nib, signoffs } = loaderData
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
+        review={document.status === 'review' ? { signoffs, canSign: canEdit } : undefined}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <div className="tool-group" role="group" aria-label="Document">

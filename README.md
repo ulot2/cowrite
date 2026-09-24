@@ -84,7 +84,7 @@ Search is an SQLite FTS5 table in D1 with one row per document for its title, it
 
 Tasks and decisions are blocks inside the document, so they sync, merge offline, and live in versions like any text. The object's alarm writes an index of them to D1 (`tasks`, `decisions`) for the Tasks page and the decision log; a decision gets its number there (per space) and the object writes it back into the block. Ticking a task on the Tasks page asks the object over RPC to change the block, so open editors tick too. A brainstorm board is a document whose content is columns and cards (a Y.Array and a Y.Map) in the same object; it exports, publishes, and restores like a document.
 
-Status is a column on the document row with four moves (submit, request changes, approve, reopen), each checked against the role and the current status. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
+Status is a column on the document row: Idea, Draft, In review, Approved, Done. Six moves (start drafting, submit, request changes, approve, mark done, reopen) are each checked against the role and the current status. A document made from an idea starts as Idea. While a document is in review, reviewers sign off each section (a heading and the blocks under it) with "agree" or a concern and a short note. The `signoffs` table keeps one row per person per section, with a hash of the section's text at the time, so the Outline panel can show a sign-off as "changed since". Approve is refused while any concern is open, and a move back to Draft deletes the sign-offs, so each review round starts clean. The bell reads the events table: everything other people did on documents and spaces you belong to since you last opened it. One tiny table holds that time per person; no notification rows are written.
 
 The Worker checks the session and the role before it hands a WebSocket to an object. Text and comments are two rooms per document (`/ws/<id>` and `/ws/<id>/threads`), each its own object with its own write rule: text needs reviewer, comments need commenter. Below that, the object drops the socket's updates, so a commenter can comment and still cannot change a word. A reviewer can write to the text; their editor makes every edit a suggestion, but the server cannot tell a suggestion from an edit, so that rule holds only for the real app.
 
@@ -92,7 +92,7 @@ Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-in
 
 Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: avatar color, muted notification kinds, Nib on or off) and what belongs to a device in the browser (theme, text size, compact sidebar), applied by a small script before the first paint. The name, the photo, the password, GitHub linking, and the list of signed-in devices go through Better Auth's own server calls. Muted kinds are filtered in the bell's SQL. Deleting an account deletes the documents and spaces the person owns (with their objects), their memberships and sessions; what they did stays in other timelines as "Deleted user".
 
-A space has its own room, a third kind of object next to a document's text and comments rooms: `<space id>:space`, at `/ws/space/<id>`. It holds the space's discussions (each a Y.Map with its posts) and the tasks made from posts, so they sync live and merge offline like everything else. Commenters and up write; viewers read. The room's alarm writes an index to D1 (`discussions`, and task rows with `space_id` and `discussion_id`) for the space home, the Tasks page, and the bell. A question is a discussion with an owner and a "decide by" date; the space home lists open questions first, late ones in red.
+A space has its own room, a third kind of object next to a document's text and comments rooms: `<space id>:space`, at `/ws/space/<id>`. It holds the space's discussions (each a Y.Map with its posts) and the tasks made from posts, so they sync live and merge offline like everything else. Commenters and up write; viewers read. The same room holds the space's ideas board, in the same shape as a board document (`groups` and `cards`), so `board.client.tsx` serves both. Its three columns are seeded the first time someone who can write opens the Ideas tab. An idea can become a discussion in the same room (the card and the discussion point at each other) or a document in the space. The room's alarm writes an index to D1 (`discussions`, and task rows with `space_id` and `discussion_id`) for the space home, the Tasks page, and the bell. A question is a discussion with an owner and a "decide by" date; the space home lists open questions first, late ones in red.
 
 Decisions are records (`/decision/<id>`). A space has one numbered log fed from two places: decision blocks in its documents, and questions answered in its discussions (row id `q:<discussion id>`). Both alarms number them from the same sequence and write the number back into their source. A record keeps its outcome, who decided and when, where it came from, and what it replaces; "replaced by" is read back from the newer record, so the chain is stored once. The page reads the source discussion from the space's room over RPC, so the reason for a decision is always the original conversation.
 
@@ -112,7 +112,7 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs forty-nine tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs fifty-three tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -158,6 +158,10 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 - An answered question becomes D-1, numbered back into the room, and its page shows the outcome and the discussion; a stranger gets 404.
 - A decision block in the same space takes the next number.
 - A newer decision can replace an older one: the older page says so and the log in force hides it; a viewer's link gets 403 and a cycle is refused.
+- The space's ideas board seeds its columns once; an idea turned into a discussion reaches another member with its text; a viewer's idea is dropped.
+- An idea becomes a document in the Idea state, and Start drafting moves it to Draft; a commenter cannot make one.
+- A concern on a section blocks approval until it is withdrawn; a viewer cannot sign off, and a draft cannot be signed off.
+- Approved moves to Done and reopens; going back to Draft clears the sign-offs.
 
 ## Accessibility
 
@@ -175,6 +179,8 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 - The sign-in email cannot be changed yet; that needs an email service to verify the new address.
 - Uploaded images, profile photos included, stay in storage after they are replaced.
 - A discussion message is plain text; no formatting or @mentions yet.
+- Other people see a new sign-off when they reload the document, not live.
+- A document made from an idea does not link back to its card.
 - Nib has no per-person limit. One person can use the whole free daily allowance.
 - Nib reads at most 12,000 characters of a document.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.
