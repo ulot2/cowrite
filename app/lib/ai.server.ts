@@ -27,8 +27,9 @@ const prompts = {
   space: `${nib} Answer the question between <text> and </text> using only the numbered sources between <document> and </document>. After each fact, cite its source as [1], [2]. If the sources do not answer the question, say that you could not find it in this space. At most six sentences. No Markdown.`,
   propose: `${nib} Read the discussion between <text> and </text>. The people who can be assigned are listed between <document> and </document>, with today's date. Propose the next steps. Reply with JSON only, in this shape: {"tasks": [{"text": "a short imperative task", "assignee": "a name from the list, or empty", "due": "YYYY-MM-DD, or empty"}], "decision": "what the discussion decided, in one sentence, or null"}. At most five tasks, only ones the discussion supports. Use null for the decision when nothing was decided.`,
   state: `${nib} Write the state of a shared workspace for its members, from the facts and the recent activity between <text> and </text>. Two or three short, plain sentences: what changed, and what is still open. Say that a person owes something only when a fact says so: the assignee of a late task, who decides an open question. Never guess who should review or act. Leave out sharing, visibility, and settings changes. Use only what is given; never invent names, dates, or numbers. If little happened, say so in one sentence. ${rules}`,
-  // A visitor's question on the landing page, answered only from the facts about CoWrite.
-  faq: `You are Nib, the assistant in CoWrite. A visitor to CoWrite's website asks the question between <text> and </text>. Answer it using only the facts about CoWrite between <document> and </document>. Never add features, plans, prices, dates, or promises that the facts do not state. If the facts do not answer the question, say in one sentence that you do not know, and suggest asking on GitHub. Answer in two to four short, plain sentences, in the language of the question. ${rules}`,
+  // A visitor's question on the landing page. Two to four sentences, and only what the facts say: a question the facts
+  // do not answer gets the exact reply NO_ANSWER, and the server shows a fixed line instead.
+  faq: `You are Nib, the assistant in CoWrite. A visitor to CoWrite's website asks the question between <text> and </text>. Answer it using only the facts between <document> and </document>: first the direct answer, then the related facts that help the visitor understand it, in two to four plain sentences. Say only what a fact states. Never add features, plans, prices, dates, numbers, or promises that no fact states. If the question assumes something a fact contradicts, such as a paid plan, answer with that fact. If no fact answers the question, reply exactly: NO_ANSWER. ${rules}`,
   check: `${nib} Compare the document between <text> and </text> with the decisions in force and the open questions between <document> and </document>. Report only real problems, one per line: "D-9: <what the document says>, but D-9 decided <what was decided>." for a statement that goes against a decision, and "Q: <the question, exactly as listed>: <what in the document depends on it>" for a part that assumes an answer to an open question. If there are none, reply exactly: None found. No other text.`,
 } as const
 export type Command = keyof typeof prompts
@@ -70,8 +71,8 @@ export async function ask(command: Command, text: string, document = '', instruc
   try {
     const out = await env.AI.run(MODEL, {
       messages: [{ role: 'system', content: prompts[command] }, { role: 'user', content: user.trim() }],
-      max_tokens: command === 'custom' ? 1200 : 700,
-      temperature: 0.3,
+      max_tokens: command === 'custom' ? 1200 : command === 'faq' ? 300 : 700,
+      temperature: command === 'faq' ? 0 : 0.3, // the landing page's answers stay close to the facts
     }) as { response?: unknown }
     // Workers AI hands back an answer that is JSON as an object already; keep it as text.
     return clean(typeof out.response === 'string' ? out.response : out.response == null ? '' : JSON.stringify(out.response))

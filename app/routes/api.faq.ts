@@ -9,23 +9,34 @@ const MAX_QUESTION = 300
 const PER_VISITOR = 5
 const PER_DAY = 100
 
-// Everything Nib may say about CoWrite. Keep it in step with the landing page and the README.
-const facts = `CoWrite keeps a team's ideas, discussions, decisions, and documents in one space, linked both ways.
-A space holds one piece of work. Its members see its Overview ("Needs attention": questions to decide, documents to review, tasks to do), an Ideas board with votes, Discussions, Documents, numbered Decisions, and Tasks.
-An idea can become a discussion. A question has an owner and a "decide by" date. When it is answered it becomes a numbered decision (D-1, D-2), and the decision keeps the conversation that made it, under "Why". A decision can replace an older one.
-Documents are written live together: every cursor shows a name. Blocks include headings, lists, quotes, code, tables, links, images, tasks with an owner and a date, and decisions. Comments, replies, reactions, and @mentions work on selected text.
-Offline: you keep writing, your edits are saved on your device, and they merge with everyone else's when you are back, with nothing to fix by hand.
-Review: turn on Suggest and edits become suggestions that an editor accepts or rejects. A document is an idea, a draft, in review, approved, or done. Reviewers sign off section by section, and a concern blocks approval.
-Versions: saved automatically while you work. You can name, compare, and restore any version.
-Roles: viewer, commenter, reviewer, editor, owner. Share by email with a role, or with a link. A space can be made public, so anyone signed in who has its link can read it. Otherwise only the people you add can see a space.
-CoWrite does not send emails yet, so you tell people yourself when you add them.
-Nib is the AI assistant. It runs on Cloudflare Workers AI. It improves, shortens, fixes, and summarizes text, answers questions about a space with its sources, proposes next steps from a discussion, checks a document against the decisions in force before review, and writes a space's weekly summary. Nib only suggests: nothing changes until a person accepts it. Each person can switch Nib off in Settings. Nib has a free daily allowance; when it is used up, Nib is back the next day.
-Export: download any document as Markdown, Word, or plain text, or print it to PDF. Publish a document as a public page, or present it as slides.
-Search covers titles, text, and comments. A bell shows what other people did. Settings has avatar color and photo, notifications, theme, and text size.
+// Everything Nib may say about CoWrite, one fact per line. Keep it true and in step with the landing
+// page and the README: Nib answers only from this text.
+const facts = `CoWrite is free. There is no paid plan today, and nothing asks for a card.
+CoWrite keeps a team's ideas, discussions, decisions, and documents in one space, linked both ways.
+A space holds one piece of work: its ideas board, its discussions, its documents, its numbered decisions, and its tasks.
+Only the people you add can see a space. If you make a space public, anyone signed in who has its link can read it.
+Add people by the email they sign up with, and give each one a role: viewer, commenter, reviewer, editor, or owner. You can also share a link to the space.
+CoWrite does not send emails yet, so tell people yourself when you add them.
+Everyone writes in the same document at the same time, and every cursor shows a name.
+If you lose the connection, keep writing. Your edits are saved on your device and merge with everyone else's when you are back.
+A question can have an owner and a “decide by” date. When it is answered, it becomes a numbered decision that keeps the conversation that made it.
+Turn on Suggest, and your edits become suggestions that an editor accepts or rejects.
+A document goes from draft to in review to approved. Reviewers sign off section by section, and an open concern blocks approval.
+CoWrite saves versions while you work. You can name, compare, and restore any of them.
+Nib is the AI assistant. It improves, shortens, fixes, and summarizes text, answers questions about a space, and checks a document against the team's decisions.
+Nib only suggests. Nothing changes until a person accepts it, and you can switch Nib off in Settings.
+Nib runs on Cloudflare Workers AI. It reads your work only when you ask it something, when a document goes to review, and to write a space's weekly summary.
+Download any document as Markdown, Word, or plain text, or print it to PDF. You can also publish a document as a public page, or present it as slides.
+A document can hold headings, lists, quotes, code, tables, links, images, tasks with an owner and a date, and decisions.
+Each task shows on the Tasks page of the person it is for, with its date.
+Select any text to comment on it. You can reply, react, and mention people with @, and they see it in their bell.
+Search finds words in document titles, text, and comments.
 Sign up with an email and a password, or with GitHub.
-Price: free. There is no paid plan today, and nothing asks for a card.
-Open source under the MIT license. The code is on GitHub at https://github.com/ulot2/cowrite, where you can read it, run it yourself, or open an issue. It runs on Cloudflare Workers, Durable Objects, and D1, with Yjs for merging edits and BlockNote as the editor.
-There is no mobile app; CoWrite works in the browser.`
+You can try CoWrite without an account in the playground, at /play: a page with the full editor that only you can see. It stays in your browser for 7 days after your last edit, and you can download it at any time.
+CoWrite works in the browser, on a computer or a phone. There is no app to install.
+The code is open source under the MIT license. You can read it, run it yourself, or open an issue on GitHub.
+CoWrite runs on Cloudflare Workers, Durable Objects, and D1, with Yjs to merge edits and BlockNote as the editor.`
+const NO_ANSWER = 'We do not have an answer to that yet. Ask on GitHub, and the team will answer.'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const visitor = async (request: Request) => {
@@ -50,7 +61,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   try {
     const answer = await ask('faq', question, facts)
-    return Response.json({ question, answer: answer || 'I do not know. Ask on GitHub, and the team can answer.' })
+    return Response.json({ question, answer: !answer || answer.includes('NO_ANSWER') ? NO_ANSWER : answer })
   } catch (e) {
     if (e instanceof AiLimit) return Response.json({ error: 'Nib is out of free answers for today. Try again tomorrow, or ask on GitHub.' }, { status: 429 })
     console.error(e)

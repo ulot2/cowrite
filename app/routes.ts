@@ -3,6 +3,7 @@ import { type RouteConfig, index, layout, route } from '@react-router/dev/routes
 export default [
   route('login', 'routes/login.tsx'),
   route('welcome', 'routes/welcome.tsx'), // after sign-up: name the first space, add people
+  route('play', 'routes/play.tsx'), // try the editor without an account
   route('api/auth/*', 'routes/api.auth.ts'),
   route('api/inbox', 'routes/api.inbox.ts'),
   route('api/ai', 'routes/api.ai.ts'),

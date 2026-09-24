@@ -12,12 +12,14 @@ import { syncWork, type WorkItem } from '~/lib/work.server'
 import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/discussions.server'
 import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
+import { PLAY_DAYS } from '~/lib/play.server'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
 const AWARENESS = 1
 // Rows in the update log before we fold them into one row.
 const COMPACT_AT = 200
+const PLAY_TTL = PLAY_DAYS * 864e5 // a playground page is deleted this long after its last edit
 // An automatic version at most this often, and how many unnamed ones we keep.
 const AUTO_VERSION_EVERY = 30 * 60 * 1000
 const AUTO_VERSIONS_KEPT = 50
@@ -183,6 +185,7 @@ export class Doc extends DurableObject<Env> {
       // This event fires only for a real change, so the sender counts as an editor.
       const ws = origin as WebSocket | null
       if (ws && typeof ws.deserializeAttachment === 'function') this.touched.add(attachmentOf(ws).user)
+      if (this.ctx.id.name?.startsWith('play:')) this.ctx.storage.put('editedAt', Date.now()) // the playground's clock
       // A few seconds after the last edit, alarm() writes the preview and the edit time to D1.
       this.ctx.storage.getAlarm().then((at) => { if (at === null) this.ctx.storage.setAlarm(Date.now() + 3000) })
       const enc = encoding.createEncoder()
@@ -216,6 +219,13 @@ export class Doc extends DurableObject<Env> {
     const name = this.ctx.id.name ?? ''
     const editors = [...this.touched].filter(Boolean)
     this.touched.clear()
+    // A playground page writes nothing to D1. It deletes itself a week after its last edit.
+    if (name.startsWith('play:')) {
+      const at = (await this.ctx.storage.get<number>('editedAt')) ?? 0
+      if (Date.now() - at >= PLAY_TTL) await this.wipe()
+      else await this.ctx.storage.setAlarm(at + PLAY_TTL)
+      return
+    }
     if (name.endsWith(':space')) {
       // A space's room: discussions (a Y.Map each, with a Y.Array of posts) and the tasks made from posts.
       const str = (v: unknown) => (typeof v === 'string' && v ? v : null)
@@ -415,7 +425,7 @@ export class Doc extends DurableObject<Env> {
   // New content for a new document: a plan template, the welcome document (its task goes to `who`),
   // or the columns of a board. A space's ideas board is seeded when first opened, so it does nothing
   // once columns exist.
-  seed(kind: 'plan' | 'welcome' | 'board' | 'ideas', who?: { id: string; name: string }) {
+  seed(kind: 'plan' | 'welcome' | 'play' | 'board' | 'ideas', who?: { id: string; name: string }) {
     if (kind === 'board' || kind === 'ideas') {
       const groups = this.doc.getArray('groups')
       if (groups.length === 0) groups.push((kind === 'ideas' ? ['New', 'Exploring', 'Picked'] : ['Ideas', 'Maybe', 'Next']).map((name) => ({ id: crypto.randomUUID(), name })))
@@ -437,6 +447,31 @@ export class Doc extends DurableObject<Env> {
     }
     const task = (text: string, assignee = '', assigneeName = '', due = '') => el('task', { taskId: crypto.randomUUID(), assignee, assigneeName, due, done: false }, text)
     const group = new Y.XmlElement('blockGroup')
+    if (kind === 'play') {
+      // A playground page, on every visit: filled only while it is empty (new, or deleted after a week).
+      if (this.doc.getXmlFragment('document-store').length) return
+      const code = (s: string): [string, object] => [s, { code: {} }]
+      const b = (s: string): [string, object] => [s, { bold: {} }]
+      const by = { id: 'ai~play' } // "ai" authors show as Nib
+      this.doc.transact(() => {
+        this.doc.getXmlFragment('document-store').insert(0, [group])
+        group.insert(0, [
+          el('paragraph', {}, 'This page is yours to try CoWrite. Nobody else can see it, and you do not need an account. Change anything.'),
+          el('heading', { level: 2 }, 'Write'),
+          el('paragraph', {}, [['Type '], code('/'), [' on an empty line for headings, lists, quotes, code, tables, and tasks. Select words to make them bold or to add a link.']]),
+          el('heading', { level: 2 }, 'Accept a suggestion'),
+          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits until someone accepts or rejects it. Accept this one from the bar at the top.'),
+          el('paragraph', {}, [['CoWrite is where a team '], ['writes', { deletion: by }], ['writes, reviews, and decides', { insertion: by }], ['.']]),
+          el('heading', { level: 2 }, 'Tick a task'),
+          task('Try the playground'),
+          el('heading', { level: 2 }, 'Take it with you'),
+          el('paragraph', {}, [['Download this page as Word, Markdown, or plain text from '], b('Export'), [', print it to PDF, or show it as slides.']]),
+          el('heading', { level: 2 }, 'Keep it'),
+          el('paragraph', {}, `This page stays in this browser for ${PLAY_DAYS} days after your last edit. Sign up to keep your work, write with other people, and use Nib, the assistant.`),
+        ].map(container))
+      })
+      return
+    }
     if (kind === 'welcome') {
       const b = (s: string): [string, object] => [s, { bold: {} }]
       const code = (s: string): [string, object] => [s, { code: {} }]

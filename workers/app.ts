@@ -3,6 +3,7 @@ import { getAuth } from '~/lib/auth.server'
 import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { usersById } from '~/lib/db.server'
 import { atLeast } from '~/lib/roles'
+import { playId } from '~/lib/play.server'
 
 // The Doc class must be exported from the Worker entry, so Cloudflare can find it.
 export { Doc } from './doc'
@@ -62,6 +63,18 @@ export default {
       headers.set('X-Role', atLeast(role, 'commenter') ? 'editor' : 'viewer')
       headers.set('X-User', session.user.id)
       return env.DOC.get(env.DOC.idFromName(`${space[1]}:space`)).fetch(new Request(request, { headers }))
+    }
+
+    // /ws/play-<id>: a playground page. Only the browser whose `play` cookie holds the id may open
+    // it, with no account. It writes the text; its comments room is read-only (the page has none).
+    const play = pathname.match(/^\/ws\/play-([\w-]+)(\/threads)?$/)
+    if (play) {
+      if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
+      if (play[1] !== playId(request)) return new Response('Not your playground', { status: 403 })
+      const headers = new Headers(request.headers)
+      headers.set('X-Role', play[2] ? 'viewer' : 'editor')
+      headers.set('X-User', 'guest')
+      return env.DOC.get(env.DOC.idFromName(`play:${play[1]}${play[2] ? ':threads' : ''}`)).fetch(new Request(request, { headers }))
     }
 
     // /ws/<id> is the text, /ws/<id>/threads the comments. Each is its own object with its own

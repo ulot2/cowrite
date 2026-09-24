@@ -109,3 +109,15 @@ test('the owner can delete a space; its documents stay with their owner, space-o
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: ada.cookie } })).status, 200, 'the owner keeps the document')
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 404, 'access through the space is gone')
 })
+
+test('the playground needs no account, and only the browser that made it can read it', async () => {
+  const res = await fetch(`${app.base}/play`)
+  assert.equal(res.status, 200)
+  const cookie = res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ')
+  const id = cookie.match(/play=([\w-]+)/)[1]
+  const file = `${app.base}/doc/play-${id}/export?format=md`
+  const md = await fetch(file, { headers: { cookie } })
+  assert.equal(md.status, 200)
+  assert.match(await md.text(), /This page is yours to try CoWrite/, 'filled on the first visit')
+  assert.equal((await fetch(file)).status, 404, 'another browser')
+})

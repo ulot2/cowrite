@@ -82,6 +82,15 @@ mark.commented { background: var(--accent-soft); color: inherit; border-bottom: 
 .sugg .rej + .acc { margin-left: 0; }
 
 /* ---------- Landing ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The page links on phones, where the header has no room for them. */
+.nav-menu { display: none; }
+.nav-menu summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; list-style: none; }
+.nav-menu summary::-webkit-details-marker { display: none; }
+.nav-menu summary svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.nav .nav-menu nav { position: absolute; right: clamp(1rem, 4vw, 3rem); top: calc(100% - 0.25rem); display: grid; gap: 0; min-width: 13rem; color: var(--fg); padding: 0.4rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); box-shadow: var(--shadow-lift); }
+.nav .nav-menu nav a { padding: 0.6rem 0.75rem; border-radius: var(--radius); font-weight: 600; text-decoration: none; }
+.nav .nav-menu nav a:hover { background: var(--tint); }
 .landing { overflow-x: hidden; }
 .nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 2rem; padding: 0.85rem clamp(1rem, 4vw, 3rem); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid transparent; }
 .nav nav { display: flex; gap: 1.5rem; font-size: 0.9rem; font-weight: 500; color: var(--fg-muted); }
@@ -171,7 +180,8 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 
 @media (max-width: 960px) {
   .hero, .nib, .live { grid-template-columns: minmax(0, 1fr); }
-  .nav nav { display: none; }
+  .nav > nav { display: none; }
+  .nav-menu { display: block; }
 }
 @media (max-width: 560px) {
   .nav-actions .link { display: none; }
@@ -482,7 +492,6 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .bs-ic.idea { background: var(--accent-soft); color: var(--accent); }
 .bs-ic.ask { background: var(--warn-soft); color: var(--warn); }
 .bs-ic.plan { background: var(--ok-soft); color: var(--ok); }
-.begin-cta { display: flex; align-items: center; gap: 1rem; margin: 1.75rem 0 0; font-size: 0.85rem; color: var(--fg-muted); }
 @media (max-width: 860px) {
   .begin-steps { grid-template-columns: minmax(0, 1fr); }
   .begin-steps li + li { border-left: 0; border-top: 1px solid var(--border); }
@@ -497,7 +506,8 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
    they are short, so nothing hides behind a click. */
 .faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(2rem, 5vw, 4.5rem); padding-block: 5rem; }
 .faq-head { align-self: start; position: sticky; top: 6rem; }
-.faq-code { margin: 1.5rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
+.faq-own { margin: 1.25rem 0 0; max-width: 24rem; font-size: 0.9rem; color: var(--fg-muted); }
+.faq-code { margin: 1rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
 .faq-code a { font-weight: 700; }
 .faq-list { margin: 0; border-top: 1px solid var(--border); }
 /* Each question opens and shuts (one at a time); the answer folds open where the browser can animate it. */
@@ -512,20 +522,25 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .faq-list details::details-content { block-size: 0; overflow: hidden; transition: block-size 260ms var(--ease-out), content-visibility 260ms allow-discrete; }
 .faq-list details[open]::details-content { block-size: auto; }
 @media (prefers-reduced-motion: reduce) { .faq-list details::details-content, .faq-list summary::after { transition: none; } }
-/* The visitor's own questions: a tag, Nib's answer, a note that it can be wrong, and Remove. */
-.faq-list .mine summary > span { display: grid; gap: 0.2rem; }
-.mine-tag { justify-self: start; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.7rem; font-weight: 700; }
-.faq-list .mine p { white-space: pre-line; }
-.faq-list .mine .mine-note { padding-bottom: 0.5rem; font-size: 0.8rem; }
-.faq-remove { margin: 0 0 1.1rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* The visitor's own questions read like ours, with Remove under the answer. The ask row is the last row. */
+.faq-list .mine p { padding-bottom: 0.5rem; }
+.faq-remove { margin: 0 0 1.1rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--fg-muted); cursor: pointer; }
 .faq-remove:hover { color: var(--fg); }
-.faq-ask { display: grid; gap: 0.5rem; margin-top: 1.75rem; }
-.faq-ask label { font-weight: 800; }
-.faq-ask-row { display: flex; gap: 0.5rem; }
-.faq-ask input { flex: 1; min-width: 0; min-height: 2.9rem; padding: 0 0.9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--fg); font: inherit; }
-.faq-ask input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.faq-ask .btn:disabled { opacity: 0.6; cursor: default; }
-.faq-ask-note { margin: 0; font-size: 0.82rem; color: var(--fg-muted); }
+/* The field is a row like the questions: same type and rule, and a send arrow where the chevron is. */
+.faq-ask { display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--border); transition: border-color 150ms; }
+.faq-ask:focus-within { border-bottom-color: var(--accent); }
+.faq-ask input { flex: 1; min-width: 0; padding: 1.1rem 0; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; font-size: 1.02rem; }
+.faq-ask input::placeholder { color: var(--fg); opacity: 1; }
+.faq-ask input:focus::placeholder { color: var(--fg-muted); }
+.faq-ask input:focus-visible { outline: none; }
+.faq-spark { flex: none; color: var(--accent); font-size: 0.95rem; }
+.faq-send { flex: none; margin-left: 0.4rem; display: grid; place-items: center; width: 2rem; height: 2rem; margin-right: -0.4rem; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fg-muted); cursor: pointer; transition: background 150ms, color 150ms; }
+.faq-send svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.faq-send:hover { color: var(--fg); }
+.faq-ask:has(input:not(:placeholder-shown)) .faq-send { background: var(--accent); color: var(--accent-fg); }
+.faq-send:disabled { opacity: 0.6; cursor: default; }
+.faq-list .faq-ask-note { margin: 0.6rem 0 0; font-size: 0.82rem; color: var(--fg-muted); }
+.faq-ask-note:empty { display: none; }
 .faq-ask-note[data-state="busy"]::before { content: "✦ "; color: var(--accent); }
 .faq-ask-note[data-state="error"] { color: var(--danger); }
 @media (max-width: 860px) {

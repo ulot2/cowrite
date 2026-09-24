@@ -8,7 +8,7 @@ OWN-WORLD: CoWrite "Studio": white page, one cobalt accent, Manrope; the serif w
   that lands in the space takes CoWrite's own parts: the verb tags of Needs attention, the status pill,
   suggestion washes, avatars, and the D-number decision with its "Why".
 STORY: see your mess, see it land in one space, learn where each piece went, meet Nib, check that it is
-  real (live, offline, how it is built), start a space.
+  real (live, offline), see what starting takes, get honest answers (or ask Nib), then start a space.
 FIRST VIEWPORT: headline and the start button left; right, the stage: the scattered stack, whose
   pieces each fly to the row they become in one space, on a loop, with a quiet player to jump or pause.
 FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's world. Seed 04ef0dcf.
@@ -24,6 +24,17 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
 <link rel="stylesheet" href="/landing/landing.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="description" content="CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways. Free and open source.">
+<!-- The preview that chat apps and social sites show for a shared link. Image: public/landing/og.png, 1200 × 630. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CoWrite">
+<meta property="og:title" content="CoWrite: every decision, with the conversation that made it">
+<meta property="og:description" content="Your team's ideas, discussions, decisions, and documents in one space, linked both ways. Free and open source.">
+<meta property="og:url" content="https://cowrite.cowrite.workers.dev/">
+<meta property="og:image" content="https://cowrite.cowrite.workers.dev/landing/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The CoWrite headline next to decision D-4, “Launch on April 10”, with the two messages that decided it.">
+<meta name="twitter:card" content="summary_large_image">
 <script>try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch {}</script>
 </head>
 <body class="landing">
@@ -37,6 +48,17 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
     <a href="https://github.com/ulot2/cowrite">GitHub</a>
   </nav>
   <div class="nav-actions">
+    <details class="nav-menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav aria-label="Page">
+        <a href="#pieces">How it works</a>
+        <a href="#nib">Nib</a>
+        <a href="#questions">Questions</a>
+        <a href="/play">Try it, no sign-up</a>
+        <a href="https://github.com/ulot2/cowrite">GitHub</a>
+        <a href="/login">Sign in</a>
+      </nav>
+    </details>
     <a class="link" href="/login">Sign in</a>
     <a class="btn primary" href="/login?mode=up">Start a space</a>
   </div>
@@ -50,13 +72,13 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <p class="lede">CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways.</p>
       <div class="hero-actions">
         <a class="btn primary big" href="/login?mode=up">Start a space, free</a>
-        <a class="btn big" href="#pieces">See how it works</a>
+        <a class="btn big" href="/play">Try it, no sign-up</a>
       </div>
       <p class="fine">Free and open source.</p>
     </div>
 
     <div class="stage-wrap">
-      <div class="stage" data-state="scattered" aria-label="Example: a launch spread over four tools, then in one CoWrite space">
+      <div class="stage" data-state="scattered" role="img" aria-label="Example: a launch spread over four tools (a chat, a Word file, a spreadsheet, and a to-do list), then in one CoWrite space: two things that need attention and decision D-4, “Launch on April 10”, with the messages that decided it.">
         <!-- The scattered pieces: other tools, drawn plain. Each one flies to the row it becomes. -->
         <div class="piece chat" data-to="chat" style="--x:-2%;--y:4%;--r:-4deg;--i:0">
           <p class="piece-head"># launch</p>
@@ -183,6 +205,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
     </div>
 
     <div class="nib-stage">
+      <p class="sr-only">Example: in the Q4 launch space, someone asks Nib when the launch party is. Nib answers “April 10 at the Harbor Room” and names its two sources: decision D-5 and the #launch discussion.</p>
       <div class="nw" aria-hidden="true">
         <p class="nw-bar"><b>Q4 launch</b><span data-where>Overview</span><span class="nw-mark">✦ Nib</span></p>
 
@@ -235,6 +258,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <p class="section-lede">Every cursor carries a name. Lose the connection and keep typing: your words merge with everyone else's when you are back, with nothing to fix by hand.</p>
       <p class="sync-state" data-sync><span class="dot"></span><span data-sync-text>In sync</span></p>
     </div>
+    <p class="sr-only">Example: Maria and Tom edit the launch plan on two laptops. Tom goes offline and keeps typing while Maria edits too. When Tom is back, both laptops show both changes, with nothing to fix by hand.</p>
     <div class="sync" aria-hidden="true">
         <div class="sw" data-win="maria">
           <p class="sw-bar"><span class="sw-who"><i style="background:#c2185b">M</i>Maria's laptop</span><span class="sw-pill" data-pill>● Live</span></p>
@@ -285,7 +309,6 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
         </div>
       </li>
     </ol>
-    <p class="begin-cta"><a class="btn primary big" href="/login?mode=up">Start a space, free</a><span>Free and open source.</span></p>
   </section>
 
   <!-- 6. For the engineers -->
@@ -293,9 +316,9 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
     <div class="faq-head">
       <h2 class="section-title">Honest answers</h2>
       <p class="section-lede">What people ask before they start.</p>
+      <p class="faq-own">Missing your question? Ask Nib at the end of the list. It answers from what CoWrite says about itself, and your questions stay in this browser.</p>
       <p class="faq-code">Curious how it works inside? <a href="https://github.com/ulot2/cowrite">Read the code on GitHub →</a></p>
     </div>
-    <div class="faq-main">
     <div class="faq-list">
       <details name="faq" open><summary>Is it free?</summary><p>Yes. There is no paid plan today, and nothing asks for a card.</p></details>
       <details name="faq"><summary>Who can see my space?</summary><p>Only the people you add. If you make a space public, anyone signed in who has its link can read it.</p></details>
@@ -303,17 +326,15 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <details name="faq"><summary>Can I take my work out?</summary><p>Yes. Download any document as Markdown, Word, or plain text, or print it to PDF.</p></details>
       <details name="faq"><summary>What if I lose the connection?</summary><p>Keep writing. Your edits are saved on your device and merge with everyone else's when you are back.</p></details>
       <details name="faq"><summary>How do I bring my team in?</summary><p>Add people by the email they sign up with, or share the space's link. CoWrite does not send emails yet, so tell them yourself.</p></details>
+      <details name="faq"><summary>Can I try it without signing up?</summary><p>Yes. The playground is a page only you can see, with the full editor. It stays in your browser for 7 days after your last edit, and you can download it at any time.</p></details>
       <details name="faq"><summary>Is the code open?</summary><p>Yes, under the MIT license. You can read it, run it yourself, or open an issue.</p></details>
-    </div>
-    <!-- Ask your own question: Nib answers from the facts about CoWrite; the row is kept in this browser only. -->
-    <form class="faq-ask">
-      <label for="faq-q">Ask your own question</label>
-      <div class="faq-ask-row">
-        <input id="faq-q" name="question" maxlength="300" required autocomplete="off" placeholder="Can I use it for a class project?" aria-describedby="faq-ask-note">
-        <button class="btn primary">Ask</button>
-      </div>
-      <p class="faq-ask-note" id="faq-ask-note" aria-live="polite">Nib answers from what CoWrite says about itself. Your questions stay in this browser.</p>
-    </form>
+      <!-- Ask your own question: the last row is the field itself. Nib answers from the facts about CoWrite; rows stay in this browser. -->
+      <form class="faq-ask">
+        <span class="faq-spark" aria-hidden="true">✦</span>
+        <input name="question" maxlength="300" required autocomplete="off" placeholder="Ask your own question" aria-label="Ask Nib your own question">
+        <button class="faq-send" aria-label="Ask Nib"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <p class="faq-ask-note" aria-live="polite"></p>
     </div>
   </section>
 
@@ -324,7 +345,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <p class="section-lede">Start a space for the work in front of you. It takes about a minute.</p>
       <div class="hero-actions">
         <a class="btn primary big" href="/login?mode=up">Start a space, free</a>
-        <a class="btn big" href="/login">Sign in</a>
+        <a class="btn big" href="/play">Try it first</a>
       </div>
     </div>
     <div class="dec-card close-card">
@@ -349,7 +370,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
     <p>Every decision, with the conversation that made it.</p>
   </div>
   <nav class="foot-links" aria-label="Footer">
-    <div><h2>Product</h2><a href="#pieces">How it works</a><a href="#nib">Nib</a><a href="#questions">Questions</a></div>
+    <div><h2>Product</h2><a href="#pieces">How it works</a><a href="#nib">Nib</a><a href="#questions">Questions</a><a href="/play">Try it, no sign-up</a></div>
     <div><h2>Account</h2><a href="/login?mode=up">Start a space</a><a href="/login">Sign in</a></div>
     <div><h2>Open source</h2><a href="https://github.com/ulot2/cowrite">Code on GitHub</a><a href="https://github.com/ulot2/cowrite/issues">Report a problem</a></div>
   </nav>
@@ -691,54 +712,54 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
-// "Ask your own question": Nib answers, and the question joins the list as the visitor's own row.
-// The rows are kept in this browser only. The answer is model output, so it is set as text, never HTML.
+// "Ask your own question": Nib answers from the facts about CoWrite, and the question joins the list as
+// its last question, above the field. Rows are kept in this browser only, and set as text, never HTML.
 const faqList = document.querySelector('.faq-list')
 const faqForm = document.querySelector('.faq-ask')
 const faqNote = document.querySelector('.faq-ask-note')
-const faqNoteText = faqNote.textContent
 const mine = {
   read: () => { try { return JSON.parse(localStorage.getItem('faq-mine') ?? '[]') } catch { return [] } },
-  write: (rows) => { try { localStorage.setItem('faq-mine', JSON.stringify(rows.slice(0, 20))) } catch { /* private window: the row still shows */ } },
+  write: (rows) => { try { localStorage.setItem('faq-mine', JSON.stringify(rows.slice(-20))) } catch { /* private window: the row still shows */ } },
 }
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e }
-const addRow = (row, open) => {
+const addRow = (row) => {
   const d = el('details', 'mine')
   d.name = 'faq'
-  const s = el('summary')
-  const q = el('span')
-  q.append(el('span', 'mine-tag', 'Your question'), el('span', '', row.q))
-  s.append(q)
   const remove = el('button', 'faq-remove', 'Remove')
   remove.type = 'button'
   remove.addEventListener('click', () => { mine.write(mine.read().filter((r) => r.at !== row.at)); d.remove() })
-  d.append(s, el('p', '', row.a), el('p', 'mine-note', 'Answered by Nib from what CoWrite says about itself. It can be wrong.'), remove)
-  faqList.prepend(d)
-  d.open = open
+  d.append(el('summary', '', row.q), el('p', '', row.a), remove)
+  faqList.insertBefore(d, faqForm)
   return d
 }
-mine.read().slice().reverse().forEach((row) => addRow(row, false))
+mine.read().forEach(addRow)
 faqForm.addEventListener('submit', async (e) => {
   e.preventDefault()
-  const input = faqForm.elements.question, button = faqForm.querySelector('button')
+  const input = faqForm.elements.question, button = faqForm.querySelector('.faq-send')
   const question = input.value.trim()
   if (!question) return
   button.disabled = input.disabled = true
-  faqNote.dataset.state = 'busy'; faqNote.textContent = 'Nib is reading…'
+  faqNote.dataset.state = 'busy'; faqNote.textContent = 'Nib is looking…'
   try {
     const res = await fetch('/api/faq', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question }) })
     const out = await res.json().catch(() => ({ error: 'Nib did not answer. Try again.' }))
     if (out.error) { faqNote.dataset.state = 'error'; faqNote.textContent = out.error; return }
     const row = { q: out.question, a: out.answer, at: Date.now() }
-    mine.write([row, ...mine.read()])
-    addRow(row, true).scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+    mine.write([...mine.read(), row])
     input.value = ''
-    delete faqNote.dataset.state; faqNote.textContent = faqNoteText
+    delete faqNote.dataset.state; faqNote.textContent = ''
+    // The new question slides in as the last one, then opens like the others.
+    const d = addRow(row)
+    if (!reduce) {
+      d.style.overflow = 'hidden'
+      await d.animate([{ height: '0px', opacity: 0 }, { height: `${d.offsetHeight}px`, opacity: 1 }], { duration: 320, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }).finished
+      d.style.overflow = ''
+    }
+    d.open = true
   } catch {
     faqNote.dataset.state = 'error'; faqNote.textContent = 'Nib did not answer. Check the connection and try again.'
   } finally {
     button.disabled = input.disabled = false
-    input.focus()
   }
 })
 

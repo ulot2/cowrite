@@ -38,6 +38,8 @@ The goal is a demo that a recruiter can open in two tabs and understand in one m
 
 The landing page is plain HTML, CSS, and a little script in `public/landing/`, with no React. The Worker serves it at `/` to visitors without a session cookie, through the `ASSETS` binding; people who are signed in get their home at the same address. The FAQ's "Ask your own question" field posts to `/api/faq`, which needs no account. Nib answers only from a fixed text of facts about CoWrite, in `app/routes/api.faq.ts`. Each visitor can ask 5 questions a day and the page 100, so visitors cannot use up the AI allowance that the app needs. The questions and answers stay in the visitor's browser; the server keeps only the daily counts.
 
+The playground (`/play`) is the full editor without an account. Each browser gets one page, a room named `play:<id>`, and the id is in an HttpOnly cookie. Only that browser can open the room, and it can export, print, and present it like a document. A playground room writes nothing to D1, and it deletes itself 7 days after its last edit.
+
 The document is a CRDT (a data structure that merges edits from any order to the same result). We use the [Yjs](https://github.com/yjs/yjs) library for that. Each tab holds a full copy of the document. The server holds a copy too, stores every change, and forwards changes between tabs over WebSockets (a two-way connection that stays open).
 
 The server is one Cloudflare Durable Object (a small server with a name, one running copy, and its own SQLite database). All tabs of a document reach the same object, so edits pass through one place in order. The object sleeps between messages and keeps the sockets open.

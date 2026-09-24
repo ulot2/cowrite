@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { requireDocument } from '~/lib/access.server'
+import { requireReadable } from '~/lib/play.server'
 import { docStub } from '~/lib/versions.server'
 import { toSlides } from '~/lib/rich'
 import { Blocks } from '~/components/read-view'
@@ -9,8 +9,8 @@ import type { Route } from './+types/present'
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.title ?? 'Slides'} · Present` }]
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  const { document } = await requireDocument(request, params.id)
-  return { title: document.title, slides: toSlides((await docStub(params.id).readRich('now')) ?? []) }
+  const { title, room, back } = await requireReadable(request, params.id)
+  return { title, back, slides: toSlides((await docStub(room).readRich('now')) ?? []) }
 }
 
 // Slides from the document. Arrows, Space, Page Up/Down move; F is full screen; N shows the notes;
@@ -43,7 +43,7 @@ export default function Present({ loaderData, params }: Route.ComponentProps) {
   return (
     <div className="present" ref={stage}>
       <div className="present-bar">
-        <Link ref={back} to={`/doc/${params.id}`} className="tool">Back to the document</Link>
+        <Link ref={back} to={loaderData.back} className="tool">Back to the document</Link>
         <span className="muted">{title}</span>
         <span className="present-actions">
           <button type="button" className="tool" aria-pressed={notes} onClick={() => setNotes(!notes)}>Notes</button>
