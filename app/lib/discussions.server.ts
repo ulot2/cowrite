@@ -47,7 +47,7 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
   for (const d of items) {
     const was = before.get(d.id)
     if (!was) await logSpaceEvent(spaceId, d.createdBy, 'discussion', d.kind === 'question' ? `asked ${quote(d.title)}${d.due ? ` (decide by ${day(d.due)})` : ''}` : `started a discussion: ${quote(d.title)}`)
-    else if (d.posts > was.posts && d.lastBy) await touchSpaceEvent(spaceId, d.lastBy, `replied in ${quote(d.title)}`)
+    else if (d.posts > was.posts && d.lastBy && d.lastBy !== 'ai') await touchSpaceEvent(spaceId, d.lastBy, `replied in ${quote(d.title)}`)
   }
 
   // Decisions from questions. Once numbered, a record stays (reopened, if the question reopens).
@@ -79,6 +79,7 @@ export const unindexSpace = (spaceId: string) => env.DB.batch([
   env.DB.prepare('DELETE FROM discussions WHERE space_id = ?').bind(spaceId),
   env.DB.prepare("DELETE FROM decisions WHERE space_id = ? AND source_type = 'discussion'").bind(spaceId),
   env.DB.prepare('DELETE FROM tasks WHERE space_id = ? AND discussion_id IS NOT NULL').bind(spaceId),
+  env.DB.prepare('DELETE FROM search WHERE document_id LIKE ?').bind(`s:${spaceId}:%`),
 ])
 
 export type QuestionRow = { id: string; title: string; owner_id: string | null; owner: string | null; due: string | null; posts: number; last_at: number }

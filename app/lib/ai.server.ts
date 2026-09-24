@@ -23,9 +23,20 @@ const prompts = {
   // A free instruction ("@nib ..."): applied to the selected text, or new writing at the cursor.
   custom: `${nib} Follow the instruction between <instruction> and </instruction>. If there is text between <text> and </text>, apply the instruction to that text and reply with its new version only. Otherwise write what the instruction asks for, to be inserted into the document; the document between <document> and </document> is context only, so never repeat it. ${markdown}`,
   reply: `${nib} The document is between <document> and </document>, and a comment thread between <text> and </text>. Answer the last comment helpfully in at most four sentences. ${rules}`,
+  // The space: numbered sources between <document> tags, the question between <text> tags.
+  space: `${nib} Answer the question between <text> and </text> using only the numbered sources between <document> and </document>. After each fact, cite its source as [1], [2]. If the sources do not answer the question, say that you could not find it in this space. At most six sentences. No Markdown.`,
+  propose: `${nib} Read the discussion between <text> and </text>. The people who can be assigned are listed between <document> and </document>, with today's date. Propose the next steps. Reply with JSON only, in this shape: {"tasks": [{"text": "a short imperative task", "assignee": "a name from the list, or empty", "due": "YYYY-MM-DD, or empty"}], "decision": "what the discussion decided, in one sentence, or null"}. At most five tasks, only ones the discussion supports. Use null for the decision when nothing was decided.`,
+  check: `${nib} Compare the document between <text> and </text> with the decisions in force and the open questions between <document> and </document>. Report only real problems, one per line: "D-9: <what the document says>, but D-9 decided <what was decided>." for a statement that goes against a decision, and "Q: <the question, exactly as listed>: <what in the document depends on it>" for a part that assumes an answer to an open question. If there are none, reply exactly: None found. No other text.`,
 } as const
 export type Command = keyof typeof prompts
-export const isCommand = (c: string): c is Command => Object.hasOwn(prompts, c) && c !== 'reply'
+// Commands the editor's Nib menu may send. The others run from the server only.
+export const isCommand = (c: string): c is Command => Object.hasOwn(prompts, c) && !['reply', 'space', 'propose', 'check'].includes(c)
+
+// The first {...} in an answer, parsed; null when there is none or it is not JSON.
+export const readJson = (out: string): unknown => {
+  const m = out.match(/\{[\s\S]*\}/)
+  try { return m ? JSON.parse(m[0]) : null } catch { return null }
+}
 
 export class AiLimit extends Error {}
 
@@ -39,18 +50,27 @@ export const clean = (out: string) =>
 
 const tag = (name: string, body: string) => (body ? `<${name}>\n${body}\n</${name}>\n\n` : '')
 
+// Fixed answers of the right shape for tests.
+const fake = (command: Command, text: string) => {
+  if (command === 'propose') return '{"tasks": [{"text": "Book the webinar room", "assignee": "Bea", "due": "2031-05-04"}, {"text": ""}], "decision": "Launch in November"}'
+  if (command === 'check') return text ? 'D-1: The text says October, but D-1 decided November.' : 'None found.'
+  if (command === 'space') return `AI space: ${text.length} [1] [2]`
+  return `AI ${command}: ${text.length}`
+}
+
 // Runs one command. `text` is what the command works on, `document` is context, and `instruction`
 // is the person's own request (for "custom").
 export async function ask(command: Command, text: string, document = '', instruction = ''): Promise<string> {
-  if ((env as { AI_FAKE?: string }).AI_FAKE) return `AI ${command}: ${text.length}` // tests never call the model
+  if ((env as { AI_FAKE?: string }).AI_FAKE) return fake(command, text) // tests never call the model
   const user = tag('document', document.slice(0, MAX_INPUT)) + tag('instruction', instruction.slice(0, MAX_INSTRUCTION)) + tag('text', text.slice(-MAX_INPUT))
   try {
     const out = await env.AI.run(MODEL, {
       messages: [{ role: 'system', content: prompts[command] }, { role: 'user', content: user.trim() }],
       max_tokens: command === 'custom' ? 1200 : 700,
       temperature: 0.3,
-    }) as { response?: string }
-    return clean(out.response ?? '')
+    }) as { response?: unknown }
+    // Workers AI hands back an answer that is JSON as an object already; keep it as text.
+    return clean(typeof out.response === 'string' ? out.response : out.response == null ? '' : JSON.stringify(out.response))
   } catch (e) {
     // Workers AI answers 4006 when the free daily allowance is used up.
     if (String(e).includes('4006') || /daily free allocation/i.test(String(e))) throw new AiLimit()

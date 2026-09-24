@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router'
-import type { ConnectionState, Panel, Presence, Review } from './rich-editor.client'
+import { useFetcher, useRevalidator, useSearchParams } from 'react-router'
+import type { Check, ConnectionState, Panel, Presence, Review } from './rich-editor.client'
 import { Avatar } from './avatar'
 import { Icon } from './icon'
 
@@ -28,6 +28,8 @@ type Props = {
   people: { id: string; name: string }[]
   kind?: 'doc' | 'board'
   review?: Review // set while the document is in review
+  check?: Check | null
+  canCheck?: boolean // may ask Nib for a check (reviewer and up, Nib on)
   crumbs: React.ReactNode
   actions?: React.ReactNode
   children?: React.ReactNode
@@ -35,7 +37,7 @@ type Props = {
 
 // One header row: where you are on the left, who is here and the tools on the right.
 // On phones the tools keep only their icons; the label stays for screen readers.
-export function Editor({ documentId, user, canEdit, canComment, canSuggest, mustSuggest, canResolve, nib = true, people, kind = 'doc', review, crumbs, actions, children }: Props) {
+export function Editor({ documentId, user, canEdit, canComment, canSuggest, mustSuggest, canResolve, nib = true, people, kind = 'doc', review, check, canCheck = false, crumbs, actions, children }: Props) {
   const board = kind === 'board'
   const [mounted, setMounted] = useState(false)
   const [status, setStatus] = useState<{ state: ConnectionState; others: Presence[]; open: number }>({ state: 'connecting', others: [], open: 0 })
@@ -44,6 +46,16 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
   const [params] = useSearchParams()
   const [panel, setPanel] = useState<Panel>(review?.canSign && params.get('suggest') === '1' ? 'outline' : 'none')
   const [sections, setSections] = useState({ total: 0, signed: 0, concerns: 0 })
+  // Nib's check: asked for here, shown in the Outline panel, and reloaded until it is done.
+  const checker = useFetcher()
+  const onCheck = useCallback(() => { checker.submit({ intent: 'check' }, { method: 'post' }); setPanel('outline') }, [checker])
+  const revalidator = useRevalidator()
+  useEffect(() => {
+    if (check?.state !== 'pending') return
+    const t = window.setInterval(() => { if (revalidator.state === 'idle') revalidator.revalidate() }, 3000)
+    return () => clearInterval(t)
+  }, [check?.state, revalidator])
+  const found = check?.state === 'done' && check.findings.length > 0
   const onSections = useCallback((total: number, signed: number, concerns: number) => setSections({ total, signed, concerns }), [])
   const [suggesting, setSuggesting] = useState(mustSuggest || (canSuggest && params.get('suggest') === '1'))
   useEffect(() => setMounted(true), [])
@@ -73,12 +85,12 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
               {canEdit && nib && <button type="button" className="tool nib-tool" data-tip="Ask Nib" data-ai-open aria-haspopup="dialog" aria-expanded={panel === 'ai'} onClick={() => setPanel(panel === 'ai' ? 'none' : 'ai')}><Icon name="sparkle" /><span className="tool-label">Ask Nib</span></button>}
               {review ? (
                 // In review, the outline is where sections are signed off. The count stays visible on phones too.
-                <button type="button" className="tool signoff-tool" data-tip="Sign off sections" data-concern={sections.concerns > 0 || undefined} aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}
+                <button type="button" className="tool signoff-tool" data-tip="Sign off sections" data-found={found || undefined} data-concern={sections.concerns > 0 || undefined} aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}
                   aria-label={`Sign-off: ${sections.signed} of ${sections.total} sections signed${sections.concerns ? `, ${sections.concerns} ${sections.concerns === 1 ? 'concern' : 'concerns'}` : ''}`}>
                   <Icon name="check" /><span aria-hidden="true">Sign-off {sections.signed}/{sections.total}</span>
                 </button>
               ) : (
-                <button type="button" className="tool" data-tip="Outline" aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
+                <button type="button" className="tool" data-tip={found ? "Outline · Nib found something" : "Outline"} data-found={found || undefined} aria-pressed={panel === 'outline'} onClick={() => setPanel(panel === 'outline' ? 'none' : 'outline')}>
                   <Icon name="outline" /><span className="tool-label">Outline</span>
                 </button>
               )}
@@ -94,7 +106,7 @@ export function Editor({ documentId, user, canEdit, canComment, canSuggest, must
       <div id="editor">
         {mounted && (
           <Suspense fallback={<p className="muted">Loading the editor…</p>}>
-            {board ? <Board documentId={documentId} user={user} canEdit={canEdit} people={people} onStatus={onStatus} /> : <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} suggesting={suggesting} canResolve={canResolve} nib={nib} people={people} panel={panel} onPanel={setPanel} onStatus={onStatus} review={review} onSections={onSections} />}
+            {board ? <Board documentId={documentId} user={user} canEdit={canEdit} people={people} onStatus={onStatus} /> : <RichEditor documentId={documentId} user={user} canEdit={canEdit} canComment={canComment} suggesting={suggesting} canResolve={canResolve} nib={nib} people={people} panel={panel} onPanel={setPanel} onStatus={onStatus} review={review} check={check} onCheck={canCheck ? onCheck : undefined} onSections={onSections} />}
           </Suspense>
         )}
       </div>

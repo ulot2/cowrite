@@ -90,6 +90,8 @@ The Worker checks the session and the role before it hands a WebSocket to an obj
 
 Nib, the AI assistant, runs on Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`, about 30 of the 10,000 free daily neurons a request) through one route, `/api/ai`, and one module, `app/lib/ai.server.ts`. Only people who can suggest (reviewer and up) may call it. A rewrite sends only the selected text, so the model cannot mix the rest of the document into its answer. The answer never changes the text directly: the editor inserts it as a suggestion whose id starts with `ai~`, so the existing bar shows "Suggested by Nib" and Accept and Reject work as for a person. A free instruction (`@nib …` in the text, or the field in the Nib menu) applies to the selection, or writes new blocks at the cursor from Markdown, with the document as context. A comment that mentions `@Nib` is found by the same alarm scan as other mentions; the threads object asks the model with the thread and the document, and adds the answer as a reply by the user `ai`. The Workers free plan gives 10,000 neurons a day; after that Nib says it is out of free uses until the next day, and nothing is billed.
 
+Nib also reads a whole space (`app/lib/nib.server.ts`). The space room's alarm writes each discussion and the ideas board into the search index, under keys (`s:<space id>:…`) that the documents search never matches. "Ask the space" searches that index with any of the question's words, and builds numbered sources: the decisions in force, the open questions, then the best five matches, cut at 12,000 characters. The model cites the sources as [1], [2], and the page turns them into links. "Suggest next steps" reads a discussion and answers JSON (tasks and a decision). The server matches the names to members and drops bad dates, and nothing is created until a person adds a card. Nib's check compares a document with the decisions in force in its log and the space's open questions. A submit or the Nib menu marks the check pending in D1 and wakes the document's object, whose alarm runs the check and writes the findings back, so the request stays fast. A finding must name a decision or a question Nib was given, or it is dropped.
+
 Settings (`/settings`) keep what belongs to the account in D1 (`user_settings`: avatar color, muted notification kinds, Nib on or off) and what belongs to a device in the browser (theme, text size, compact sidebar), applied by a small script before the first paint. The name, the photo, the password, GitHub linking, and the list of signed-in devices go through Better Auth's own server calls. Muted kinds are filtered in the bell's SQL. Deleting an account deletes the documents and spaces the person owns (with their objects), their memberships and sessions; what they did stays in other timelines as "Deleted user".
 
 A space has its own room, a third kind of object next to a document's text and comments rooms: `<space id>:space`, at `/ws/space/<id>`. It holds the space's discussions (each a Y.Map with its posts) and the tasks made from posts, so they sync live and merge offline like everything else. Commenters and up write; viewers read. The same room holds the space's ideas board, in the same shape as a board document (`groups` and `cards`), so `board.client.tsx` serves both. Its three columns are seeded the first time someone who can write opens the Ideas tab. An idea can become a discussion in the same room (the card and the discussion point at each other) or a document in the space. The room's alarm writes an index to D1 (`discussions`, and task rows with `space_id` and `discussion_id`) for the space home, the Tasks page, and the bell. A question is a discussion with an owner and a "decide by" date; the space home lists open questions first, late ones in red.
@@ -112,7 +114,7 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 
 ## Tests
 
-`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs fifty-three tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
+`npm test` builds the app, starts the Cloudflare runtime on a free port with a database of its own, signs up users through the real auth API, and runs fifty-seven tests over real WebSockets. The tests set `AI_FAKE`, so they never call the model:
 
 - One tab goes offline, both tabs edit, the tab returns. Both tabs end with the exact same text.
 - Two offline tabs insert at the same position. Both inserts survive, and both tabs agree on one order.
@@ -162,6 +164,10 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 - An idea becomes a document in the Idea state, and Start drafting moves it to Draft; a commenter cannot make one.
 - A concern on a section blocks approval until it is withdrawn; a viewer cannot sign off, and a draft cannot be signed off.
 - Approved moves to Done and reopens; going back to Draft clears the sign-offs.
+- Asking the space names a document, a discussion, and a decision in force as sources; a stranger gets 404, and Nib off is refused.
+- Next steps from a discussion map a proposed name to a member and keep a valid date; a viewer gets 403.
+- Submitting for review runs Nib's check, which finds the decision the text goes against and links to it; a viewer cannot ask for a check.
+- A document outside a space is checked against its owner's own decisions.
 
 ## Accessibility
 
@@ -181,6 +187,8 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 - A discussion message is plain text; no formatting or @mentions yet.
 - Other people see a new sign-off when they reload the document, not live.
 - A document made from an idea does not link back to its card.
+- Answers from "Ask the space" are not saved.
+- The space's search rows are rewritten whole on every change to its room.
 - Nib has no per-person limit. One person can use the whole free daily allowance.
 - Nib reads at most 12,000 characters of a document.
 - Presence is kept in memory. After the object wakes, the list of who is here can take up to 15 seconds to fill.

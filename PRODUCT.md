@@ -34,6 +34,7 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 - A space ideas board; an idea becomes a discussion or a document.
 - A document lifecycle: Idea, Draft, In review, Approved, Done. Reviewers sign off section by section, and an open concern blocks approval.
 - Nib: improve, fix, shorten, continue, summarize, extract action items, find contradictions, any free instruction (`@nib …`), and replies to `@Nib` in comments.
+- Nib across a space: answers questions with cited sources, proposes tasks and a decision from a discussion for people to accept, and checks a document against the decisions in force and the open questions, automatically when it is submitted for review.
 - Runs entirely on Cloudflare's free plan (Workers, Durable Objects, D1, R2, Workers AI) at $0. Nib shares a free daily allowance of a few hundred requests.
 - Sign in with email and password; GitHub sign-in only when its secrets are set.
 - Undecided: pricing (the product is free today; no paid plan exists), an email service (no invitations or digests by email yet).

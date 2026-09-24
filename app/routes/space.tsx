@@ -1,8 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Form, Link, redirect, useSearchParams } from 'react-router'
+import { Form, Link, redirect, useFetcher, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
+import { askSpace, proposeNextSteps } from '~/lib/nib.server'
+import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
+import type { Source } from '~/lib/search.server'
 import { deleteSpace, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
@@ -36,6 +39,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     owner: { name: user.name, color: user.color, image: user.image },
     me: { id: user.id, name: user.name, color: user.color },
+    nib: user.settings.nib,
     space, role, isOwner,
     questions: await listOpenQuestions(params.id),
     discussions: await listRecentDiscussions(params.id),
@@ -55,6 +59,27 @@ export async function action({ request, params }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = String(f.get('intent'))
   const role = await roleOnSpace(user.id, params.id)
+  if (intent === 'ask' || intent === 'propose') {
+    // Nib reads the space. Any member may ask (it changes nothing); next steps need a writer.
+    if (!role) throw new Response('Not found', { status: 404 })
+    if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    if (intent === 'propose' && !atLeast(role, 'commenter')) throw new Response('Commenters and up can ask for next steps', { status: 403 })
+    try {
+      if (intent === 'ask') {
+        const question = String(f.get('question') ?? '').trim()
+        if (!question) return { error: 'Ask a question first.' }
+        if (question.length > MAX_INSTRUCTION) return { error: `Keep the question under ${MAX_INSTRUCTION} characters.` }
+        return { question, ...(await askSpace(params.id, question)) }
+      }
+      const discussion = String(f.get('discussion') ?? '')
+      const proposal = await proposeNextSteps(params.id, discussion)
+      return proposal ? { discussion, proposal } : { error: 'This discussion is gone.' }
+    } catch (e) {
+      if (e instanceof AiLimit) return { error: 'Nib is out of free uses for today. Try again tomorrow.' }
+      console.error(e)
+      return { error: 'Nib did not answer. Try again.' }
+    }
+  }
   if (intent === 'create') {
     if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
     const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, params.id)
@@ -105,13 +130,50 @@ export async function action({ request, params }: Route.ActionArgs) {
   return null
 }
 
+const sourceIcon = { decision: 'check', question: 'comment', document: 'docs', discussion: 'comment', ideas: 'board' } as const
+
+// "Ask Nib about this space": the answer cites its sources as [1], [2]; each becomes a link.
+function AskSpace() {
+  const fetcher = useFetcher<{ question?: string; answer?: string; sources?: Source[]; error?: string }>()
+  const busy = fetcher.state !== 'idle'
+  const out = fetcher.data
+  const link = (n: number) => out?.sources?.find((x) => x.n === n)
+  return (
+    <section className="ask-space" aria-labelledby="ask-title">
+      <h2 id="ask-title" className="sr-only">Ask Nib about this space</h2>
+      <fetcher.Form method="post" className="ask-space-form">
+        <input type="hidden" name="intent" value="ask" />
+        <span className="ai-mark" aria-hidden="true">✦</span>
+        <input name="question" required maxLength={500} placeholder="Ask Nib about this space, like “When do we launch?”" aria-label="Ask Nib about this space" disabled={busy} />
+        <button className="primary" disabled={busy} aria-busy={busy}>{busy ? <span className="spinner" aria-hidden="true" /> : 'Ask'}</button>
+      </fetcher.Form>
+      {busy && <p className="muted small" role="status">Nib is reading the space…</p>}
+      {!busy && out?.error && <p className="error small" role="alert">{out.error}</p>}
+      {!busy && out?.answer && (
+        <div className="ask-answer" role="status">
+          <p className="ask-question">{out.question}</p>
+          <p>{out.answer.split(/(\[\d+\])/).map((part, i) => {
+            const s = /^\[(\d+)\]$/.test(part) ? link(Number(part.slice(1, -1))) : undefined
+            return s ? <Link key={i} to={s.href} className="cite" title={s.title} aria-label={`Source ${s.n}: ${s.title}`}>{s.n}</Link> : part
+          })}</p>
+          {out.sources && out.sources.length > 0 && (
+            <ol className="ask-sources" aria-label="Sources">
+              {out.sources.map((x) => <li key={x.n}><Link to={x.href}><span className="cite" aria-hidden="true">{x.n}</span><Icon name={sourceIcon[x.kind]} />{x.title}</Link></li>)}
+            </ol>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
 type Tab = (typeof tabs)[number][0]
 const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function Space({ loaderData }: Route.ComponentProps) {
-  const { owner, me, space, role, isOwner, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
+  const { owner, me, nib, space, role, isOwner, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
   const [params, setParams] = useSearchParams()
   const tab = (tabs.some(([t]) => t === params.get('tab')) ? params.get('tab') : 'overview') as Tab
   const go = (t: Tab, d?: string | null) => setParams(d ? { tab: t, d } : t === 'overview' ? {} : { tab: t }, { preventScrollReset: true })
@@ -201,6 +263,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
 
       {tab === 'overview' && (
         <div className="overview">
+          {nib && <AskSpace />}
           <section className="overview-block questions" aria-labelledby="q-title">
             <div className="block-head"><h2 id="q-title">Open questions</h2><button type="button" className="link-button" onClick={() => go('discussions')}>All discussions</button></div>
             {questions.length === 0 ? <p className="muted">No question is waiting for a decision. Ask one in Discussions when something needs deciding.</p> : (
@@ -254,7 +317,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         : <p className="muted">Loading ideas…</p>)}
 
       {tab === 'discussions' && (mounted
-        ? <Suspense fallback={<p className="muted">Loading discussions…</p>}><SpaceRoom spaceId={space.id} user={me} canWrite={atLeast(role, 'commenter')} people={people} open={params.get('d')} onOpen={(d) => go('discussions', d)} /></Suspense>
+        ? <Suspense fallback={<p className="muted">Loading discussions…</p>}><SpaceRoom spaceId={space.id} user={me} canWrite={atLeast(role, 'commenter')} nib={nib} people={people} open={params.get('d')} onOpen={(d) => go('discussions', d)} /></Suspense>
         : <p className="muted">Loading discussions…</p>)}
 
       {tab === 'documents' && (documents.length === 0 ? (

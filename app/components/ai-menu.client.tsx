@@ -13,7 +13,7 @@ export const NIB = 'Nib'
 const groups: { label: string; selection?: true; items: [string, string][] }[] = [
   { label: 'Edit selection', selection: true, items: [['improve', 'Improve writing'], ['fix', 'Fix spelling and grammar'], ['shorten', 'Make shorter']] },
   { label: 'Write', items: [['continue', 'Continue writing']] },
-  { label: 'Whole document', items: [['summarize', 'Summarize at the top'], ['actions', 'Extract action items'], ['contradictions', 'Find contradictions']] },
+  { label: 'Whole document', items: [['summarize', 'Summarize at the top'], ['actions', 'Extract action items'], ['contradictions', 'Find contradictions'], ['check', 'Check against decisions']] },
 ]
 
 // The button in the selection toolbar. `data-ai-open` marks every control that opens the menu,
@@ -54,7 +54,8 @@ export function NibSuggestion({ items, selectedIndex, onItemClick }: SuggestionM
 // The Nib menu: next to the selected text (or under the header's Nib button) on a wide screen,
 // a bottom sheet on a phone. The answer goes into the text as a suggestion by Nib, then the menu
 // closes and the new suggestion is selected, so the bar offers Accept and Reject at once.
-export function AiMenu({ editor, documentId, start = '', onClose }: { editor: Editor; documentId: string; start?: string; onClose: () => void }) {
+// "Check against decisions" is not an edit: it asks for Nib's check, whose result shows in the Outline panel.
+export function AiMenu({ editor, documentId, start = '', onClose, onCheck }: { editor: Editor; documentId: string; start?: string; onClose: () => void; onCheck?: () => void }) {
   const view = editor.prosemirrorView!
   const [hasSelection] = useState(() => !view.state.selection.empty)
   const [busy, setBusy] = useState<string | null>(null)
@@ -100,6 +101,7 @@ export function AiMenu({ editor, documentId, start = '', onClose }: { editor: Ed
   }, [editor, onClose])
 
   const run = async (command: string) => {
+    if (command === 'check') { onClose(); onCheck?.(); return } // close first: the check opens the Outline panel
     const { from, to, $to } = view.state.selection
     // Rewrites send only the selection; "continue" sends the text before the cursor.
     const text = command === 'continue' ? view.state.doc.textBetween(0, $to.end(), '\n').slice(-4000) : view.state.doc.textBetween(from, to, '\n')

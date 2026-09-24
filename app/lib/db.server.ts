@@ -28,8 +28,9 @@ export const listSpaceDocuments = async (spaceId: string, role: Role) =>
     .bind(spaceId, role).all<DocumentRow>()).results
 
 export const getDocument = async (id: string) =>
-  env.DB.prepare('SELECT id, title, kind, updated_at, space_id, status, preview, published_slug, published_version, published_at FROM documents WHERE id = ?').bind(id)
-    .first<{ id: string; title: string; kind: Kind; updated_at: number; space_id: string | null; status: Status; preview: string; published_slug: string | null; published_version: number | null; published_at: number | null }>()
+  env.DB.prepare('SELECT id, title, kind, updated_at, space_id, status, preview, published_slug, published_version, published_at, check_state, check_findings, check_at FROM documents WHERE id = ?').bind(id)
+    .first<{ id: string; title: string; kind: Kind; updated_at: number; space_id: string | null; status: Status; preview: string; published_slug: string | null; published_version: number | null; published_at: number | null
+      check_state: 'pending' | 'done' | 'failed' | null; check_findings: string; check_at: number | null }>()
 
 // One batch = one transaction: the document and its owner row appear together or not at all.
 export const createDocument = async (userId: string, title: string, spaceId: string | null = null, kind: Kind = 'doc') => {

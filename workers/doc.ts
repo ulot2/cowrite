@@ -5,7 +5,8 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import { logEvent, touchEvent } from '~/lib/events.server'
-import { indexBody, indexComments } from '~/lib/search.server'
+import { indexBody, indexComments, indexSpace } from '~/lib/search.server'
+import { checkDocument } from '~/lib/nib.server'
 import { syncWork, type WorkItem } from '~/lib/work.server'
 import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/discussions.server'
 import { ask } from '~/lib/ai.server'
@@ -154,6 +155,9 @@ export class Doc extends DurableObject<Env> {
   // Users who changed the document since the last alarm. In memory: a hibernation inside the
   // 3 s window loses one "edited" event, nothing else. (ponytail: storage.put per edit is not worth it)
   touched = new Set<string>()
+  // Whether the document changed since the last alarm. True after a wake, when we cannot know,
+  // so an alarm that only runs Nib's check skips the edit work (and the edit time) when it can.
+  changed = true
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -173,6 +177,7 @@ export class Doc extends DurableObject<Env> {
     // A doc change from one client is stored, then goes to every other client.
     this.doc.on('update', (update: Uint8Array, origin: unknown) => {
       this.ctx.storage.sql.exec('INSERT INTO updates (data) VALUES (?)', update)
+      this.changed = true
       if (++this.rows >= COMPACT_AT) this.compact()
       // This event fires only for a real change, so the sender counts as an editor.
       const ws = origin as WebSocket | null
@@ -229,8 +234,14 @@ export class Doc extends DurableObject<Env> {
         id, text: String(t.text ?? '').slice(0, 500), assignee: str(t.assignee), assigneeName: String(t.assigneeName ?? ''),
         due: str(t.due), done: t.done === true, discussionId: String(t.discussionId ?? ''), createdBy: String(t.createdBy ?? ''),
       }))
-      const numbered = await syncDiscussions(name.slice(0, -6), items, tasks)
+      const spaceId = name.slice(0, -6)
+      const numbered = await syncDiscussions(spaceId, items, tasks)
       if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) this.doc.getMap<Y.Map<unknown>>('discussions').get(id)?.set('decisionNumber', number) }, 'index')
+      // What Nib searches when someone asks the space: each discussion's words, and the ideas board.
+      const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''),
+        ...((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => String(p.get('text') ?? ''))].filter(Boolean).join('\n') }))
+      const ideas = cardsOf(this.doc).map((c) => c.text).filter(Boolean).join('\n')
+      await indexSpace(spaceId, ideas ? [...said, { key: 'ideas', text: ideas }] : said)
       return
     }
     if (name.endsWith(':threads')) {
@@ -243,6 +254,13 @@ export class Doc extends DurableObject<Env> {
       await indexComments(id, this.commentsText())
       return
     }
+    // Nib's check, asked for by a submit or the Nib menu. It runs here so the request stays fast.
+    if (await this.ctx.storage.get<boolean>('checkWanted')) {
+      await this.ctx.storage.delete('checkWanted')
+      await checkDocument(name, toText(richFrom(this.doc)))
+    }
+    if (!this.changed) return
+    this.changed = false
     // The editor stores blocks as XML in this fragment. Strip the tags, keep the words.
     const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
     await this.env.DB.prepare('UPDATE documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, Date.now(), name).run()
@@ -414,6 +432,12 @@ export class Doc extends DurableObject<Env> {
         el('bulletListItem', {}, 'What could stop us, and what we will do about it'),
       ].map(container))
     })
+  }
+
+  // Nib's check runs from the alarm: now, or with the edit alarm already due. The caller marked it pending in D1.
+  async requestCheck() {
+    await this.ctx.storage.put('checkWanted', true)
+    if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now())
   }
 
   // Publishing freezes the document as it is now: a version named "Published".

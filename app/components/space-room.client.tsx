@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useFetcher } from 'react-router'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { timeAgo } from '~/lib/time'
@@ -18,6 +19,7 @@ type Props = {
   spaceId: string
   user: { id: string; name: string }
   canWrite: boolean // commenters and up; viewers read
+  nib?: boolean // Nib is on in this person's settings
   people: Member[]
   open: string | null // the thread in the URL
   onOpen: (id: string | null) => void
@@ -28,7 +30,7 @@ const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { wee
 
 // The space's room: discussions and the tasks made from their posts. Same object and protocol as a
 // document's rooms, so it is live, works offline, and merges. The room's alarm indexes it into D1.
-export function SpaceRoom({ spaceId, user, canWrite, people, open, onOpen }: Props) {
+export function SpaceRoom({ spaceId, user, canWrite, nib = false, people, open, onOpen }: Props) {
   const [sync] = useState(() => {
     const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/space`
     const doc = new Y.Doc()
@@ -69,7 +71,7 @@ export function SpaceRoom({ spaceId, user, canWrite, people, open, onOpen }: Pro
     }
   }, [sync])
 
-  const person = (id: string) => people.find((p) => p.id === id) ?? { id, name: id === user.id ? user.name : 'Someone', color: 'var(--fg-muted)' }
+  const person = (id: string) => people.find((p) => p.id === id) ?? { id, name: id === user.id ? user.name : id === 'ai' ? 'Nib' : 'Someone', color: id === 'ai' ? 'var(--accent)' : 'var(--fg-muted)' }
   const map = (id: string) => sync.discussions.get(id)!
   const post = (text: string): Y.Map<unknown> => {
     const p = new Y.Map<unknown>()
@@ -102,11 +104,27 @@ export function SpaceRoom({ spaceId, user, canWrite, people, open, onOpen }: Pro
       target?.set('taskId', taskId)
     })
   }
+  // An accepted proposal from Nib: a message by Nib with the task on it, in one change. The task is
+  // created by the person who accepted it, so the bell says who assigned it.
+  const acceptTask = (d: Discussion, t: { text: string; assignee: string; due: string }) => {
+    const taskId = crypto.randomUUID()
+    const p = post(`Next step: ${t.text}`)
+    p.set('userId', 'ai')
+    sync.doc.transact(() => {
+      (map(d.id).get('posts') as Y.Array<Y.Map<unknown>>).push([p])
+      p.set('taskId', taskId)
+      sync.tasks.set(taskId, { text: t.text, assignee: t.assignee, assigneeName: t.assignee ? person(t.assignee).name : '', due: t.due, done: false, discussionId: d.id, postId: String(p.get('id')), createdBy: user.id })
+    })
+  }
+  // An accepted decision answers the discussion (a plain talk becomes a question first); the room's
+  // alarm then records it as the next D-number.
+  const acceptDecision = (d: Discussion, outcome: string) => setField(d.id, { kind: 'question', status: 'answered', answer: outcome, answeredBy: user.id })
   const tick = (taskId: string) => { const t = sync.tasks.get(taskId); if (t) sync.tasks.set(taskId, { ...t, done: !t.done }) }
 
   const current = open ? list.find((d) => d.id === open) : null
   if (open && !current) return <p className="muted room-wait">{synced ? 'This discussion is gone.' : 'Loading the discussion…'} <button type="button" className="link-button" onClick={() => onOpen(null)}>All discussions</button></p>
-  if (current) return <Thread d={current} tasks={tasks} canWrite={canWrite} people={people} person={person} user={user}
+  if (current) return <Thread d={current} tasks={tasks} canWrite={canWrite} nib={nib} people={people} person={person} user={user}
+    onAcceptTask={(t) => acceptTask(current, t)} onAcceptDecision={(o) => acceptDecision(current, o)}
     onBack={() => onOpen(null)} onReply={(t) => reply(current.id, t)} onSet={(patch) => setField(current.id, patch)} onTask={(p, t) => makeTask(current, p, t)} onTick={tick} />
   return <DiscussionList list={list} synced={synced} canWrite={canWrite} people={people} person={person} user={user} onOpen={onOpen} onStart={start} />
 }
@@ -199,10 +217,11 @@ function DiscussionList({ list, synced, canWrite, people, person, user, onOpen, 
   )
 }
 
-function Thread({ d, tasks, canWrite, people, person, user, onBack, onReply, onSet, onTask, onTick }: {
-  d: Discussion; tasks: Record<string, Task>; canWrite: boolean; people: Member[]; person: PersonOf; user: { id: string }
+function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply, onSet, onTask, onTick, onAcceptTask, onAcceptDecision }: {
+  d: Discussion; tasks: Record<string, Task>; canWrite: boolean; nib: boolean; people: Member[]; person: PersonOf; user: { id: string }
   onBack: () => void; onReply: (text: string) => void; onSet: (patch: Record<string, unknown>) => void
   onTask: (p: Post, t: { text: string; assignee: string; due: string }) => void; onTick: (taskId: string) => void
+  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void; onAcceptDecision: (outcome: string) => void
 }) {
   const [answering, setAnswering] = useState(false)
   const [tasking, setTasking] = useState<string | null>(null)
@@ -233,6 +252,8 @@ function Thread({ d, tasks, canWrite, people, person, user, onBack, onReply, onS
           ) : <button type="button" className="primary" onClick={() => setAnswering(true)}><Icon name="check" />Mark answered</button>)}
         </section>
       )}
+
+      {canWrite && nib && d.posts.length > 0 && <NextSteps d={d} people={people} onAcceptTask={onAcceptTask} onAcceptDecision={onAcceptDecision} />}
 
       <ol className="posts">
         {d.posts.map((p) => {
@@ -292,5 +313,78 @@ function Thread({ d, tasks, canWrite, people, person, user, onBack, onReply, onS
         </form>
       ) : <p className="muted">You can read this discussion. Ask the space owner for commenter access to reply.</p>}
     </div>
+  )
+}
+
+type Proposal = { tasks: { text: string; assignee: string; due: string }[]; decision: string | null }
+
+// "Suggest next steps": Nib reads the thread and proposes tasks and a decision. Each is a card that
+// can be edited, then added or dismissed. Nothing is created until someone adds it.
+function NextSteps({ d, people, onAcceptTask, onAcceptDecision }: {
+  d: Discussion; people: Member[]
+  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void; onAcceptDecision: (outcome: string) => void
+}) {
+  const fetcher = useFetcher<{ discussion?: string; proposal?: Proposal; error?: string }>()
+  const [closed, setClosed] = useState<Set<string>>(new Set()) // cards added or dismissed: "t0", "decision"
+  const busy = fetcher.state !== 'idle'
+  const proposal = fetcher.data?.discussion === d.id ? fetcher.data.proposal : undefined
+  const close = (key: string) => setClosed((c) => new Set(c).add(key))
+  const open = proposal && [...proposal.tasks.map((_, i) => `t${i}`), ...(proposal.decision && d.status === 'open' ? ['decision'] : [])].filter((k) => !closed.has(k))
+  return (
+    <section className="next-steps" aria-label="Next steps from Nib">
+      <div className="next-steps-head">
+        <button type="button" className="ghost nib-button" disabled={busy} aria-busy={busy}
+          onClick={() => { setClosed(new Set()); fetcher.submit({ intent: 'propose', discussion: d.id }, { method: 'post' }) }}>
+          {busy ? <span className="spinner" aria-hidden="true" /> : <span className="ai-mark" aria-hidden="true">✦</span>}
+          {busy ? 'Nib is reading the thread…' : proposal ? 'Suggest again' : 'Suggest next steps'}
+        </button>
+        {proposal && open && open.length > 0 && <button type="button" className="link-button" onClick={() => open.forEach(close)}>Dismiss all</button>}
+      </div>
+      {!busy && fetcher.data?.error && <p className="error small" role="alert">{fetcher.data.error}</p>}
+      {!busy && proposal && open?.length === 0 && <p className="muted small" role="status">{proposal.tasks.length || proposal.decision ? 'All done. Added items are in the thread below.' : 'Nib found no next steps in this discussion.'}</p>}
+      {!busy && proposal && (
+        <ul className="proposals">
+          {proposal.tasks.map((t, i) => !closed.has(`t${i}`) && (
+            <li key={i}>
+              <form className="proposal" onSubmit={(e) => {
+                e.preventDefault()
+                const f = new FormData(e.currentTarget)
+                const text = String(f.get('text') ?? '').trim()
+                if (!text) return
+                onAcceptTask({ text, assignee: String(f.get('assignee') ?? ''), due: String(f.get('due') ?? '') })
+                close(`t${i}`)
+              }}>
+                <span className="proposal-kind"><Icon name="tasks" />Task</span>
+                <input name="text" required maxLength={300} defaultValue={t.text} aria-label="The task" />
+                <Select name="assignee" label="Assigned to" defaultValue={t.assignee} options={[{ value: '', label: 'Nobody yet' }, ...people.map((m) => ({ value: m.id, label: m.name }))]} />
+                <input type="date" name="due" defaultValue={t.due} aria-label="Due date" />
+                <span className="proposal-actions">
+                  <button type="button" className="ghost" onClick={() => close(`t${i}`)}>Dismiss</button>
+                  <button className="primary">Add task</button>
+                </span>
+              </form>
+            </li>
+          ))}
+          {proposal.decision && d.status === 'open' && !closed.has('decision') && (
+            <li>
+              <form className="proposal decision-proposal" onSubmit={(e) => {
+                e.preventDefault()
+                const outcome = String(new FormData(e.currentTarget).get('outcome') ?? '').trim()
+                if (!outcome) return
+                onAcceptDecision(outcome)
+                close('decision')
+              }}>
+                <span className="proposal-kind"><Icon name="check" />Decision</span>
+                <textarea name="outcome" rows={2} required maxLength={1000} defaultValue={proposal.decision} aria-label="What was decided" />
+                <span className="proposal-actions">
+                  <button type="button" className="ghost" onClick={() => close('decision')}>Dismiss</button>
+                  <button className="primary">Record decision</button>
+                </span>
+              </form>
+            </li>
+          )}
+        </ul>
+      )}
+    </section>
   )
 }

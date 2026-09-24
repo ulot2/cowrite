@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useFetcher } from 'react-router'
+import { Link, useFetcher } from 'react-router'
+import { timeAgo } from '~/lib/time'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { createUserStore } from '@blocknote/core'
@@ -21,6 +22,8 @@ export type Presence = { name: string; color: string; editing?: boolean }
 export type Signoff = { block_id: string; user_id: string; name: string; state: 'agree' | 'concern'; note: string; heading: string; text_hash: string }
 // While a document is in review: every sign-off, and whether this person may sign.
 export type Review = { signoffs: Signoff[]; canSign: boolean }
+// Nib's latest check of the document against the decisions in force and the open questions.
+export type Check = { state: 'pending' | 'done' | 'failed'; at: number | null; findings: { kind: 'decision' | 'question'; text: string; href: string }[] }
 type Props = {
   documentId: string
   user: { id: string; name: string; color: string }
@@ -35,6 +38,8 @@ type Props = {
   onPanel: (panel: Panel) => void
   onStatus: (state: ConnectionState, others: Presence[], openComments: number) => void
   review?: Review
+  check?: Check | null
+  onCheck?: () => void // asks for a new check; absent when this person cannot
   onSections?: (total: number, signed: number, concerns: number) => void
 }
 
@@ -86,7 +91,7 @@ const useTheme = () => {
 }
 
 // The shared editor. One Y.Doc and one socket per mounted editor; both go away with it.
-export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, nib, people, panel, onPanel, onStatus, review, onSections }: Props) {
+export function RichEditor({ documentId, user, canEdit, canComment, suggesting, canResolve, nib, people, panel, onPanel, onStatus, review, check, onCheck, onSections }: Props) {
   const canNib = canEdit && nib
   const [sync] = useState(() => {
     // Same origin. /ws/<id> carries the text, /ws/<id>/threads the comments: two rooms, so the
@@ -277,7 +282,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
       <SuggestionMenuController triggerCharacter="/" getItems={slashItems(editor)} />
       <FormattingToolbarController formattingToolbar={() => <FormattingToolbar>{canNib && <AskAiButton onOpen={() => onPanel('ai')} />}{getFormattingToolbarItems()}<TurnIntoTask /></FormattingToolbar>} />
       {canNib && <SuggestionMenuController triggerCharacter="@" getItems={nibItems(openNib)} suggestionMenuComponent={NibSuggestion} />}
-      {panel === 'ai' && canNib && <AiMenu editor={editor} documentId={documentId} start={nibStart} onClose={closeAi} />}
+      {panel === 'ai' && canNib && <AiMenu editor={editor} documentId={documentId} start={nibStart} onClose={closeAi} onCheck={onCheck} />}
       {/* Our components (the comment editor with @mentions) must wrap the comment UI, so the
           floating composer and thread are rendered here instead of by the view. */}
       <ComponentsContext.Provider value={uiComponents}>
@@ -319,6 +324,23 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
         {panel === 'outline' && (
           <aside className="comments-panel outline" aria-label="Outline">
             <div className="panel-head"><strong>{review ? 'Outline and sign-off' : 'Outline'}</strong><button type="button" className="ghost" onClick={() => onPanel('none')} aria-label="Close outline">✕</button></div>
+            {(check || onCheck) && (
+              <section className="nib-check" data-state={check?.state} data-found={(check?.state === 'done' && check.findings.length > 0) || undefined} aria-labelledby="nib-check-title">
+                <div className="nib-check-head">
+                  <span className="ai-mark" aria-hidden="true">✦</span><strong id="nib-check-title">Nib's check</strong>
+                  {check?.at && check.state !== 'pending' && <span className="muted small">{timeAgo(check.at)}</span>}
+                </div>
+                {!check && <p className="small muted">Nib can compare this document with the decisions in force and the open questions.</p>}
+                {check?.state === 'pending' && <p className="small" role="status"><span className="spinner" aria-hidden="true" /> Nib is checking this against the space…</p>}
+                {check?.state === 'failed' && <p className="small" role="status">Nib could not check this. Try again later.</p>}
+                {check?.state === 'done' && (check.findings.length === 0
+                  ? <p className="small" role="status">No conflicts with the decisions in force or the open questions.</p>
+                  : <ul className="nib-findings">{check.findings.map((f, i) => (
+                      <li key={i} data-kind={f.kind}>{f.text} <Link to={f.href}>{f.kind === 'decision' ? 'Open the decision' : 'Open the question'}</Link></li>
+                    ))}</ul>)}
+                {onCheck && check?.state !== 'pending' && <button type="button" className="link-button" onClick={onCheck}>{check ? 'Check again' : 'Check against decisions'}</button>}
+              </section>
+            )}
             {review && headings.length > 0 && <p className="signoff-summary small" role="status">{signedCount} of {headings.length} {headings.length === 1 ? 'section' : 'sections'} signed{concernCount > 0 && <> · <span className="concern-text">{concernCount === 1 ? '1 concern' : `${concernCount} concerns`}</span></>}</p>}
             {headings.length === 0 ? <p className="muted small">{review ? 'Reviewers sign off each heading and the text under it. ' : ''}No headings yet. Type # and a space at the start of a line to make one.</p> : (
               <ol>{sections.map((h) => (

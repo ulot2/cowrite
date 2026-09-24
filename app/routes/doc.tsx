@@ -2,6 +2,7 @@ import { Form, Link } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { clearPublished, clearSignoff, clearSignoffs, createInMode, getDocument, listSignoffs, openConcern, renameDocument, setPublished, setSignoff, setStatus } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
+import { markCheckPending, type Finding } from '~/lib/nib.server'
 import { canMove, moves, statusLabel, type Move } from '~/lib/status'
 import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent, touchEvent } from '~/lib/events.server'
@@ -28,6 +29,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     role, document, isOwner,
     members: await listMembers('document', params.id),
     signoffs: await listSignoffs(params.id),
+    check: document.check_state ? { state: document.check_state, at: document.check_at, findings: JSON.parse(document.check_findings || '[]') as Finding[] } : null,
     link: isOwner ? await getShareLink('document', params.id) : null,
     spaces: isOwner ? (await listSpaces(user.id)).filter((s) => s.owner_id === user.id) : [],
     error: new URL(request.url).searchParams.get('error'),
@@ -57,6 +59,16 @@ export async function action({ request, params }: Route.ActionArgs) {
     await setStatus(params.id, move.to)
     if (move.to === 'draft') await clearSignoffs(params.id) // a new review starts clean
     await logEvent(params.id, user.id, 'status', move.text)
+    // Every submit gets Nib's check against the space, in the background.
+    if (key === 'submit' && user.settings.nib) { await markCheckPending(params.id); await docStub(params.id).requestCheck() }
+    return null
+  }
+  if (intent === 'check') {
+    // Nib's check on demand, from the Nib menu or the panel. It runs in the document's object.
+    if (!atLeast(role, 'reviewer')) throw new Response('Reviewers and up can ask for a check', { status: 403 })
+    if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    await markCheckPending(params.id)
+    await docStub(params.id).requestCheck()
     return null
   }
   if (intent === 'signoff' || intent === 'unsignoff') {
@@ -144,13 +156,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
-  const { user, role, document, isOwner, members, link, spaces, nib, signoffs } = loaderData
+  const { user, role, document, isOwner, members, link, spaces, nib, signoffs, check } = loaderData
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
       <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
         review={document.status === 'review' ? { signoffs, canSign: canEdit } : undefined}
+        check={check} canCheck={canEdit && nib}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}
         actions={<>
           <div className="tool-group" role="group" aria-label="Document">
