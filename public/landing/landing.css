@@ -146,35 +146,39 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 
 .live { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; padding-block: 5rem; }
 
-.built { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; margin-block: 3rem; padding-block: 3.5rem !important; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.facts { list-style: none; margin: 1.5rem 0; padding: 0; display: grid; gap: 0.4rem; color: var(--fg-muted); }
-.facts b { display: inline-block; min-width: 3rem; color: var(--fg); font-weight: 800; }
-.arch { margin: 0; display: grid; justify-items: center; gap: 0.6rem; font-size: 0.85rem; }
-.node { padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-weight: 700; text-align: center; box-shadow: var(--shadow); }
-.node small { display: block; font-weight: 500; color: var(--fg-muted); font-size: 0.75rem; }
-.node.strong { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.wire { display: flex; gap: 1rem; color: var(--fg-muted); font-size: 0.72rem; font-weight: 600; }
-.wire span::before { content: "↕ "; color: var(--accent); }
-.fan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; width: 100%; padding-top: 0.9rem; position: relative; }
-.fan::before { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 0.9rem; border: 1.5px solid var(--border); border-bottom: 0; border-radius: 8px 8px 0 0; }
-.fan .node { padding: 0.5rem 0.4rem; }
-
-.close { padding-block: 6rem 7rem; text-align: center; display: grid; justify-items: center; gap: 1.5rem; }
-.close h2 { margin: 0; max-width: 18ch; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
-.close .fine { margin: 0; }
-.foot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.5rem clamp(1rem, 4vw, 3rem); border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--fg-muted); }
+.close { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); align-items: center; gap: clamp(2rem, 5vw, 4.5rem); padding-block: 6rem 7rem; }
+.close h2 { margin: 0; max-width: 16ch; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
+.close .hero-actions { margin-top: 2rem; }
+/* The reader's decision: accent, not the green of a decided one. */
+.close-card { font-size: 1.05rem; padding: 1.1rem 1.2rem 1.2rem; box-shadow: var(--shadow-lift); rotate: 1.5deg; }
+.close-card .dec-num { background: var(--accent-soft); color: var(--accent); }
+.close-card .dec-state { color: var(--accent); }
+.close-card .dec-state::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; background: currentColor; }
+.close-card ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; font-size: 0.9em; }
+.close-card li { display: flex; gap: 0.5rem; }
+.close-card li::before { content: "✓"; flex: none; color: var(--ok); font-weight: 800; }
+@media (max-width: 760px) { .close { grid-template-columns: minmax(0, 1fr); padding-block: 4rem 5rem; } .close-card { rotate: none; } }
+/* Footer: brand and links on top, the license line and theme toggle on a ruled bottom row. */
+.foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 3rem 2rem; max-width: 76rem; margin-inline: auto; padding: 3.5rem clamp(1rem, 4vw, 3rem) 1.5rem; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--fg-muted); }
+.foot-brand p { margin: 0.6rem 0 0; max-width: 22rem; }
+.foot-links { display: flex; gap: clamp(2rem, 6vw, 5rem); }
+.foot-links div { display: grid; align-content: start; gap: 0.55rem; }
+.foot-links h2 { margin: 0 0 0.2rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0; color: var(--fg); }
+.foot-links a { text-decoration: none; }
+.foot-links a:hover { color: var(--fg); }
+.foot-base { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.85rem; }
+.foot-base p { margin: 0; }
 
 @media (max-width: 960px) {
-  .hero, .nib, .live, .built { grid-template-columns: minmax(0, 1fr); }
+  .hero, .nib, .live { grid-template-columns: minmax(0, 1fr); }
   .nav nav { display: none; }
 }
 @media (max-width: 560px) {
   .nav-actions .link { display: none; }
   .hero-actions .btn { flex: 1; }
   .stage { aspect-ratio: 1 / 1.15; }
-  .fan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .fan::before { display: none; }
-  .foot { flex-direction: column; align-items: flex-start; }
+  .foot { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+  .foot-links { flex-wrap: wrap; gap: 2rem 2.5rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -487,4 +491,19 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 @media (min-width: 861px) {
   .begin-steps { grid-template-rows: auto auto auto 1fr; }
   .begin-steps li { grid-row: span 4; grid-template-rows: subgrid; }
+}
+
+/* Honest answers: the heading on the left, the questions on hairlines on the right. All answers show;
+   they are short, so nothing hides behind a click. */
+.faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(2rem, 5vw, 4.5rem); padding-block: 5rem; }
+.faq-head { align-self: start; position: sticky; top: 6rem; }
+.faq-code { margin: 1.5rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
+.faq-code a { font-weight: 700; }
+.faq-list { margin: 0; border-top: 1px solid var(--border); }
+.faq-list > div { display: grid; gap: 0.35rem; padding: 1.1rem 0; border-bottom: 1px solid var(--border); }
+.faq-list dt { font-weight: 800; font-size: 1.02rem; }
+.faq-list dd { margin: 0; max-width: 40rem; color: var(--fg-muted); line-height: 1.6; }
+@media (max-width: 860px) {
+  .faq { grid-template-columns: minmax(0, 1fr); }
+  .faq-head { position: static; }
 }
