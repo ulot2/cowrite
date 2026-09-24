@@ -19,7 +19,8 @@ export default function Login({ loaderData }: Route.ComponentProps) {
   const [params] = useSearchParams()
   const next = params.get('next') ?? '/'
   const target = next.startsWith('/') && !next.startsWith('//') ? next : '/' // only paths on this site
-  const [mode, setMode] = useState<'in' | 'up'>('in')
+  // "Start a space" on the landing page links here with ?mode=up, to open on sign-up.
+  const [mode, setMode] = useState<'in' | 'up'>(params.get('mode') === 'up' ? 'up' : 'in')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
