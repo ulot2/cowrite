@@ -78,7 +78,7 @@ test('a task from a post reaches the Tasks page, and ticking it there ticks it i
 })
 
 test('deleting the space takes its discussions and their tasks', async () => {
-  await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'delete-space' })
+  await app.post(`/space/${spaceId}/settings`, ada.cookie, { intent: 'delete-space' })
   assert.doesNotMatch(await (await fetch(`${app.base}/tasks`, { headers: { cookie: bea.cookie } })).text(), /Update the pricing section/)
   assert.equal(await app.handshakeStatus(`space/${spaceId}`, ada.cookie), 403, 'the space is gone')
 })
