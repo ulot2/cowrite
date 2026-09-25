@@ -1987,6 +1987,15 @@ button:disabled[aria-busy="true"] {
     display: none !important;
   }
 }
+/* Phones: the title is a one-line field, so it cannot wrap; a smaller size fits most titles. */
+@media (max-width: 600px) {
+  .title {
+    font-size: 1.75rem;
+  }
+}
+html[data-sheet] .bn-formatting-toolbar {
+  display: none;
+}
 @keyframes sheet-in {
   from {
     transform: translateY(100%);

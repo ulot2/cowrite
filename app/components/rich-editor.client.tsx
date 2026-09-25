@@ -213,13 +213,20 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   }, [])
   useEffect(() => { if (hover && !found.all.some((s) => s.id === hover.id)) setHover(null) }, [found, hover])
   // Previous / Next: select a suggestion and bring it into view.
+  // With none selected yet, Next goes to the first and Previous to the last. The one selected is
+  // outlined (see the style under the bar), so it shows without focus in the text, and it is
+  // scrolled to the middle of the screen, above the phone panel.
   const step = (dir: 1 | -1) => {
-    if (!found.all.length) return
+    const n = found.all.length
+    if (!n) return
     const i = found.all.findIndex((s) => s.id === found.atCursor?.id)
-    const next = found.all[(i + dir + found.all.length) % found.all.length]
+    const next = found.all[i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n]
     run(selectSuggestion(next.id))
-    editor.prosemirrorView?.dispatch(editor.prosemirrorState.tr.scrollIntoView())
-    if (!sheet) editor.focus() // on a phone, focus in the text would open the keyboard under the panel
+    root.current?.querySelector(`[data-suggestion][data-id="${CSS.escape(next.id)}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+    if (!sheet) { editor.focus(); return } // on a phone, focus in the text would open the keyboard under the panel
+    // In the panel, an arrow that just disabled itself would drop focus; Accept (or the next button) takes it.
+    requestAnimationFrame(() => { if (!document.activeElement || (document.activeElement as HTMLButtonElement).disabled || document.activeElement === document.body) (sheetRef.current?.querySelector<HTMLButtonElement>('.suggestion-accept') ?? sheetRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)'))?.focus() })
   }
 
   // Phones: the bar waits behind a round button with the count, and opens as a panel from the
@@ -230,7 +237,9 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
   const fabRef = useRef<HTMLButtonElement>(null)
   const closeSheet = useCallback(() => { setSheet(false); fabRef.current?.focus() }, [])
   useEffect(() => { if (!found.all.length) setSheet(false) }, [found.all.length])
-  useEffect(() => { if (sheet) sheetRef.current?.querySelector<HTMLButtonElement>('button')?.focus() }, [sheet])
+  // While the panel is open, the text's formatting toolbar stays hidden (see app.css).
+  useEffect(() => { document.documentElement.toggleAttribute('data-sheet', sheet); return () => { document.documentElement.removeAttribute('data-sheet') } }, [sheet])
+  useEffect(() => { if (sheet) sheetRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus() }, [sheet])
   useEffect(() => {
     const el = root.current
     if (!el) return
@@ -254,7 +263,7 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     if (!sheet) return
     if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return }
     if (e.key !== 'Tab') return
-    const all = [...(sheetRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+    const all = [...(sheetRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
     const first = all[0], last = all[all.length - 1]
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
@@ -333,8 +342,10 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
             const at = found.atCursor ? found.all.findIndex((x) => x.id === found.atCursor!.id) + 1 : 0
             const one = found.atCursor
             const n = found.all.length
+            const stuck = n === 1 && !!one // the only suggestion is already selected: nowhere to go
             return (
               <>
+              {one && <style>{`.editor-layout [data-suggestion][data-id="${CSS.escape(one.id)}"] { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }`}</style>}
               <button type="button" ref={fabRef} className="suggestion-fab" aria-expanded={sheet} aria-controls="suggestion-bar" aria-label={`Suggestions, ${n} waiting`} onClick={() => setSheet(true)}>
                 <Icon name="suggest" /><span className="suggestion-count" aria-hidden="true">{n}</span>
               </button>
@@ -347,8 +358,8 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
                   <span>{one ? <>by {nameOf(one.author)}</> : canResolve ? 'Review them one by one, or all at once' : 'Waiting for an editor to review'}</span>
                 </span>
                 <span className="suggestion-nav">
-                  <button type="button" className="ghost" onClick={() => step(-1)} aria-label="Previous suggestion" data-tip="Previous"><Icon name="chevron" /></button>
-                  <button type="button" className="ghost" onClick={() => step(1)} aria-label="Next suggestion" data-tip="Next"><Icon name="chevron" /></button>
+                  <button type="button" className="ghost" onClick={() => step(-1)} disabled={stuck} aria-label="Previous suggestion" data-tip="Previous"><Icon name="chevron" /></button>
+                  <button type="button" className="ghost" onClick={() => step(1)} disabled={stuck} aria-label="Next suggestion" data-tip="Next"><Icon name="chevron" /></button>
                 </span>
                 {canResolve && (
                   <span className="suggestion-actions">
