@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoWrite logo directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Instrument+Serif:ital@1&display=swap">
+<style>
+  :root { --accent: #2d4ff5; --soft: #aebcff; --fg: #16181d; --muted: #626671; --border: #e3e5ea; --tint: #f3f4f7; --dark: #121316; --dark-accent: #7d93ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2.5rem clamp(1rem, 4vw, 3rem) 4rem; font-family: Manrope, system-ui, sans-serif; color: var(--fg); background: #fff; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.03em; }
+  .lede { margin: 0.4rem 0 2rem; color: var(--muted); max-width: 44rem; }
+  .row { display: grid; grid-template-columns: 15rem repeat(4, minmax(0, 1fr)); gap: 1rem; align-items: stretch; padding: 1.5rem 0; border-top: 1px solid var(--border); }
+  .about h2 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+  .about p { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--muted); }
+  .about .tag { display: inline-block; margin-bottom: 0.4rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--tint); font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+  .cell { display: grid; place-items: center; min-height: 9rem; border-radius: 12px; background: var(--tint); position: relative; }
+  .cell.white { background: #fff; border: 1px solid var(--border); }
+  .cell.dark { background: var(--dark); color: #e9eaee; }
+  .cell small { position: absolute; left: 0.7rem; bottom: 0.5rem; font-size: 0.68rem; font-weight: 600; color: var(--muted); }
+  .cell.dark small { color: #9b9fa9; }
+  .lockup { display: inline-flex; align-items: center; gap: 0.6rem; }
+  .sizes { display: flex; align-items: end; gap: 1rem; }
+  /* Wordmarks */
+  .wm-sans { font: 800 1.75rem/1 Manrope, sans-serif; letter-spacing: -0.045em; }
+  .wm-serif { font: italic 400 2.1rem/1 "Instrument Serif", serif; letter-spacing: -0.01em; }
+  .wm-split { font: 700 1.7rem/1 Manrope, sans-serif; letter-spacing: -0.04em; }
+  .wm-split b { font-weight: 800; color: var(--accent); }
+  .dark .wm-split b { color: var(--dark-accent); }
+  .wm-dot { font-weight: 800; }
+  .round { margin: 2.5rem 0 0.25rem; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+  .wm-sans.big { font-size: 2.2rem; }
+  .letter { gap: 0; }
+  .mock-side { display: grid; gap: 0.2rem; width: 11rem; padding: 0.8rem 0.6rem; border-right: 1px solid var(--border); font-size: 0.85rem; justify-self: start; margin-left: 1rem; }
+  .mock-side .lockup { padding: 0 0.3rem 0.6rem; margin-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  .mock-link { padding: 0.35rem 0.5rem; border-radius: 6px; color: var(--muted); }
+  .mock-link.on { background: var(--tint); color: var(--fg); font-weight: 600; }
+  .grid-sizes { display: grid; grid-template-columns: repeat(3, 32px); gap: 0.8rem 1rem; place-items: center; }
+  .cell { overflow: hidden; }
+  .mock-tabs { overflow: hidden; display: flex; gap: 2px; align-self: start; margin-top: 1.4rem; padding: 0.4rem 0.4rem 0; width: calc(100% - 2rem); border-radius: 10px 10px 0 0; background: #dfe1e6; }
+  .mock-tab { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.8rem; border-radius: 8px 8px 0 0; font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .mock-tab.on { background: #fff; color: var(--fg); }
+  @media (max-width: 900px) { .row { grid-template-columns: 1fr 1fr; } .about { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+  <h1>CoWrite logo directions</h1>
+  <p class="lede">Seven new marks in two rounds, each alone and with its wordmark, on light and dark, and at favicon size (32 and 16 pixels). Today's logo is first, for comparison. The blue is the app's accent.</p>
+
+  <!-- Symbols, drawn once. Each mark has a tile version (for the app icon and favicon) and a bare one. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- Today: two overlapping rings -->
+      <symbol id="now" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="#fff" stroke-width="2.6"/></symbol>
+
+      <!-- 1. Said, then settled: a speech bubble with a check -->
+      <symbol id="a-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M9.5 7h13a4 4 0 0 1 4 4v6.5a4 4 0 0 1-4 4h-7.2L10.5 25.5v-4H9.5a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4z" fill="#fff"/><path d="M11.6 14.3l2.9 2.9 5.9-6" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="a-bare" viewBox="0 0 32 32"><path d="M8 4.5h16a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5h-8.8l-6.7 5.2v-5.2H8a5 5 0 0 1-5-5v-8a5 5 0 0 1 5-5z" fill="var(--accent)"/><path d="M10.6 13.6l3.6 3.6 7.2-7.4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+
+      <!-- 2. The nib: two halves that meet at one point -->
+      <symbol id="b-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M15.3 6H10.8C9.6 9 9 12.2 9.4 15.4L15.3 26.6Z" fill="#fff"/><path d="M16.7 6H21.2C22.4 9 23 12.2 22.6 15.4L16.7 26.6Z" fill="var(--soft)"/><circle cx="16" cy="14.4" r="1.7" fill="var(--accent)"/></symbol>
+      <symbol id="b-bare" viewBox="0 0 32 32"><path d="M15.1 3H8.3C6.6 7.4 5.8 12 6.4 16.6L15.1 30Z" fill="var(--accent)"/><path d="M16.9 3H23.7C25.4 7.4 26.2 12 25.6 16.6L16.9 30Z" fill="var(--soft)"/><circle cx="16" cy="15" r="2.3" fill="var(--bg, #fff)"/></symbol>
+
+      <!-- 3. The live cursor: a C with a named cursor in its gap -->
+      <symbol id="c-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M19.6 11.2A7 7 0 1 0 19.6 20.8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M23.5 10.5v12" stroke="#fff" stroke-width="2" stroke-linecap="round"/><rect x="23.5" y="7" width="4.5" height="3.6" rx="1" fill="var(--soft)"/></symbol>
+      <symbol id="c-bare" viewBox="0 0 32 32"><path d="M20.4 9.6A9 9 0 1 0 20.4 22.4" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/><path d="M25.5 8.5v16" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/><rect x="25.5" y="4" width="5.5" height="4.6" rx="1.2" fill="var(--soft)"/></symbol>
+
+      <!-- 4. Common ground: two speech bubbles; where they overlap is filled -->
+      <clipPath id="d-clip-tile"><circle cx="13" cy="13.2" r="6.6"/></clipPath>
+      <symbol id="d-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <circle cx="19" cy="18.6" r="6.6" fill="#fff" clip-path="url(#d-clip-tile)"/>
+        <g fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8.6 18.2A6.6 6.6 0 1 1 11.2 19.6L7 21.6z"/><path d="M23.4 23.6A6.6 6.6 0 1 0 20.8 25L25 27z"/>
+        </g></symbol>
+      <clipPath id="d-clip-bare"><circle cx="12.4" cy="12.4" r="8.4"/></clipPath>
+      <symbol id="d-bare" viewBox="0 0 32 32">
+        <circle cx="19.6" cy="19.2" r="8.4" fill="var(--accent)" clip-path="url(#d-clip-bare)"/>
+        <g fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M6.8 18.6A8.4 8.4 0 1 1 10 20.4L4.6 23z"/><path d="M25.2 25.4A8.4 8.4 0 1 0 22 27.2L27.4 29.6z"/>
+        </g></symbol>
+
+      <!-- 5. Merge: two people, two lines of talk, one decision -->
+      <symbol id="e-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <path d="M10 8.5v2a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-2M16 16.5v3.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="10" cy="7.4" r="2.3" fill="#fff"/><circle cx="22" cy="7.4" r="2.3" fill="#fff"/><circle cx="16" cy="23.6" r="3.4" fill="var(--soft)"/></symbol>
+      <symbol id="e-bare" viewBox="0 0 32 32">
+        <path d="M8 7v3.4a8 8 0 0 0 8 8 8 8 0 0 0 8-8V7M16 18.4v4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="8" cy="5.2" r="3" fill="var(--accent)"/><circle cx="24" cy="5.2" r="3" fill="var(--accent)"/><circle cx="16" cy="26.6" r="4.4" fill="var(--soft)"/></symbol>
+
+      <!-- 6. The collapse: scattered cards settle into one -->
+      <symbol id="f-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <rect x="9.5" y="7.5" width="13" height="15" rx="2.5" fill="#fff" opacity="0.3" transform="rotate(-16 16 15)"/>
+        <rect x="9.5" y="8.5" width="13" height="15" rx="2.5" fill="#fff" opacity="0.55" transform="rotate(9 16 16)"/>
+        <rect x="9.5" y="9.5" width="13" height="15" rx="2.5" fill="#fff"/>
+        <path d="M12.5 14h7M12.5 17.5h7M12.5 21h4" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="f-bare" viewBox="0 0 32 32">
+        <rect x="7" y="3.5" width="18" height="21" rx="3.5" fill="var(--accent)" opacity="0.25" transform="rotate(-16 16 14)"/>
+        <rect x="7" y="5" width="18" height="21" rx="3.5" fill="var(--accent)" opacity="0.5" transform="rotate(9 16 15.5)"/>
+        <rect x="7" y="7" width="18" height="21" rx="3.5" fill="var(--accent)"/>
+        <path d="M11 13.5h10M11 17.5h10M11 21.5h6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></symbol>
+
+      <!-- 7. The talking page: a document with a speech-bubble tail -->
+      <symbol id="g-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <path d="M10 6h9.5l4.5 4.5V22a2.5 2.5 0 0 1-2.5 2.5h-7.2L10 27.6v-3.1a2.5 2.5 0 0 1-2.5-2.5V8.5A2.5 2.5 0 0 1 10 6z" fill="#fff"/>
+        <path d="M19.5 6v3a1.5 1.5 0 0 0 1.5 1.5h3" fill="none" stroke="var(--soft)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M11 14.5h9M11 18.5h6" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="g-bare" viewBox="0 0 32 32">
+        <path d="M8 2.5h12.8l6 6V23a3.5 3.5 0 0 1-3.5 3.5h-9.4L8 31v-4.5A3.5 3.5 0 0 1 4.5 23V6A3.5 3.5 0 0 1 8 2.5z" fill="var(--accent)"/>
+        <path d="M20.8 2.5v4a2 2 0 0 0 2 2h4" fill="none" stroke="var(--soft)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M9.5 13h12M9.5 18h8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></symbol>
+
+      <!-- 8. The talking C: the letter C drawn as a speech bubble -->
+      <symbol id="h-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <path d="M21.6 10.4A7.6 7.6 0 1 0 21.6 21" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M9.4 19.6L7 26.2l6.4-3.4z" fill="#fff" stroke="#fff" stroke-width="1" stroke-linejoin="round"/></symbol>
+      <symbol id="h-bare" viewBox="0 0 32 32">
+        <path d="M24.4 7.6A11 11 0 1 0 24.4 23" fill="none" stroke="var(--accent)" stroke-width="4.6" stroke-linecap="round"/>
+        <path d="M6.6 20.6L3 30l9.2-4.8z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+
+      <!-- 8B. The talking C, swoosh: a curved tail that grows out of the ring -->
+      <symbol id="hb-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <path d="M21.3 11.1A7.6 7.6 0 1 0 21.3 20.9" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+        <path d="M9 19.2C9.3 22.4 8.3 24.7 6.2 26.4 9.6 26.4 12.4 24.8 13.9 22.8z" fill="#fff"/></symbol>
+      <symbol id="hb-bare" viewBox="0 0 32 32">
+        <path d="M24.3 8.3A11 11 0 1 0 24.3 23.7" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M6.6 19.6C7 24.2 5.6 27.6 2.6 30 7.5 30 11.6 27.7 13.7 24.8z" fill="var(--accent)"/></symbol>
+
+      <!-- 8C. The talking C, cut: flat ends like the C of a bold typeface -->
+      <mask id="hc-cut-tile"><rect width="32" height="32" fill="#fff"/><circle cx="15.5" cy="16" r="5.3" fill="#000"/><rect x="15.5" y="11.9" width="12" height="8.2" fill="#000"/></mask>
+      <symbol id="hc-tile" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+        <circle cx="15.5" cy="16" r="9.4" fill="#fff" mask="url(#hc-cut-tile)"/>
+        <path d="M8.6 19.6C8.9 22.7 7.9 25 5.8 26.6 9.2 26.6 12 25 13.6 23z" fill="#fff"/></symbol>
+      <mask id="hc-cut-bare"><rect width="32" height="32" fill="#fff"/><circle cx="16" cy="15.4" r="7" fill="#000"/><rect x="16" y="10" width="16" height="10.8" fill="#000"/></mask>
+      <symbol id="hc-bare" viewBox="0 0 32 32">
+        <circle cx="16" cy="15.4" r="13" fill="var(--accent)" mask="url(#hc-cut-bare)"/>
+        <path d="M6.4 20.6C6.9 25 5.5 28.2 2.6 30.6 7.4 30.6 11.4 28.4 13.6 25.6z" fill="var(--accent)"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- Today -->
+  <section class="row">
+    <div class="about"><span class="tag">Today</span><h2>Two rings</h2><p>Two overlapping rings: two people on one document. The wordmark is Instrument Serif italic.</p></div>
+    <div class="cell"><svg width="72" height="72"><use href="#now"/></svg><small>Mark</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#now"/></svg><span class="wm-serif">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark"><span class="lockup"><svg width="34" height="34"><use href="#now"/></svg><span class="wm-serif">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#now"/></svg><svg width="16" height="16"><use href="#now"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+
+  <h2 class="round">The talking C, refined</h2>
+  <section class="row">
+    <div class="about"><h2>Three versions</h2><p>A: as first drawn. B, the swoosh: a curved tail that grows out of the ring, like a real chat bubble, and a heavier ring. C, the cut: flat ends like the C of a bold typeface, so it reads as a letter first.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.2rem;align-items:center"><svg width="64" height="64"><use href="#h-tile"/></svg><svg width="56" height="56"><use href="#h-bare"/></svg></span><small>A · as first drawn</small></div>
+    <div class="cell"><span class="sizes" style="gap:1.2rem;align-items:center"><svg width="64" height="64"><use href="#hb-tile"/></svg><svg width="56" height="56"><use href="#hb-bare"/></svg></span><small>B · swoosh</small></div>
+    <div class="cell"><span class="sizes" style="gap:1.2rem;align-items:center"><svg width="64" height="64"><use href="#hc-tile"/></svg><svg width="56" height="56"><use href="#hc-bare"/></svg></span><small>C · cut</small></div>
+    <div class="cell white"><span class="grid-sizes"><svg width="32" height="32"><use href="#h-tile"/></svg><svg width="32" height="32"><use href="#hb-tile"/></svg><svg width="32" height="32"><use href="#hc-tile"/></svg><svg width="16" height="16"><use href="#h-tile"/></svg><svg width="16" height="16"><use href="#hb-tile"/></svg><svg width="16" height="16"><use href="#hc-tile"/></svg></span><small>A, B, C at 32 and 16 px</small></div>
+  </section>
+  <section class="row">
+    <div class="about"><h2>Lockups (B)</h2><p>With the sans wordmark, with today's serif italic, and with the mark as the first letter of the name.</p></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#hb-tile"/></svg><span class="wm-sans">cowrite</span></span><small>Sans</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#hb-tile"/></svg><span class="wm-serif">cowrite</span></span><small>Serif italic</small></div>
+    <div class="cell white"><span class="lockup letter"><svg width="40" height="40" style="margin-right:-0.15rem"><use href="#hb-bare"/></svg><span class="wm-sans big">owrite</span></span><small>The mark is the C</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent)"><span class="lockup letter"><svg width="40" height="40" style="margin-right:-0.15rem"><use href="#hb-bare"/></svg><span class="wm-sans big">owrite</span></span><small>The mark is the C, on dark</small></div>
+  </section>
+  <section class="row">
+    <div class="about"><h2>In use (B)</h2><p>As the app icon, in the app's sidebar, and in a browser tab.</p></div>
+    <div class="cell"><svg width="96" height="96" style="filter: drop-shadow(0 10px 18px rgba(20,30,60,.25))"><use href="#hb-tile"/></svg><small>App icon</small></div>
+    <div class="cell white"><div class="mock-side"><span class="lockup" style="gap:0.45rem"><svg width="24" height="24"><use href="#hb-tile"/></svg><span class="wm-serif" style="font-size:1.35rem">cowrite</span></span><span class="mock-link on">Home</span><span class="mock-link">Documents</span><span class="mock-link">Tasks</span></div><small>Sidebar</small></div>
+    <div class="cell" style="grid-column: span 2"><div class="mock-tabs"><span class="mock-tab on"><svg width="16" height="16"><use href="#hb-tile"/></svg>Q4 launch · cowrite</span><span class="mock-tab"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#b0b4bd"/></svg>Inbox</span><span class="mock-tab"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="3" fill="#d6d8de"/></svg>Calendar</span></div><small>Browser tab, 16 px</small></div>
+  </section>
+  <h2 class="round">Round 2</h2>
+  <section class="row">
+    <div class="about"><span class="tag">8</span><h2>The talking C</h2><p>The letter C drawn as a speech bubble, with its tail at the bottom left. A letter and a conversation in one simple shape, so it stays clear at 16 pixels. Wordmark: Manrope ExtraBold.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#h-tile"/></svg><svg width="64" height="64"><use href="#h-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#h-tile"/></svg><span class="wm-sans">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#h-bare"/></svg><span class="wm-sans">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#h-tile"/></svg><svg width="16" height="16"><use href="#h-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+
+  <section class="row">
+    <div class="about"><span class="tag">4</span><h2>Common ground</h2><p>Today’s two rings become two speech bubbles, and the overlap is filled: where two people agree. It keeps what people know of the current logo, and adds talk and agreement. Wordmark: Instrument Serif italic, as today.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#d-tile"/></svg><svg width="64" height="64"><use href="#d-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#d-tile"/></svg><span class="wm-serif">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#d-bare"/></svg><span class="wm-serif">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#d-tile"/></svg><svg width="16" height="16"><use href="#d-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+  <section class="row">
+    <div class="about"><span class="tag">5</span><h2>Merge</h2><p>Two people, two lines of talk, and one decision where they join. It also says “edits merge” for offline writing. Wordmark: Manrope Bold.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#e-tile"/></svg><svg width="64" height="64"><use href="#e-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#e-tile"/></svg><span class="wm-sans">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#e-bare"/></svg><span class="wm-sans">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#e-tile"/></svg><svg width="16" height="16"><use href="#e-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+  <section class="row">
+    <div class="about"><span class="tag">6</span><h2>The collapse</h2><p>Scattered pages settle into one: the landing page’s opening animation, as a mark. Wordmark: Manrope ExtraBold with a period, like a thing settled.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#f-tile"/></svg><svg width="64" height="64"><use href="#f-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#f-tile"/></svg><span class="wm-split wm-dot">cowrite<b>.</b></span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#f-bare"/></svg><span class="wm-split wm-dot">cowrite<b>.</b></span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#f-tile"/></svg><svg width="16" height="16"><use href="#f-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+  <section class="row">
+    <div class="about"><span class="tag">7</span><h2>The talking page</h2><p>A document with a speech-bubble tail: a document that remembers the conversation that made it. Wordmark: Instrument Serif italic.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#g-tile"/></svg><svg width="64" height="64"><use href="#g-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#g-tile"/></svg><span class="wm-serif">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#g-bare"/></svg><span class="wm-serif">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#g-tile"/></svg><svg width="16" height="16"><use href="#g-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+
+  <h2 class="round">Round 1</h2>
+
+  <!-- 1 -->
+  <section class="row">
+    <div class="about"><span class="tag">1</span><h2>Said, then settled</h2><p>A speech bubble with a check inside: the conversation, and the decision it made. It says the headline in one shape. Wordmark: Manrope ExtraBold, tight.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#a-tile"/></svg><svg width="64" height="64"><use href="#a-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#a-tile"/></svg><span class="wm-sans">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent)"><span class="lockup"><svg width="34" height="34"><use href="#a-bare"/></svg><span class="wm-sans">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#a-tile"/></svg><svg width="16" height="16"><use href="#a-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="row">
+    <div class="about"><span class="tag">2</span><h2>The nib</h2><p>A pen nib in two halves, two tones, meeting at one point: two people writing one thing. It is also the assistant's name. Wordmark: Instrument Serif italic, as today.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#b-tile"/></svg><svg width="64" height="64" style="--bg: var(--tint)"><use href="#b-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#b-tile"/></svg><span class="wm-serif">cowrite</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff; --bg: var(--dark)"><span class="lockup"><svg width="34" height="34"><use href="#b-bare"/></svg><span class="wm-serif">cowrite</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#b-tile"/></svg><svg width="16" height="16"><use href="#b-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="row">
+    <div class="about"><span class="tag">3</span><h2>The live cursor</h2><p>A "C" with a text cursor and its name flag in the gap: someone is writing here, right now. Wordmark: Manrope, with "co" in the accent.</p></div>
+    <div class="cell"><span class="sizes" style="gap:1.5rem;align-items:center"><svg width="72" height="72"><use href="#c-tile"/></svg><svg width="64" height="64"><use href="#c-bare"/></svg></span><small>Mark, tile and bare</small></div>
+    <div class="cell white"><span class="lockup"><svg width="34" height="34"><use href="#c-tile"/></svg><span class="wm-split"><b>co</b>write</span></span><small>With wordmark</small></div>
+    <div class="cell dark" style="--accent: var(--dark-accent); --soft: #c9d2ff"><span class="lockup"><svg width="34" height="34"><use href="#c-bare"/></svg><span class="wm-split"><b>co</b>write</span></span><small>On dark</small></div>
+    <div class="cell white"><span class="sizes"><svg width="32" height="32"><use href="#c-tile"/></svg><svg width="16" height="16"><use href="#c-tile"/></svg></span><small>32 and 16 px</small></div>
+  </section>
+</body>
+</html>

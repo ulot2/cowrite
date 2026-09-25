@@ -1,0 +1,95 @@
+<!doctype html>
+<!--
+Onboarding, inside the app's own world (an extension, not a new identity).
+- Home on the first visit: a "Get started" card above Recent, five steps checked off from real
+  actions (not clicks on the card), hideable. The welcome document is the first card in Recent.
+- The welcome document: a real document created with the account. It teaches by doing: a waiting
+  suggestion, a sentence to hand to Nib, a task assigned to you, a decision block.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoWrite onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap">
+<link rel="stylesheet" href="preview.css?v=4">
+<link rel="stylesheet" href="welcome.css?v=4">
+</head>
+<body>
+<p class="frame-label">1 · Home, first visit</p>
+<div class="app">
+  <aside class="side">
+    <span class="brand small"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></span>
+    <a class="on">Home</a><a>Documents</a><a>Tasks</a><a>Review</a>
+    <p class="side-h">Spaces</p><span class="new-space">New space</span>
+  </aside>
+  <div class="main">
+    <div class="top"><span class="search">Search documents</span><span class="btn small">+ New</span><i class="me">T</i></div>
+    <div class="home">
+      <h1>Good morning, Tolu</h1>
+      <p class="muted">Pick up where you left off.</p>
+
+      <section class="start" aria-labelledby="start-title">
+        <header>
+          <div>
+            <h2 id="start-title">Get started</h2>
+            <p class="muted"><b>1 of 5 done.</b> Each step checks itself off when you do it.</p>
+          </div>
+          <div class="steps-bar" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+          <button class="hide">Hide</button>
+        </header>
+        <ol>
+          <li data-done><span class="tick done">✓</span><span><b>Open your welcome document</b><small>It is yours, and everything in it works.</small></span></li>
+          <li><span class="tick"></span><span><b>Accept a suggestion</b><small>One is waiting in the welcome document.</small></span><a class="btn small">Open</a></li>
+          <li><span class="tick"></span><span><b>Ask Nib to shorten a sentence</b><small>Select text, click <em>✦ Ask Nib</em>, choose Make shorter.</small></span><a class="btn small">Try it</a></li>
+          <li><span class="tick"></span><span><b>Share a document</b><small>Invite someone by email, or send a link.</small></span><a class="btn small">Share</a></li>
+          <li><span class="tick"></span><span><b>Start a space</b><small>A shared home for a team’s documents.</small></span><a class="btn small">New space</a></li>
+        </ol>
+      </section>
+
+      <h2 class="recent">Recent</h2>
+      <div class="cards">
+        <div class="card"><b>Welcome to CoWrite</b><p>This is your own document. Everything here works, so try it as you read…</p><small>Edited just now</small></div>
+        <div class="card ghost"><b>+ New document</b><p>Write, Brainstorm, Plan, or Review.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="frame-label">2 · The welcome document</p>
+<div class="app doc-app">
+  <div class="main wide">
+    <div class="docbar"><span class="crumb">‹ Documents</span><span class="pill">● Draft</span><span class="grow"></span><span class="tools" aria-hidden="true"><i></i><i class="a"></i><i></i><i></i></span><span class="share">Share</span></div>
+    <article class="welcome">
+      <h1>Welcome to CoWrite</h1>
+      <p>This is your own document. Everything here works, so try it as you read. Nobody else sees it until you share it.</p>
+
+      <div class="sugg sticky"><span class="badge">✎</span><span><b>Suggestion 1 of 1</b> by CoWrite</span><span class="rej">✕ Reject</span><span class="acc">✓ Accept</span></div>
+
+      <h2>Accept a suggestion</h2>
+      <p>A suggestion shows a change someone wants, and waits for you. Accept this one with the green button above.</p>
+      <p class="sample">CoWrite is where a team <del>writes</del><ins>writes, reviews, and decides</ins>.</p>
+
+      <h2>Ask Nib</h2>
+      <p>Select the sentence below, click <b>✦ Ask Nib</b> in the toolbar, and choose <b>Make shorter</b>. Or type <code>@nib</code> on an empty line and tell it what to write.</p>
+      <p class="sample"><mark class="select">We are writing this particular sentence in a way that is a great deal longer than it really needs to be.</mark></p>
+
+      <h2>Tick a task</h2>
+      <p>Type <code>/task</code> to add one. Tasks show on the assignee’s Tasks page.</p>
+      <div class="task"><span class="tick"></span>Finish the welcome document<span class="chip"><i style="background:#2e7d32">T</i>Today</span></div>
+
+      <h2>Comment and mention</h2>
+      <p>Select any words and click the comment button. Type <code>@</code> to mention someone; they hear about it in their bell.</p>
+
+      <h2>Record a decision</h2>
+      <p>Type <code>/decision</code>. Decisions get a number, so a team can say “we settled that in D-12”.</p>
+      <div class="decision proposed"><b>◆ D-1</b> Use CoWrite for our next plan<span class="pill review">Proposed</span></div>
+
+      <p class="more">Type <code>/</code> on an empty line for every kind of block: headings, lists, tables, images, tasks, and decisions. When you are done, keep this as a cheat sheet, or delete it.</p>
+    </article>
+  </div>
+</div>
+</body>
+</html>

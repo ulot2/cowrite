@@ -1,0 +1,233 @@
+<!doctype html>
+<!--
+THESIS: A team's draft lives in five places; CoWrite puts it in one document. The page refuses the
+  category's split hero with a screenshot and three icon pillars: its first viewport performs the
+  collapse instead of describing it.
+OWN-WORLD: CoWrite "Studio": white page, one cobalt accent, Manrope; the serif wordmark. The
+  scattered pieces are drawn in the grey of other tools (plain chat, a file icon, a spreadsheet), and
+  everything that lands in the document takes CoWrite's own parts: the status pill, suggestion
+  washes, task ticks, the D-number decision, avatars.
+STORY: see your mess, see it land in one place, learn where each piece went, meet Nib, check that it
+  is real (live, offline, how it is built), start writing.
+FIRST VIEWPORT: headline and the start button left; right, the stage: the scattered stack, which
+  collapses into one document after a beat, with a "Scattered / In CoWrite" switch to replay.
+FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's world. Seed 04ef0dcf.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoWrite: write, review, and decide in one document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap">
+<link rel="stylesheet" href="preview.css">
+</head>
+<body class="landing">
+
+<header class="nav">
+  <a class="brand" href="#top"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></a>
+  <nav aria-label="Page">
+    <a href="#pieces">How it works</a>
+    <a href="#nib">Nib</a>
+    <a href="#built">How it is built</a>
+    <a href="https://github.com/ulot2/cowrite">GitHub</a>
+  </nav>
+  <div class="nav-actions">
+    <a class="link" href="#">Sign in</a>
+    <a class="btn primary" href="#">Start writing</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 1. The collapse -->
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Write it, review it, decide it. <span>In one document.</span></h1>
+      <p class="lede">Your team drafts together live, suggests changes, moves the document from draft to approved, and keeps its tasks and decisions in the text. No second file, no review spreadsheet, no lost thread.</p>
+      <div class="hero-actions">
+        <a class="btn primary big" href="#">Start writing, free</a>
+        <a class="btn big" href="#pieces">See how it works</a>
+      </div>
+      <p class="fine">Free and open source. Sign up with an email, or with GitHub.</p>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="switch" role="radiogroup" aria-label="Show">
+        <button role="radio" aria-checked="true" data-to="scattered">Scattered</button>
+        <button role="radio" aria-checked="false" data-to="together">In CoWrite</button>
+      </div>
+      <div class="stage" data-state="scattered" aria-label="Example: a launch plan spread over four tools, then in one CoWrite document">
+        <!-- The scattered pieces: other tools, drawn plain -->
+        <div class="piece chat" style="--x:-2%;--y:4%;--r:-4deg">
+          <p class="piece-head"># launch</p>
+          <p><b>Maria</b> which one is final? plan_v3_FINAL (2).docx or the one Tom sent?</p>
+          <p><b>Tom</b> I left my notes in the other file 🙃</p>
+          <p><b>Ade</b> did we say March 3 or April 10?</p>
+        </div>
+        <div class="piece file" style="--x:52%;--y:0%;--r:3deg">
+          <span class="file-icon" aria-hidden="true">W</span>
+          <span><b>plan_v3_FINAL (2).docx</b><small>Edited by Maria · 2 days ago</small></span>
+        </div>
+        <div class="piece sheet" style="--x:48%;--y:34%;--r:-2deg">
+          <p class="piece-head">Review comments.xlsx</p>
+          <table><tr><th>Change</th><th>By</th><th>OK?</th></tr><tr><td>Launch → April 10</td><td>Tom</td><td>?</td></tr><tr><td>Cut the FAQ</td><td>Ade</td><td>yes</td></tr></table>
+        </div>
+        <div class="piece todo" style="--x:4%;--y:56%;--r:2.5deg">
+          <p class="piece-head">To do (someone’s notes app)</p>
+          <p>☐ screenshots — Maria?</p>
+          <p>☐ book the venue — who?</p>
+        </div>
+
+        <!-- The same things in one document -->
+        <article class="doc" aria-hidden="true">
+          <div class="doc-bar">
+            <span class="crumb">‹ Documents</span>
+            <span class="pill review">● In review</span>
+            <span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i></span>
+            <span class="share">Share</span>
+          </div>
+          <h2 class="doc-title">Q4 launch plan</h2>
+          <p class="doc-p land" style="--d:1">We launch on <del>March 3</del><ins>April 10</ins>, after the security review.<span class="cursor" style="--c:#1565c0" data-name="Tom"></span></p>
+          <div class="sugg land" style="--d:2"><span class="badge">✎</span><span><b>Suggestion 1 of 1</b> by Tom</span><span class="acc">✓ Accept</span></div>
+          <p class="doc-p land" style="--d:3"><mark class="commented">The store screenshots</mark> need the new icon.</p>
+          <aside class="margin land" style="--d:3"><i style="background:#c2185b">M</i><span><b>Maria</b> Is Friday realistic?</span></aside>
+          <div class="task land" style="--d:4"><span class="tick done">✓</span><s>Store screenshots</s><span class="chip"><i style="background:#c2185b">M</i>Fri</span></div>
+          <div class="task land" style="--d:5"><span class="tick"></span>Book the launch venue<span class="chip"><i style="background:#1565c0">T</i>Mar 28</span></div>
+          <div class="decision land" style="--d:6"><b>◆ D-4</b> Launch after the security review<span class="pill ok">Decided</span></div>
+        </article>
+      </div>
+      <p class="caption">Example document. Names and dates are made up.</p>
+    </div>
+  </section>
+
+  <!-- 2. Where each piece went -->
+  <section class="pieces" id="pieces">
+    <h2 class="section-title">Where each piece goes</h2>
+    <p class="section-lede">Everything a draft collects stays attached to the words it is about.</p>
+    <ol class="ledger">
+      <li>
+        <span class="was">A chat thread about the draft</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div class="now">
+          <h3>Comments on the exact words</h3>
+          <p>Select a sentence and comment. Reply, react, mention someone with @, resolve it when it is settled.</p>
+        </div>
+        <div class="demo"><mark class="commented">need the new icon</mark><span class="bubble"><i style="background:#c2185b">M</i>Is Friday realistic? <em>@Tom</em></span></div>
+      </li>
+      <li>
+        <span class="was">plan_v3_FINAL (2).docx</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div class="now">
+          <h3>One live document, every version kept</h3>
+          <p>Everyone types in the same place at once. Versions save by themselves; compare any two and restore one.</p>
+        </div>
+        <div class="demo versions"><span class="dot on"></span><b>Sent to review</b><small>Tom · 2 h ago</small><span class="dot"></span><b>Automatic</b><small>Maria · yesterday</small></div>
+      </li>
+      <li>
+        <span class="was">A spreadsheet of changes to approve</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div class="now">
+          <h3>Suggestions and a status</h3>
+          <p>Reviewers suggest instead of overwriting. Editors accept or reject each change, then move the document from Draft to Approved.</p>
+        </div>
+        <div class="demo"><span>We launch on <del>March 3</del><ins>April 10</ins></span><span class="pills"><span class="pill">Draft</span>→<span class="pill review">In review</span>→<span class="pill ok">Approved</span></span></div>
+      </li>
+      <li>
+        <span class="was">A to-do list and “what did we decide?”</span>
+        <span class="arrow" aria-hidden="true">→</span>
+        <div class="now">
+          <h3>Tasks and decisions in the text</h3>
+          <p>Type /task to assign work with a date; it shows on that person’s Tasks page. Type /decision to record a numbered decision for the space’s log.</p>
+        </div>
+        <div class="demo"><div class="task"><span class="tick"></span>Book the launch venue<span class="chip"><i style="background:#1565c0">T</i>Mar 28</span></div><div class="decision"><b>◆ D-4</b> After the security review<span class="pill ok">Decided</span></div></div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 3. Nib -->
+  <section class="nib" id="nib">
+    <div class="nib-copy">
+      <p class="kicker"><span aria-hidden="true">✦</span> Nib, the writing assistant</p>
+      <h2 class="section-title">Nib suggests. You decide.</h2>
+      <p class="section-lede">Ask Nib to improve, shorten, or continue a passage, or type <code>@nib</code> and anything you want. Its answer arrives as a suggestion, marked as Nib’s, so nothing changes until someone accepts it.</p>
+      <ul class="chips"><li>Improve writing</li><li>Fix spelling and grammar</li><li>Make shorter</li><li>Summarize</li><li>Extract action items</li><li>Find contradictions</li></ul>
+    </div>
+    <div class="nib-demo" aria-hidden="true">
+      <div class="sugg wide"><span class="badge is-nib">✦</span><span><b>Suggestion 1 of 1</b> by Nib</span><span class="rej">✕ Reject</span><span class="acc">✓ Accept</span></div>
+      <p class="doc-p"><del>We have decided that, after a great deal of careful discussion among all of the members of the team, we are going to ship the new release on Friday afternoon.</del> <ins>After careful team discussion, we will ship the new release on Friday afternoon.</ins></p>
+      <div class="at-nib"><span class="nib-badge">✦</span><span><b>Ask Nib: turn this into three bullet points</b><small>Press Enter to send</small></span></div>
+    </div>
+  </section>
+
+  <!-- 4. Live and offline -->
+  <section class="live">
+    <div class="tabs" aria-hidden="true">
+      <div class="tab"><div class="tab-bar"><span class="pill">● Live</span><span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i></span></div><p>The launch moves to April 10<span class="cursor" style="--c:#c2185b" data-name="Maria"></span> so the review can finish.</p></div>
+      <div class="tab"><div class="tab-bar"><span class="pill warn">● Offline</span><span class="faces"><i style="background:#1565c0">T</i></span></div><p>Tom keeps writing on the train. <ins class="plain">It merges when he is back.</ins><span class="cursor" style="--c:#1565c0" data-name="Tom"></span></p></div>
+    </div>
+    <div class="live-copy">
+      <h2 class="section-title">Together live, and fine offline</h2>
+      <p class="section-lede">Cursors carry names. Lose the connection and keep typing: your edits are saved on the device and merge with everyone else’s when you are back, with nothing to resolve by hand.</p>
+    </div>
+  </section>
+
+  <!-- 5. Start from a mode -->
+  <section class="modes">
+    <h2 class="section-title">Start the way the work starts</h2>
+    <div class="mode-row">
+      <div class="mode"><div class="mini lines"><i></i><i></i><i class="short"></i></div><h3>Write</h3><p>An empty page.</p></div>
+      <div class="mode"><div class="mini board"><span><i></i><i></i></span><span><i></i></span><span><i></i><i></i><i></i></span></div><h3>Brainstorm</h3><p>A board of cards in columns, with votes.</p></div>
+      <div class="mode"><div class="mini plan"><b>Goal</b><b>Tasks</b><em>☐ ☐</em><b>Decision</b></div><h3>Plan</h3><p>Goal, tasks, a decision, a timeline, ready to fill.</p></div>
+      <div class="mode"><div class="mini queue"><span class="pill review">In review</span><span class="pill review">In review</span></div><h3>Review</h3><p>The documents waiting for you.</p></div>
+    </div>
+  </section>
+
+  <!-- 6. For the engineers -->
+  <section class="built" id="built">
+    <div>
+      <h2 class="section-title">How it is built</h2>
+      <p class="section-lede">For the curious. Every document is its own small server that holds the text as a CRDT, so edits from any number of people and devices merge the same way everywhere.</p>
+      <ul class="facts"><li><b>$0</b> to run, on Cloudflare’s free plan</li><li><b>42</b> automated tests on every push</li><li><b>MIT</b> licensed, on GitHub</li></ul>
+      <a class="btn" href="https://github.com/ulot2/cowrite">Read the code on GitHub</a>
+    </div>
+    <figure class="arch" aria-label="Architecture: the browser talks to one Worker; each document is a Durable Object; D1, R2, and Workers AI sit behind the Worker.">
+      <div class="node">Browser<small>React Router · BlockNote · Yjs</small></div>
+      <div class="wire"><span>HTTP</span><span>WebSocket</span></div>
+      <div class="node strong">Worker<small>pages, API, auth, roles</small></div>
+      <div class="fan">
+        <div class="node">Durable Object<small>one per document · Yjs · versions</small></div>
+        <div class="node">D1<small>people, spaces, search</small></div>
+        <div class="node">R2<small>images</small></div>
+        <div class="node">Workers AI<small>Nib</small></div>
+      </div>
+    </figure>
+  </section>
+
+  <!-- 7. Close -->
+  <section class="close">
+    <h2>Your next draft, reviewed and decided in one place.</h2>
+    <a class="btn primary big" href="#">Start writing, free</a>
+    <p class="fine">Already have an account? <a href="#">Sign in</a></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="brand small"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></span>
+  <span>Open source · <a href="https://github.com/ulot2/cowrite">GitHub</a></span>
+</footer>
+
+<script>
+// The collapse: plays once after a beat, and the switch replays it either way.
+const stage = document.querySelector('.stage')
+const buttons = document.querySelectorAll('.switch button')
+const show = (to) => {
+  stage.dataset.state = to
+  buttons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.to === to)))
+}
+buttons.forEach((b) => b.addEventListener('click', () => show(b.dataset.to)))
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) show('together')
+else setTimeout(() => show('together'), 1600)
+</script>
+</body>
+</html>
