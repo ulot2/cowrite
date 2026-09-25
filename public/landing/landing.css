@@ -451,6 +451,18 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 /* The pointer: hidden until a run starts; it dips on a click. */
 .nw-cursor { position: absolute; left: 0; top: 0; z-index: 5; width: 1.35rem; height: 1.35rem; fill: var(--fg); stroke: var(--bg); stroke-width: 1.4; stroke-linejoin: round; opacity: 0; pointer-events: none; transition: opacity 300ms; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25)); }
 .nw-cursor.on { opacity: 1; }
+/* Labels in the demos never break mid-label; a row wraps as a whole instead. */
+.nw-who, .nw-btn, .c-task .chip { flex: none; white-space: nowrap; }
+.nw-prow, .nw-row { flex-wrap: wrap; }
+@media (max-width: 560px) {
+  /* How it works: slimmer cards, and the task row without its indent. */
+  .c-idea, .c-q, .c-doc { padding: 0.85rem 0.9rem; }
+  .c-task { margin-left: 0 !important; }
+  .from { border-radius: 8px; }
+  /* Nib: more room for the window, and one height for every scene, so the page does not jump. */
+  .nib-stage { padding: 0.6rem; border-radius: 18px; }
+  .nw { min-height: 23.5rem; padding: 0.85rem 0.9rem 1rem; font-size: 0.88rem; }
+}
 .nw-cursor.down { scale: 0.85; }
 
 .nib-foot { display: flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 0.75rem; color: var(--fg-muted); }
