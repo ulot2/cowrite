@@ -103,11 +103,26 @@ test('the owner can delete a space; its documents stay with their owner, space-o
   await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'add', email: grace.email, role: 'editor' })
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 200)
 
-  assert.equal((await app.post(`/space/${spaceId}`, grace.cookie, { intent: 'delete-space' })).status, 403, 'only the owner')
-  assert.equal((await app.post(`/space/${spaceId}`, ada.cookie, { intent: 'delete-space' })).status, 302)
+  assert.equal((await app.post(`/space/${spaceId}/settings`, grace.cookie, { intent: 'delete-space' })).status, 403, 'only the owner')
+  assert.equal((await app.post(`/space/${spaceId}/settings`, ada.cookie, { intent: 'delete-space' })).status, 302)
   assert.equal((await fetch(`${app.base}/space/${spaceId}`, { headers: { cookie: ada.cookie } })).status, 404)
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: ada.cookie } })).status, 200, 'the owner keeps the document')
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 404, 'access through the space is gone')
+})
+
+test('the owner can let commenters add documents, and can make someone else the owner', async () => {
+  const spaceId = (await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Handed over' })).headers.get('location').split('/').pop()
+  const space = `/space/${spaceId}`, settings = `${space}/settings`
+  await app.post(space, ada.cookie, { intent: 'add', email: grace.email, role: 'commenter' })
+  assert.equal((await app.post(space, grace.cookie, { intent: 'create' })).status, 403, 'commenters wait for the owner')
+  assert.equal((await app.post(settings, grace.cookie, { intent: 'add-docs', value: 'commenter' })).status, 403, 'only the owner')
+  assert.equal((await app.post(settings, ada.cookie, { intent: 'add-docs', value: 'commenter' })).status, 200)
+  assert.equal((await app.post(space, grace.cookie, { intent: 'create' })).status, 302)
+
+  const graceId = (await (await fetch(`${app.base}/api/auth/get-session`, { headers: { cookie: grace.cookie } })).json()).user.id
+  assert.equal((await app.post(settings, ada.cookie, { intent: 'transfer', value: graceId })).status, 302)
+  assert.equal((await fetch(`${app.base}${settings}`, { headers: { cookie: grace.cookie } })).status, 200)
+  assert.equal((await fetch(`${app.base}${settings}`, { headers: { cookie: ada.cookie } })).status, 403, 'the old owner is an editor now')
 })
 
 test('a guest makes documents without an account, and they move into the account on sign-up', async () => {

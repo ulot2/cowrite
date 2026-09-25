@@ -8,6 +8,7 @@ import { isKind, kinds, type Kind } from '~/lib/kinds'
 import { Avatar } from '~/components/avatar'
 import { Confirm } from '~/components/confirm'
 import { Icon } from '~/components/icon'
+import { isUpload, Said, uploadImage } from '~/components/said'
 import type { Route } from './+types/settings'
 
 export const meta = () => [{ title: 'Settings · cowrite' }]
@@ -61,7 +62,7 @@ export async function action({ request }: Route.ActionArgs) {
       case 'photo': {
         // Only a file this app stored (from /upload), or nothing to remove the photo.
         const image = String(f.get('image') ?? '')
-        if (image && !/^\/files\/[\w-]+\/[\w.-]+$/.test(image)) return { intent, error: 'That photo did not upload. Try again.' }
+        if (image && !isUpload(image)) return { intent, error: 'That photo did not upload. Try again.' }
         await auth.api.updateUser({ headers, body: { image: image || null } })
         return done
       }
@@ -109,15 +110,6 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 type Result = { intent: string; ok?: true; error?: string } | null | undefined
-
-// The status line next to a form's button: "Saved", or what went wrong.
-function Said({ fetcher, intent, ok = 'Saved' }: { fetcher: { state: string; data?: unknown }; intent: string; ok?: string }) {
-  const data = fetcher.data as Result
-  if (fetcher.state !== 'idle' || data?.intent !== intent) return null
-  return data.error
-    ? <p className="setting-said" data-error role="alert">{data.error}</p>
-    : <p className="setting-said" role="status"><Icon name="check" />{ok}</p>
-}
 
 const pref = {
   get: (key: string) => { try { return localStorage.getItem(key) } catch { return null } },
@@ -191,12 +183,9 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
   // The photo goes to the same image store as the editor, then its address is saved on the account.
   const upload = async (file: File | undefined) => {
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) return setUploadError('Choose a photo of 2 MB or smaller.')
     setUploading(true); setUploadError('')
-    const res = await fetch('/upload', { method: 'POST', body: file, headers: { 'content-type': file.type, 'x-file-name': file.name } })
+    try { photo.submit({ intent: 'photo', image: await uploadImage(file) }, { method: 'post' }) } catch (e) { setUploadError((e as Error).message) }
     setUploading(false)
-    if (!res.ok) return setUploadError(await res.text())
-    photo.submit({ intent: 'photo', image: (await res.json() as { url: string }).url }, { method: 'post' })
   }
   const pendingColor = color.formData?.get('color')
   const shownColor = pendingColor !== undefined ? colorFor(user.id, String(pendingColor)) : user.color

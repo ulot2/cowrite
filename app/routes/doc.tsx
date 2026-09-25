@@ -4,7 +4,7 @@ import { clearPublished, clearSignoff, clearSignoffs, createInMode, getDocument,
 import { docStub } from '~/lib/versions.server'
 import { markCheckPending, type Finding } from '~/lib/nib.server'
 import { canMove, moves, statusLabel, type Move } from '~/lib/status'
-import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, markStart, listSpaces, moveDocument, removeMember, revokeShareLink, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, markStart, listSpaces, moveDocument, removeMember, revokeShareLink, nibInSpace, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
@@ -61,13 +61,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (move.to === 'draft') await clearSignoffs(params.id) // a new review starts clean
     await logEvent(params.id, user.id, 'status', move.text)
     // Every submit gets Nib's check against the space, in the background.
-    if (key === 'submit' && user.settings.nib) { await markCheckPending(params.id); await docStub(params.id).requestCheck() }
+    if (key === 'submit' && user.settings.nib && await nibInSpace(document.space_id)) { await markCheckPending(params.id); await docStub(params.id).requestCheck() }
     return null
   }
   if (intent === 'check') {
     // Nib's check on demand, from the Nib menu or the panel. It runs in the document's object.
     if (!atLeast(role, 'reviewer')) throw new Response('Reviewers and up can ask for a check', { status: 403 })
     if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    if (!(await nibInSpace(document.space_id))) return { error: 'The owner turned Nib off for this space.' }
     await markCheckPending(params.id)
     await docStub(params.id).requestCheck()
     return null

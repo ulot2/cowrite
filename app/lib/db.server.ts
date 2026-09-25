@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers'
-import type { Role } from './roles'
+import { atLeast, type Role } from './roles'
 import type { Status } from './status'
 import { indexTitle, unindex } from './search.server'
 import { unindexWork } from './work.server'
@@ -105,4 +105,19 @@ export const usersById = async (ids: string[]): Promise<UserRow[]> => {
   const some = [...new Set(ids)].slice(0, 50)
   if (some.length === 0) return []
   return (await env.DB.prepare(`SELECT u.id, u.name, u.image, us.color FROM "user" u LEFT JOIN user_settings us ON us.user_id = u.id WHERE u.id IN (${some.map(() => '?').join(',')})`).bind(...some).all<UserRow>()).results
+}
+
+// Documents waiting for a review this user can give: in review, they are a reviewer or above, and
+// they did not submit it themselves. Oldest request first. `docs` saves the query when the caller has them.
+export const reviewQueue = async (userId: string, docs?: DocumentRow[]) => {
+  const waiting = (docs ?? await listDocuments(userId)).filter((d) => d.status === 'review' && atLeast(d.role, 'reviewer'))
+  if (!waiting.length) return []
+  const { results } = await env.DB.prepare(
+    `SELECT e.document_id, e.actor_id, u.name, MAX(e.at) AS at FROM events e JOIN "user" u ON u.id = e.actor_id
+     WHERE e.text = 'submitted for review' AND e.document_id IN (SELECT value FROM json_each(?)) GROUP BY e.document_id`,
+  ).bind(JSON.stringify(waiting.map((d) => d.id))).all<{ document_id: string; actor_id: string; name: string; at: number }>()
+  const by = new Map(results.map((r) => [r.document_id, r]))
+  return waiting.filter((d) => by.get(d.id)?.actor_id !== userId)
+    .map((d) => ({ id: d.id, title: d.title, preview: d.preview, space: d.space_name, by: by.get(d.id)?.name ?? null, at: by.get(d.id)?.at ?? d.updated_at }))
+    .sort((a, b) => a.at - b.at)
 }

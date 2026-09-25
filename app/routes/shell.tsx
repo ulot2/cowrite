@@ -8,6 +8,7 @@ import { Icon } from '~/components/icon'
 import { Inbox } from '~/components/inbox'
 import { NewMenu } from '~/components/new-menu'
 import { Logo } from '~/components/logo'
+import { SpaceMark } from '~/components/space-mark'
 import type { Route } from './+types/shell'
 
 export type ShellUser = { id: string; name: string; email: string; color: string; image: string | null }
@@ -79,7 +80,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
         <NavLink to="/tasks" onClick={() => setOpen(false)}><Icon name="tasks" /><span>Tasks</span></NavLink>
         <NavLink to="/review" onClick={() => setOpen(false)}><Icon name="suggest" /><span>Review</span></NavLink>
         <p className="side-heading"><span>Spaces</span></p>
-        {spaces.map((s) => <NavLink key={s.id} to={`/space/${s.id}`} onClick={() => setOpen(false)}><Icon name="space" /><span>{s.name}</span></NavLink>)}
+        {spaces.map((s) => <NavLink key={s.id} to={`/space/${s.id}`} onClick={() => setOpen(false)}><SpaceMark space={s} /><span>{s.name}</span></NavLink>)}
         <Form method="post" action="/?index" className="new-space">
           <input type="hidden" name="intent" value="new-space" />
           <input name="name" placeholder="New space" aria-label="New space name" maxLength={60} required />

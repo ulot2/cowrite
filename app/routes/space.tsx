@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Form, Link, redirect, useFetcher, useRevalidator, useSearchParams } from 'react-router'
+import { Link, redirect, useFetcher, useRevalidator, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listSpaceDocuments, type Mode } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
@@ -7,7 +7,7 @@ import { askSpace, proposeNextSteps } from '~/lib/nib.server'
 import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
 import type { Source } from '~/lib/search.server'
 import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState } from '~/lib/state.server'
-import { deleteSpace, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember, setSpaceVisibility } from '~/lib/access.server'
+import { canAddDocs, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
 import { atLeast } from '~/lib/roles'
@@ -21,7 +21,9 @@ import { DocCard } from '~/components/doc-card'
 import { Icon } from '~/components/icon'
 import { NewMenu } from '~/components/new-menu'
 import { Confirm } from '~/components/confirm'
+import { NeedsAttention, day, today, type Waiting } from '~/components/attention'
 import { ShareDialog } from '~/components/share-dialog'
+import { SpaceMark } from '~/components/space-mark'
 import type { Route } from './+types/space'
 
 const SpaceRoom = lazy(() => import('~/components/space-room.client').then((m) => ({ default: m.SpaceRoom })))
@@ -40,7 +42,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (tab === 'ideas' && atLeast(role, 'commenter')) await docStub(`${params.id}:space`).seed('ideas')
   // The state of the space: live facts, and Nib's saved summary, written again in the room when due.
   const saved = await getSavedState(params.id)
-  if ((!tab || tab === 'overview') && user.settings.nib && await stateDue(params.id, saved)) {
+  // Nib works here when the person has it on and the owner has not turned it off for the space.
+  const nib = user.settings.nib && space.nib !== 0
+  if ((!tab || tab === 'overview') && nib && await stateDue(params.id, saved)) {
     await markStatePending(params.id)
     await docStub(`${params.id}:space`).requestState()
     saved.state = 'pending'
@@ -48,9 +52,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     owner: { name: user.name, color: user.color, image: user.image },
     me: { id: user.id, name: user.name, color: user.color },
-    nib: user.settings.nib,
+    nib,
     state: { saved, review: (await spaceState(params.id)).review },
-    space, role, isOwner,
+    space, role, isOwner, canAdd: canAddDocs(role, space),
     questions: await listOpenQuestions(params.id),
     discussions: await listRecentDiscussions(params.id),
     tasks: await listSpaceTasks(params.id),
@@ -69,11 +73,13 @@ export async function action({ request, params }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = String(f.get('intent'))
   const role = await roleOnSpace(user.id, params.id)
+  const space = role && await getSpace(params.id)
   if (intent === 'state') {
     // Refresh Nib's summary now, at most once every 10 minutes per space.
     if (!role) throw new Response('Not found', { status: 404 })
     if (!atLeast(role, 'commenter')) throw new Response('Commenters and up can refresh the summary', { status: 403 })
     if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    if (space && !space.nib) return { error: 'The owner turned Nib off for this space.' }
     const saved = await getSavedState(params.id)
     if (saved.state === 'pending') return null
     if (saved.at && Date.now() - saved.at < REFRESH_EVERY) return { error: 'Nib updated this a few minutes ago. Try again later.' }
@@ -85,6 +91,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     // Nib reads the space. Any member may ask (it changes nothing); next steps need a writer.
     if (!role) throw new Response('Not found', { status: 404 })
     if (!user.settings.nib) return { error: 'Nib is off in your settings.' }
+    if (space && !space.nib) return { error: 'The owner turned Nib off for this space.' }
     if (intent === 'propose' && !atLeast(role, 'commenter')) throw new Response('Commenters and up can ask for next steps', { status: 403 })
     try {
       if (intent === 'ask') {
@@ -109,15 +116,14 @@ export async function action({ request, params }: Route.ActionArgs) {
     await markStart('id', params.id, 'hidden')
     return null
   }
+  if ((intent === 'create' || intent === 'card-doc') && !(space && canAddDocs(role, space))) throw new Response('You cannot add documents to this space', { status: 403 })
   if (intent === 'create') {
-    if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
     const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, params.id)
     await logEvent(id, user.id, 'created', `created “${title}”`)
     throw redirect(`/doc/${id}`)
   }
   if (intent === 'card-doc') {
     // An idea on the board becomes a document in the space, in the Idea state.
-    if (role !== 'owner' && role !== 'editor') throw new Response('Editors can add documents', { status: 403 })
     const { id, title } = await createInMode(user.id, 'write', params.id, String(f.get('title') ?? '').trim().slice(0, 120) || 'Untitled', 'idea')
     await logEvent(id, user.id, 'created', `created “${title}” from an idea`)
     return { created: id }
@@ -125,16 +131,12 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (intent === 'leave') {
     // Any member but the owner. Documents shared with them directly stay theirs.
     if (!role) throw new Response('Not found', { status: 404 })
-    if (role === 'owner') throw new Response('The owner cannot leave. Delete the space instead.', { status: 403 })
+    if (role === 'owner') throw new Response('The owner cannot leave. Make someone else the owner in Settings, or delete the space.', { status: 403 })
     await removeMember('space', params.id, user.id)
     await logSpaceEvent(params.id, user.id, 'shared', 'left the space')
     throw redirect('/')
   }
   if (role !== 'owner') throw new Response('Only the owner can change the space', { status: 403 })
-  if (intent === 'delete-space') {
-    await deleteSpace(params.id)
-    throw redirect('/')
-  }
   const pick = String(f.get('role'))
   const granted = grantable.includes(pick as Role) ? (pick as Role) : 'viewer'
   switch (intent) {
@@ -157,12 +159,6 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
     case 'link-create': await createShareLink('space', params.id, granted, user.id); await logSpaceEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
     case 'link-revoke': await revokeShareLink('space', params.id); await logSpaceEvent(params.id, user.id, 'shared', 'revoked the link'); return null
-    case 'visibility': {
-      const visibility = f.get('visibility') === 'public' ? 'public' : 'private'
-      await setSpaceVisibility(params.id, visibility)
-      await logSpaceEvent(params.id, user.id, 'space', `made the space ${visibility}`)
-      return null
-    }
   }
   return null
 }
@@ -225,42 +221,6 @@ function NibCard({ saved, nib, canRefresh }: { saved: SavedState; nib: boolean; 
   )
 }
 
-// One thing that waits for a person: a question to decide, a document to review, a task to do.
-type Waiting = { key: string; verb: 'Decide' | 'Review' | 'Do'; title: string; who: string | null; whoId: string | null; due: string | null; note?: string; to?: string; open?: () => void }
-
-// The starting point of the Overview. What waits for you comes first, then late things, then by date.
-function NeedsAttention({ rows, me, people }: { rows: Waiting[]; me: string; people: { id: string; color: string; image?: string | null }[] }) {
-  const [all, setAll] = useState(false)
-  const shown = all ? rows : rows.slice(0, 6)
-  return (
-    <section className="attention" aria-labelledby="attention-title">
-      <div className="block-head">
-        <h2 id="attention-title">Needs attention{rows.length > 0 && <span className="count">{rows.length}</span>}</h2>
-      </div>
-      {rows.length === 0 ? <p className="attention-empty">Nothing needs anyone right now.</p> : (
-        <ul className="attention-rows">
-          {shown.map((r) => {
-            const late = !!r.due && r.due < today()
-            const body = (
-              <>
-                <span className="verb" data-verb={r.verb}>{r.verb}</span>
-                <span className="attention-title">{r.title}</span>
-                <span className="attention-meta">
-                  {r.whoId === me ? <span className="you">You</span> : r.who && <>{r.whoId && <Avatar name={r.who} color={people.find((p) => p.id === r.whoId)?.color ?? 'var(--fg-muted)'} image={people.find((p) => p.id === r.whoId)?.image} size={20} />}{r.who}</>}
-                  {r.note && <span className="attention-note">{r.note}</span>}
-                  {r.due && <time dateTime={r.due} data-late={late || undefined}>{late ? `Was due ${day(r.due)}` : day(r.due)}</time>}
-                </span>
-              </>
-            )
-            return <li key={r.key} data-late={late || undefined}>{r.to ? <Link to={r.to}>{body}</Link> : <button type="button" onClick={r.open}>{body}</button>}</li>
-          })}
-        </ul>
-      )}
-      {rows.length > 6 && <button type="button" className="link-button attention-more" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show ${rows.length - 6} more`}</button>}
-    </section>
-  )
-}
-
 // A space made from the welcome steps: five first steps. Each is ticked by doing it, not by the card.
 type Step = { title: string; hint: string; done: boolean; act?: React.ReactNode }
 function GetStarted({ steps }: { steps: Step[] }) {
@@ -292,11 +252,9 @@ function GetStarted({ steps }: { steps: Step[] }) {
 
 const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
 type Tab = (typeof tabs)[number][0]
-const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
-const today = () => new Date().toISOString().slice(0, 10)
 
 export default function Space({ loaderData }: Route.ComponentProps) {
-  const { owner, me, nib, state, space, role, isOwner, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
+  const { owner, me, nib, state, space, role, isOwner, canAdd, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
   const [params, setParams] = useSearchParams()
   const tab = (tabs.some(([t]) => t === params.get('tab')) ? params.get('tab') : 'overview') as Tab
   const go = (t: Tab, d?: string | null) => setParams(d ? { tab: t, d } : t === 'overview' ? {} : { tab: t }, { preventScrollReset: true })
@@ -371,23 +329,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
       <div className="doc-bar">
         <nav className="crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link><span aria-hidden="true">/</span><span>{space.name}</span></nav>
         <div className="doc-tools">
-          {isOwner && (
-            <Form method="post">
-              <input type="hidden" name="intent" value="visibility" />
-              <input type="hidden" name="visibility" value={space.visibility === 'public' ? 'private' : 'public'} />
-              <button className="tool"><Icon name={space.visibility === 'public' ? 'lock' : 'globe'} /><span className="tool-label">{space.visibility === 'public' ? 'Make private' : 'Make public'}</span></button>
-            </Form>
-          )}
-          {isOwner && (
-            <Confirm title={`Delete “${space.name}”?`} confirm="Delete space" busy="Deleting…" fields={{ intent: 'delete-space' }}
-              trigger={(open) => <button type="button" className="tool danger" title="Delete space" onClick={open}><Icon name="trash" /><span className="tool-label">Delete space</span></button>}>
-              <p>The space, its members, its discussions, and its share link go away. This cannot be undone.</p>
-              <ul>
-                <li><strong>{documents.length} {documents.length === 1 ? 'document is' : 'documents are'} kept.</strong> They move out of the space and stay with the people added to them.</li>
-                <li>People who could open them only through this space lose access.</li>
-              </ul>
-            </Confirm>
-          )}
+          {isOwner && <Link className="tool" to={`/space/${space.id}/settings`} title="Space settings"><Icon name="settings" /><span className="tool-label">Settings</span></Link>}
           {!isOwner && members.some((m) => m.user_id === me.id) && (
             <Confirm title={`Leave “${space.name}”?`} confirm="Leave space" busy="Leaving…" fields={{ intent: 'leave' }}
               trigger={(open) => <button type="button" className="tool" title="Leave space" onClick={open}><Icon name="back" /><span className="tool-label">Leave space</span></button>}>
@@ -399,11 +341,12 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
       <header className="page-title">
-        <h1>{space.name}</h1>
+        <div className="space-name"><SpaceMark space={space} size={44} /><h1>{space.name}</h1></div>
+        {space.description && <p className="space-description">{space.description}</p>}
         <div className="title-meta">
           <span className="avatars" aria-hidden="true">{members.slice(0, 5).map((m) => <Avatar key={m.user_id} name={m.name} color={colorFor(m.user_id, m.color)} image={m.image} size={26} />)}</span>
           <p className="muted">{members.length} {members.length === 1 ? 'member' : 'members'} · {space.visibility === 'public' ? 'anyone with the link can view' : 'only members can open it'}</p>
-          {(role === 'owner' || role === 'editor') && <span className="title-action"><NewMenu action="" /></span>}
+          {canAdd && <span className="title-action"><NewMenu action="" /></span>}
         </div>
       </header>
 
@@ -419,13 +362,13 @@ export default function Space({ loaderData }: Route.ComponentProps) {
         <div className="overview">
           {showStart && <GetStarted steps={steps} />}
           <NeedsAttention rows={waiting} me={me.id} people={people} />
-          <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />
+          {space.nib !== 0 && <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />}
           <Activity events={events} filtered limit={5} title="Latest" />
         </div>
       ))}
 
       {tab === 'ideas' && (mounted
-        ? <Suspense fallback={<p className="muted">Loading ideas…</p>}><Board documentId={space.id} room={`space/${space.id}`} space user={me} canEdit={atLeast(role, 'commenter')} canMakeDoc={atLeast(role, 'editor')} people={people} /></Suspense>
+        ? <Suspense fallback={<p className="muted">Loading ideas…</p>}><Board documentId={space.id} room={`space/${space.id}`} space user={me} canEdit={atLeast(role, 'commenter')} canMakeDoc={canAdd} people={people} /></Suspense>
         : <p className="muted">Loading ideas…</p>)}
 
       {tab === 'discussions' && (mounted

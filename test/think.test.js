@@ -102,4 +102,8 @@ test('the review queue lists documents waiting for you, not the ones you submitt
   await app.post(`/doc/${docId}`, ada.cookie, { intent: 'status', move: 'submit' })
   assert.match(await get('/review', bea.cookie), /Ready for eyes/)
   assert.doesNotMatch(await get('/review', ada.cookie), /Ready for eyes/)
+  // Home lists the same review under Needs attention.
+  const row = /data-verb="Review">Review<\/span><span class="attention-title">Ready for eyes/
+  assert.match(await get('/', bea.cookie), row)
+  assert.doesNotMatch(await get('/', ada.cookie), row)
 })

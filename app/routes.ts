@@ -28,5 +28,6 @@ export default [
     route('doc/:id', 'routes/doc.tsx'),
     route('doc/:id/history', 'routes/history.tsx'),
     route('space/:id', 'routes/space.tsx'),
+    route('space/:id/settings', 'routes/space-settings.tsx'),
   ]),
 ] satisfies RouteConfig

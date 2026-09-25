@@ -7,7 +7,10 @@ import { getDocument } from './db.server'
 export type { Role }
 const higher = (a: Role | null | undefined, b: Role | null | undefined) => (rank(a) >= rank(b) ? a ?? null : b ?? null)
 
-export type SpaceRow = { id: string; name: string; owner_id: string; visibility: 'private' | 'public'; created_at: number; welcome_doc: string | null; start_done: string }
+export type SpaceRow = {
+  id: string; name: string; owner_id: string; visibility: 'private' | 'public'; created_at: number; welcome_doc: string | null; start_done: string
+  logo: string | null; color: string | null; description: string; nib: number; add_docs: 'editor' | 'commenter'
+}
 export type Member = { user_id: string; name: string; email: string; role: Role; color: string | null; image: string | null }
 export type ShareLink = { token: string; target_type: 'document' | 'space'; target_id: string; role: Role; created_at: number }
 
@@ -65,8 +68,24 @@ const deleteSpaceRows = (id: string) => env.DB.batch([
   env.DB.prepare('DELETE FROM spaces WHERE id = ?').bind(id),
 ])
 
-export const setSpaceVisibility = (id: string, visibility: 'private' | 'public') =>
-  env.DB.prepare('UPDATE spaces SET visibility = ? WHERE id = ?').bind(visibility, id).run()
+// The owner's settings. The keys come from the settings page's code, never from the request.
+type SpaceSettings = Partial<Pick<SpaceRow, 'name' | 'logo' | 'color' | 'description' | 'visibility' | 'nib' | 'add_docs'>>
+export const updateSpace = (id: string, set: SpaceSettings) =>
+  env.DB.prepare(`UPDATE spaces SET ${Object.keys(set).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).bind(...Object.values(set), id).run()
+
+// Whether this role may add documents to the space: editors always, commenters when the owner allows it.
+export const canAddDocs = (role: Role | null, space: Pick<SpaceRow, 'add_docs'>) => rank(role) >= rank(space.add_docs === 'commenter' ? 'commenter' : 'editor')
+
+// Nib's space features (the summary, Ask, next steps, the check before review). A document outside a space has them.
+export const nibInSpace = async (spaceId: string | null) =>
+  !spaceId || (await env.DB.prepare('SELECT nib FROM spaces WHERE id = ?').bind(spaceId).first<{ nib: number }>())?.nib !== 0
+
+// A new owner: they get the owner role, and the old owner stays on as an editor.
+export const transferSpace = (id: string, from: string, to: string) => env.DB.batch([
+  env.DB.prepare('UPDATE spaces SET owner_id = ? WHERE id = ?').bind(to, id),
+  env.DB.prepare("UPDATE space_memberships SET role = 'editor' WHERE space_id = ? AND user_id = ?").bind(id, from),
+  env.DB.prepare("UPDATE space_memberships SET role = 'owner' WHERE space_id = ? AND user_id = ?").bind(id, to),
+])
 
 export const moveDocument = (documentId: string, spaceId: string | null) =>
   env.DB.prepare('UPDATE documents SET space_id = ? WHERE id = ?').bind(spaceId, documentId).run()
