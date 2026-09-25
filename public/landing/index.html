@@ -40,27 +40,30 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
 <body class="landing">
 
 <header class="nav">
-  <a class="brand" href="#top"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></a>
-  <nav aria-label="Page">
+  <a class="brand" href="#top"><svg class="logo-c" viewBox="0 0 32 32" role="img" aria-label="CoWrite"><path d="M24.3 8.3A11 11 0 1 0 24.3 23.7" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/><path d="M6.6 19.6C7 24.2 5.6 27.6 2.6 30 7.5 30 11.6 27.7 13.7 24.8z" fill="var(--accent)"/></svg><span aria-hidden="true">oWrite</span></a>
+  <nav class="nav-links" aria-label="Page">
     <a href="#pieces">How it works</a>
     <a href="#nib">Nib</a>
     <a href="#questions">Questions</a>
-    <a href="https://github.com/ulot2/cowrite">GitHub</a>
+    <a href="/play">Try it</a>
   </nav>
   <div class="nav-actions">
+    <a class="nav-icon" href="https://github.com/ulot2/cowrite" aria-label="CoWrite on GitHub" title="CoWrite on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <a class="link" href="/login">Sign in</a>
+    <a class="btn primary" href="/login?mode=up">Start a space</a>
+    <!-- Phones: the page links move into this menu. -->
     <details class="nav-menu">
-      <summary aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg></summary>
       <nav aria-label="Page">
         <a href="#pieces">How it works</a>
         <a href="#nib">Nib</a>
         <a href="#questions">Questions</a>
         <a href="/play">Try it, no sign-up</a>
+        <span class="nav-menu-rule" aria-hidden="true"></span>
         <a href="https://github.com/ulot2/cowrite">GitHub</a>
         <a href="/login">Sign in</a>
       </nav>
     </details>
-    <a class="link" href="/login">Sign in</a>
-    <a class="btn primary" href="/login?mode=up">Start a space</a>
   </div>
 </header>
 
@@ -366,7 +369,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
 
 <footer class="foot">
   <div class="foot-brand">
-    <a class="brand small" href="#top"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><circle cx="12.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/><circle cx="19.5" cy="16" r="6" fill="none" stroke="var(--accent-fg)" stroke-width="2.6"/></svg><span>cowrite</span></a>
+    <a class="brand small" href="#top"><svg class="logo-c" viewBox="0 0 32 32" role="img" aria-label="CoWrite"><path d="M24.3 8.3A11 11 0 1 0 24.3 23.7" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/><path d="M6.6 19.6C7 24.2 5.6 27.6 2.6 30 7.5 30 11.6 27.7 13.7 24.8z" fill="var(--accent)"/></svg><span aria-hidden="true">oWrite</span></a>
     <p>Every decision, with the conversation that made it.</p>
   </div>
   <nav class="foot-links" aria-label="Footer">
@@ -762,6 +765,25 @@ faqForm.addEventListener('submit', async (e) => {
     button.disabled = input.disabled = false
   }
 })
+
+// The bar: a line under it once the page scrolls, the link of the section in view marked, and the
+// phone menu shut by a tap on a link, a tap outside it, or Escape.
+const bar = document.querySelector('.nav')
+const edge = () => bar.toggleAttribute('data-scrolled', scrollY > 8)
+edge(); addEventListener('scroll', edge, { passive: true })
+const barLinks = [...bar.querySelectorAll('a[href^="#"]')]
+const mark = (id) => barLinks.forEach((a) => (a.hash === `#${id}` ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')))
+// A section counts as "here" while it crosses a thin band just under the middle of the screen.
+const here = new IntersectionObserver((entries) => {
+  const on = entries.find((e) => e.isIntersecting)
+  if (on) mark(on.target.id)
+  else if (entries.some((e) => barLinks.some((a) => a.hash === `#${e.target.id}` && a.hasAttribute('aria-current')))) mark('')
+}, { rootMargin: '-45% 0px -50% 0px' })
+;['pieces', 'nib', 'questions'].forEach((id) => here.observe(document.getElementById(id)))
+const menu = bar.querySelector('.nav-menu')
+menu.addEventListener('click', (e) => { if (e.target.closest('nav a')) menu.open = false })
+document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false })
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus() } })
 
 // The footer's theme toggle. "System" follows the device; light and dark pin the page.
 const themeButtons = document.querySelectorAll('[data-theme-to]')

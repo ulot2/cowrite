@@ -41,10 +41,10 @@ p { text-wrap: pretty; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 /* Shared parts, as in the app */
-.brand { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; font-family: var(--font-display); font-style: italic; font-size: 1.5rem; }
+/* The logo: the talking C as the first letter, then "oWrite" in Manrope ExtraBold, set tight. */
+.brand { display: inline-flex; align-items: center; font: 800 1.45rem/1 var(--font); letter-spacing: -0.045em; text-decoration: none; }
 .brand.small { font-size: 1.2rem; }
-.mark { width: 28px; height: 28px; flex: none; }
-.brand.small .mark { width: 22px; height: 22px; }
+.logo-c { flex: none; width: 1.2em; height: 1.2em; margin-right: -0.04em; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.55rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); font-weight: 600; font-size: 0.9375rem; text-decoration: none; white-space: nowrap; transition: background 150ms, border-color 150ms, transform 150ms; }
 .btn:hover { border-color: var(--fg-muted); }
 .btn.primary { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
@@ -83,20 +83,40 @@ mark.commented { background: var(--accent-soft); color: inherit; border-bottom: 
 
 /* ---------- Landing ---------- */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-/* The page links on phones, where the header has no room for them. */
+/* The bar. A line and a soft shadow appear once the page scrolls under it. The link of the section
+   in view is dark, with a short accent line under it. */
+.nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 2.25rem; height: 4rem; padding: 0 clamp(1rem, 4vw, 3rem); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: border-color 200ms, box-shadow 200ms; }
+.nav[data-scrolled] { border-bottom-color: var(--border); box-shadow: 0 8px 24px -20px rgba(20, 30, 60, 0.35); }
+.nav-links { display: flex; gap: 0.25rem; font-size: 0.9rem; font-weight: 500; }
+.nav-links a { position: relative; padding: 0.45rem 0.7rem; border-radius: var(--radius); color: var(--fg-muted); text-decoration: none; transition: color 150ms, background 150ms; }
+.nav-links a:hover { color: var(--fg); background: var(--tint); }
+.nav-links a[aria-current] { color: var(--fg); }
+.nav-links a::after { content: ""; position: absolute; left: 0.7rem; right: 0.7rem; bottom: 0.15rem; height: 2px; border-radius: 2px; background: var(--accent); transform: scaleX(0); transition: transform 250ms var(--ease-out); }
+.nav-links a[aria-current]::after { transform: scaleX(1); }
+.nav-actions { margin-left: auto; display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; font-weight: 600; }
+.link { text-decoration: none; color: var(--fg-muted); }
+.link:hover { color: var(--fg); }
+.nav-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius); color: var(--fg-muted); transition: color 150ms, background 150ms; }
+.nav-icon:hover { color: var(--fg); background: var(--tint); }
+.nav-icon svg { width: 1.2rem; height: 1.2rem; fill: currentColor; }
+
+/* Phones: the page links move into a full-width panel under the bar. The three lines turn into an X. */
 .nav-menu { display: none; }
-.nav-menu summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; list-style: none; }
+.nav-menu summary { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--radius); cursor: pointer; list-style: none; }
+.nav-menu summary:hover { background: var(--tint); }
 .nav-menu summary::-webkit-details-marker { display: none; }
-.nav-menu summary svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.nav .nav-menu nav { position: absolute; right: clamp(1rem, 4vw, 3rem); top: calc(100% - 0.25rem); display: grid; gap: 0; min-width: 13rem; color: var(--fg); padding: 0.4rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); box-shadow: var(--shadow-lift); }
-.nav .nav-menu nav a { padding: 0.6rem 0.75rem; border-radius: var(--radius); font-weight: 600; text-decoration: none; }
+.nav-menu summary svg { width: 1.3rem; height: 1.3rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; overflow: visible; }
+.nav-menu summary path { transform-origin: 12px 12px; transition: transform 250ms var(--ease-out), opacity 150ms; }
+.nav-menu[open] .l1 { transform: translateY(5px) rotate(45deg); }
+.nav-menu[open] .l2 { opacity: 0; }
+.nav-menu[open] .l3 { transform: translateY(-5px) rotate(-45deg); }
+.nav .nav-menu nav { position: absolute; left: 0; right: 0; top: 100%; display: grid; padding: 0.5rem clamp(1rem, 4vw, 3rem) 1rem; border-bottom: 1px solid var(--border); background: var(--bg); box-shadow: 0 24px 40px -24px rgba(20, 30, 60, 0.35); color: var(--fg); animation: menu-in 220ms var(--ease-out); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-6px); } }
+.nav .nav-menu nav a { display: flex; align-items: center; min-height: 3rem; padding: 0 0.75rem; border-radius: var(--radius); font-size: 1rem; font-weight: 600; text-decoration: none; }
 .nav .nav-menu nav a:hover { background: var(--tint); }
-.landing { overflow-x: hidden; }
-.nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 2rem; padding: 0.85rem clamp(1rem, 4vw, 3rem); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid transparent; }
-.nav nav { display: flex; gap: 1.5rem; font-size: 0.9rem; font-weight: 500; color: var(--fg-muted); }
-.nav nav a, .link { text-decoration: none; }
-.nav nav a:hover, .link:hover { color: var(--fg); }
-.nav-actions { margin-left: auto; display: flex; align-items: center; gap: 1.25rem; font-size: 0.9rem; font-weight: 600; }
+.nav .nav-menu nav a[aria-current] { color: var(--accent); background: var(--accent-soft); }
+.nav-menu-rule { height: 1px; margin: 0.5rem 0.75rem; background: var(--border); }
+@media (prefers-reduced-motion: reduce) { .nav, .nav-links a, .nav-links a::after, .nav-menu summary path { transition: none; } .nav .nav-menu nav { animation: none; } }
 main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3rem); max-width: 76rem; margin-inline: auto; }
 
 .hero { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-block: clamp(2.5rem, 7vw, 5.5rem) 4rem; }
@@ -180,8 +200,8 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 
 @media (max-width: 960px) {
   .hero, .nib, .live { grid-template-columns: minmax(0, 1fr); }
-  .nav > nav { display: none; }
-  .nav-menu { display: block; }
+  .nav-links, .nav-actions .nav-icon { display: none; }
+  .nav-menu { display: block; margin-right: -0.5rem; }
 }
 @media (max-width: 560px) {
   .nav-actions .link { display: none; }

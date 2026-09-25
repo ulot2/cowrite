@@ -488,7 +488,7 @@ export class Doc extends DurableObject<Env> {
           el('paragraph', {}, 'We are writing this particular sentence in a way that is a great deal longer than it really needs to be.'),
           el('heading', { level: 2 }, 'Tick a task'),
           el('paragraph', {}, [['Type '], code('/task'), [' to add one. Tasks show on the Tasks page of the person they are for.']]),
-          task('Finish the welcome document', who?.id, who?.name, new Date().toISOString().slice(0, 10)),
+          task('Finish the welcome document', who?.id, who?.name), // no date: a welcome task must not turn late
           el('heading', { level: 2 }, 'Comment and mention'),
           el('paragraph', {}, [['Select any words and click the comment button. Type '], code('@'), [' to mention someone. They hear about it in their bell.']]),
           el('heading', { level: 2 }, 'Record a decision'),

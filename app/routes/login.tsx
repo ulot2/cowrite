@@ -3,7 +3,7 @@ import { Link, redirect, useNavigate, useSearchParams } from 'react-router'
 import { env } from 'cloudflare:workers'
 import { getAuth } from '~/lib/auth.server'
 import { authClient } from '~/lib/auth.client'
-import { Mark } from '~/components/logo'
+import { Logo } from '~/components/logo'
 import type { Route } from './+types/login'
 
 export const meta = () => [{ title: 'Sign in · cowrite' }]
@@ -60,7 +60,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
   return (
     <main className="login">
       <section className="login-intro">
-        <Link to="/" className="brand"><Mark size={32} /><span>cowrite</span></Link>
+        <Link to="/" className="brand"><Logo /></Link>
         <div className="login-pitch">
           <h1>Every decision, <span>with the conversation that made it.</span></h1>
           <p className="lead">Ideas, discussions, decisions, and documents in one space, linked both ways.</p>

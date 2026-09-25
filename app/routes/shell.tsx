@@ -7,7 +7,7 @@ import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { Inbox } from '~/components/inbox'
 import { NewMenu } from '~/components/new-menu'
-import { Mark } from '~/components/logo'
+import { Logo } from '~/components/logo'
 import type { Route } from './+types/shell'
 
 export type ShellUser = { id: string; name: string; email: string; color: string; image: string | null }
@@ -69,7 +69,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
 
       <nav id="sidebar" className="sidebar" data-open={open} aria-label="Main">
         <div className="side-head">
-          <NavLink to="/" className="brand" onClick={() => setOpen(false)}><Mark /><span>cowrite</span></NavLink>
+          <NavLink to="/" className="brand" onClick={() => setOpen(false)}><Logo /></NavLink>
           <button className="ghost collapse" type="button" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand' : 'Collapse'}>
             <Icon name={collapsed ? 'expand' : 'collapse'} />
           </button>

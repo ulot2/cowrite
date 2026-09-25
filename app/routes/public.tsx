@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { getPublished } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
 import { ReadView } from '~/components/read-view'
-import { Mark } from '~/components/logo'
+import { Logo } from '~/components/logo'
 import type { Route } from './+types/public'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => loaderData ? [
@@ -26,7 +26,7 @@ export default function Public({ loaderData }: Route.ComponentProps) {
   return (
     <div className="public">
       <header className="public-bar">
-        <Link to="/" className="brand"><Mark /><span>cowrite</span></Link>
+        <Link to="/" className="brand"><Logo /></Link>
       </header>
       <main className="public-page">
         <h1 className="read-title">{title}</h1>

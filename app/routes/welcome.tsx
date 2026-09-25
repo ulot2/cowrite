@@ -8,7 +8,7 @@ import { createSpace, findUserByEmail, getSpace, roleOnSpace, setMember } from '
 import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import type { Role } from '~/lib/roles'
 import { Avatar } from '~/components/avatar'
-import { Mark } from '~/components/logo'
+import { Logo } from '~/components/logo'
 import type { Route } from './+types/welcome'
 
 export const meta = () => [{ title: 'Welcome · cowrite' }]
@@ -69,7 +69,7 @@ export default function Welcome({ loaderData }: Route.ComponentProps) {
   return (
     <div className="onb">
       <header className="onb-top">
-        <span className="brand"><Mark /><span>cowrite</span></span>
+        <span className="brand"><Logo /></span>
         <span className="muted">Step {space ? 2 : 1} of 2</span>
         <Link className="onb-skip" to={space ? `/space/${space.id}` : '/'}>Skip for now</Link>
       </header>

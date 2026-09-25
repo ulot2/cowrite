@@ -3,7 +3,7 @@ import { docStub } from '~/lib/versions.server'
 import { PLAY_DAYS, playCookie, playId } from '~/lib/play.server'
 import { Editor } from '~/components/editor'
 import { MoreMenu } from '~/components/more-menu'
-import { Mark } from '~/components/logo'
+import { Logo } from '~/components/logo'
 import type { Route } from './+types/play'
 
 export const meta = () => [{ title: 'Playground · cowrite' }, { name: 'robots', content: 'noindex' }]
@@ -28,7 +28,7 @@ export default function Play({ loaderData }: Route.ComponentProps) {
     <main className="play">
       <article className="document">
         <Editor documentId={id} user={guest} canEdit canComment={false} canSuggest mustSuggest={false} canResolve nib={false} people={[]}
-          crumbs={<div className="doc-where"><Link to="/" className="brand"><Mark /><span>cowrite</span></Link><span className="play-tag">Playground</span></div>}
+          crumbs={<div className="doc-where"><Link to="/" className="brand"><Logo /></Link><span className="play-tag">Playground</span></div>}
           actions={<>
             <div className="tool-group" role="group" aria-label="Page"><MoreMenu documentId={id} /></div>
             <Link className="tool play-cta" to="/login?mode=up">Sign up free</Link>

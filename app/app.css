@@ -107,17 +107,20 @@ h1 {
 h2 {
   font-size: 1.0625rem;
 }
+/* The logo: the talking C, then "oWrite" in Manrope ExtraBold, set tight so the C reads as its first letter. */
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font: italic 400 1.375rem/1 var(--font-display);
-  letter-spacing: -0.01em;
+  font: 800 1.375rem/1 var(--font);
+  letter-spacing: -0.045em;
   color: inherit;
   text-decoration: none;
 }
-.mark {
+.logo-c {
   flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: -0.04em;
 }
 .lead,
 .muted {
@@ -456,10 +459,16 @@ html[data-sidebar="collapsed"] .shell {
   padding: 0 0.625rem 0 0.875rem;
   border-bottom: 1px solid var(--border);
 }
+/* The logo in the sidebar is not a nav row: no gap, no row weight, no "current page" box. */
 .side-head .brand {
+  gap: 0;
   padding: 0;
+  font-weight: 800;
+  font-size: 1.375rem;
+  color: var(--fg);
 }
-.side-head .brand:hover {
+.side-head .brand:hover,
+.side-head .brand.active {
   background: none;
 }
 .collapse {
