@@ -3,7 +3,7 @@ import { getAuth } from '~/lib/auth.server'
 import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { usersById } from '~/lib/db.server'
 import { atLeast } from '~/lib/roles'
-import { playId } from '~/lib/play.server'
+import { getGuestDocument, guestId } from '~/lib/guest.server'
 
 // The Doc class must be exported from the Worker entry, so Cloudflare can find it.
 export { Doc } from './doc'
@@ -65,29 +65,25 @@ export default {
       return env.DOC.get(env.DOC.idFromName(`${space[1]}:space`)).fetch(new Request(request, { headers }))
     }
 
-    // /ws/play-<id>: a playground page. Only the browser whose `play` cookie holds the id may open
-    // it, with no account. It writes the text; its comments room is read-only (the page has none).
-    const play = pathname.match(/^\/ws\/play-([\w-]+)(\/threads)?$/)
-    if (play) {
-      if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
-      if (play[1] !== playId(request)) return new Response('Not your playground', { status: 403 })
-      const headers = new Headers(request.headers)
-      headers.set('X-Role', play[2] ? 'viewer' : 'editor')
-      headers.set('X-User', 'guest')
-      return env.DOC.get(env.DOC.idFromName(`play:${play[1]}${play[2] ? ':threads' : ''}`)).fetch(new Request(request, { headers }))
-    }
-
     // /ws/<id> is the text, /ws/<id>/threads the comments. Each is its own object with its own
     // write rule: text needs reviewer (their edits are suggestions, which the editor enforces),
     // comments need commenter. Below that, the socket can only read.
     const match = pathname.match(/^\/ws\/([\w-]+)(\/threads)?$/)
     if (match) {
       if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
+      const room = match[2] ? `${match[1]}:threads` : match[1]
+      // A guest document: only the browser whose `guest` cookie owns it. It writes the text; its
+      // comments room is read-only, because guests do not comment.
+      if (await getGuestDocument(match[1], guestId(request))) {
+        const headers = new Headers(request.headers)
+        headers.set('X-Role', match[2] ? 'viewer' : 'editor')
+        headers.set('X-User', 'guest')
+        return env.DOC.get(env.DOC.idFromName(room)).fetch(new Request(request, { headers }))
+      }
       const session = await getAuth().api.getSession({ headers: request.headers })
       if (!session) return new Response('Sign in first', { status: 401 })
       const role = await roleOnDocument(session.user.id, match[1])
       if (!role) return new Response('No access to this document', { status: 403 })
-      const room = match[2] ? `${match[1]}:threads` : match[1]
       const canWrite = atLeast(role, match[2] ? 'commenter' : 'reviewer')
       const headers = new Headers(request.headers)
       headers.set('X-Role', canWrite ? 'editor' : 'viewer')

@@ -116,6 +116,10 @@ mark.commented { background: var(--accent-soft); color: inherit; border-bottom: 
 .nav .nav-menu nav a:hover { background: var(--tint); }
 .nav .nav-menu nav a[aria-current] { color: var(--accent); background: var(--accent-soft); }
 .nav-menu-rule { height: 1px; margin: 0.5rem 0.75rem; background: var(--border); }
+/* Phones hide the bar's "Start a space" button, so the menu ends with it. */
+.nav .nav-menu nav a.nav-menu-cta { justify-content: center; margin-top: 0.5rem; background: var(--accent); color: var(--accent-fg); }
+.nav .nav-menu nav a.nav-menu-cta:hover { background: var(--accent-hover); }
+@media (min-width: 561px) { .nav .nav-menu nav a.nav-menu-cta { display: none; } }
 @media (prefers-reduced-motion: reduce) { .nav, .nav-links a, .nav-links a::after, .nav-menu summary path { transition: none; } .nav .nav-menu nav { animation: none; } }
 main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3rem); max-width: 76rem; margin-inline: auto; }
 

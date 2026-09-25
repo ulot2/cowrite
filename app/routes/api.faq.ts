@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { AiLimit, ask } from '~/lib/ai.server'
+import { visitorCode } from '~/lib/guest.server'
 import type { Route } from './+types/api.faq'
 
 // POST { question } from the landing page: Nib answers a visitor's own question. No account, so the
@@ -32,18 +33,13 @@ Each task shows on the Tasks page of the person it is for, with its date.
 Select any text to comment on it. You can reply, react, and mention people with @, and they see it in their bell.
 Search finds words in document titles, text, and comments.
 Sign up with an email and a password, or with GitHub.
-You can try CoWrite without an account in the playground, at /play: a page with the full editor that only you can see. It stays in your browser for 7 days after your last edit, and you can download it at any time.
+You can make up to 10 documents without an account ("Try it, no sign-up"), edit them, and download them. Only your browser can open them, and they stay for 30 days after your last edit. When you sign up or sign in, they move into your account. Without an account there are no comments, sharing, spaces, Nib, or images.
 CoWrite works in the browser, on a computer or a phone. There is no app to install.
 The code is open source under the MIT license. You can read it, run it yourself, or open an issue on GitHub.
 CoWrite runs on Cloudflare Workers, Durable Objects, and D1, with Yjs to merge edits and BlockNote as the editor.`
 const NO_ANSWER = 'We do not have an answer to that yet. Ask on GitHub, and the team will answer.'
 
 const today = () => new Date().toISOString().slice(0, 10)
-const visitor = async (request: Request) => {
-  const ip = request.headers.get('cf-connecting-ip') ?? 'local'
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${env.BETTER_AUTH_SECRET}:${today()}:${ip}`))
-  return [...new Uint8Array(hash).slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
 
 export async function action({ request }: Route.ActionArgs) {
   const body = await request.json().catch(() => ({})) as { question?: unknown }
@@ -54,7 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
   // Count first, then decide: both counters go up in one batch, so two requests cannot both slip in.
   // Past days' rows are no use to the limits, so the same batch drops them.
   const count = (who: string) => env.DB.prepare('INSERT INTO faq_asks (day, who, n) VALUES (?, ?, 1) ON CONFLICT DO UPDATE SET n = n + 1 RETURNING n').bind(today(), who)
-  const [mine, all] = (await env.DB.batch<{ n: number }>([count(await visitor(request)), count('*'), env.DB.prepare('DELETE FROM faq_asks WHERE day < ?').bind(today())]))
+  const [mine, all] = (await env.DB.batch<{ n: number }>([count(await visitorCode(request)), count('*'), env.DB.prepare('DELETE FROM faq_asks WHERE day < ?').bind(today())]))
     .map((r) => r.results[0]?.n ?? 0)
   if (mine > PER_VISITOR) return Response.json({ error: `You have asked ${PER_VISITOR} questions today. Ask again tomorrow, or ask on GitHub.` }, { status: 429 })
   if (all > PER_DAY) return Response.json({ error: 'Nib has answered a lot of questions today. Try again tomorrow, or ask on GitHub.' }, { status: 429 })

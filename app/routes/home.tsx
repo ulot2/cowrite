@@ -2,6 +2,7 @@ import { Form, Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listDocuments, type Mode } from '~/lib/db.server'
 import { createSpace } from '~/lib/access.server'
+import { claimGuestDocuments, clearGuestCookie } from '~/lib/guest.server'
 import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import { colorFor } from '~/lib/color'
 import { DocCard } from '~/components/doc-card'
@@ -13,6 +14,10 @@ export const meta = () => [{ title: 'Home · cowrite' }]
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
+  // Documents made before signing in (without an account) become this account's own, and the
+  // person lands on them, instead of on home.
+  const saved = await claimGuestDocuments(request, user.id)
+  if (saved) throw redirect(`/documents?saved=${saved}`, { headers: { 'Set-Cookie': clearGuestCookie(request) } })
   const recent = await listDocuments(user.id, { limit: 6 })
   return { firstName: user.name.split(' ')[0], owner: { name: user.name, color: user.color, image: user.image }, recent }
 }

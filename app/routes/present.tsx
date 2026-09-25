@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { requireReadable } from '~/lib/play.server'
+import { requireReadable } from '~/lib/guest.server'
 import { docStub } from '~/lib/versions.server'
 import { toSlides } from '~/lib/rich'
 import { Blocks } from '~/components/read-view'
@@ -9,8 +9,8 @@ import type { Route } from './+types/present'
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.title ?? 'Slides'} · Present` }]
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  const { title, room, back } = await requireReadable(request, params.id)
-  return { title, back, slides: toSlides((await docStub(room).readRich('now')) ?? []) }
+  const { title, back } = await requireReadable(request, params.id)
+  return { title, back, slides: toSlides((await docStub(params.id).readRich('now')) ?? []) }
 }
 
 // Slides from the document. Arrows, Space, Page Up/Down move; F is full screen; N shows the notes;

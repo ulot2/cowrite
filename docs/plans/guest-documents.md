@@ -1,6 +1,6 @@
 # Plan: documents without an account
 
-Status: planned, not started. Build it after the landing page work (link previews, playground, phone menu) is live.
+Status: phases 1 to 3 built on 2026-09-25, with the recommended answers to the four decisions (30 days, 10 documents, Nib off, the playground becomes the first document). Not built yet: the 2 MB size cap from section 5, and phase 4.
 
 ## The goal
 
@@ -77,12 +77,12 @@ This runs at the first page after sign-in: the `/welcome` loader for a new accou
 3. **Limits and cleanup.** Documents per guest, new guests per IP address, expiry, and moving the playground into guest documents. One test: the 11th document is refused.
 4. **Later, if wanted.** Nib with a daily quota, images with a quota, and a read-only share link.
 
-## Decisions to make before phase 1
+## Decisions (answered on 2026-09-25)
 
-1. Is 30 days the right time to keep a guest document after its last edit?
-2. Is 10 the right number of documents per guest?
-3. Should Nib stay off for guests at first? The recommendation is yes.
-4. Should the playground become the guest's first document? The recommendation is yes, so nothing a visitor writes is lost when they sign up.
+1. A guest document is kept 30 days after its last edit.
+2. A guest can have 10 documents.
+3. Nib stays off for guests.
+4. The playground became the guest's first document: "Try it" (`/play`) opens it. Old playground rooms (`play:<id>`) delete themselves when their alarm runs.
 
 ## Risks
 

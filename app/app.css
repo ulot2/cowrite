@@ -687,25 +687,42 @@ html[data-sidebar="collapsed"] .sidebar a {
 }
 .document > form,
 .document > .title,
-.document > .play-note,
+.document > .guest-note,
 .editor-layout {
   max-width: var(--measure);
   margin-inline: auto;
 }
-/* The playground: the editor with the brand in place of the breadcrumbs, and one line on what it is. */
-.play-tag {
-  padding: 0.1rem 0.55rem;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.play-note {
+/* Without an account: the editor with the logo in front of the breadcrumbs, and one line on what
+   it is; the list of the guest's documents under a plain bar. */
+.guest-note {
   margin-top: -0.5rem;
   margin-bottom: 1rem;
   font-size: 0.875rem;
   color: var(--fg-muted);
+}
+.saved-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 0.9rem;
+}
+.saved-note .icon {
+  color: var(--accent);
+}
+.guest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem clamp(1rem, 4vw, 2rem);
+  border-bottom: 1px solid var(--border);
+}
+.guest .doc-where .brand {
+  margin-right: 0.5rem;
 }
 .crumbs {
   display: flex;
@@ -3894,7 +3911,7 @@ input.board-column-name:focus-visible {
   display: inline-flex;
 }
 .doc-tools .tool.share-cta,
-.doc-tools .tool.play-cta {
+.doc-tools .tool.guest-cta {
   height: 2.375rem;
   padding: 0 0.875rem;
   gap: 0.375rem;
@@ -3904,7 +3921,7 @@ input.board-column-name:focus-visible {
   font-weight: 600;
 }
 .doc-tools .tool.share-cta:hover,
-.doc-tools .tool.play-cta:hover {
+.doc-tools .tool.guest-cta:hover {
   color: var(--accent-fg);
   background: color-mix(in srgb, var(--accent) 86%, #000);
 }

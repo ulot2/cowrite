@@ -12,14 +12,14 @@ import { syncWork, type WorkItem } from '~/lib/work.server'
 import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/discussions.server'
 import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
-import { PLAY_DAYS } from '~/lib/play.server'
+import { GUEST_DAYS } from '~/lib/guest.server'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
 const AWARENESS = 1
 // Rows in the update log before we fold them into one row.
 const COMPACT_AT = 200
-const PLAY_TTL = PLAY_DAYS * 864e5 // a playground page is deleted this long after its last edit
+const GUEST_TTL = GUEST_DAYS * 864e5 // a guest document is deleted this long after its last edit
 // An automatic version at most this often, and how many unnamed ones we keep.
 const AUTO_VERSION_EVERY = 30 * 60 * 1000
 const AUTO_VERSIONS_KEPT = 50
@@ -161,9 +161,13 @@ export class Doc extends DurableObject<Env> {
   // Whether the document changed since the last alarm. True after a wake, when we cannot know,
   // so an alarm that only runs Nib's check skips the edit work (and the edit time) when it can.
   changed = true
+  // A document made without an account (see guest.server.ts). It writes only its guest row to D1,
+  // and it deletes itself GUEST_DAYS after its last edit. Claiming it on sign-up clears the flag.
+  guest = false
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
+    ctx.blockConcurrencyWhile(async () => { this.guest = (await ctx.storage.get<boolean>('guest')) === true })
     this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, data BLOB NOT NULL)')
     // A version is the whole document at one moment. `name` is NULL for automatic ones.
     this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS versions (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT, created_at INTEGER NOT NULL, snapshot BLOB NOT NULL)')
@@ -185,9 +189,10 @@ export class Doc extends DurableObject<Env> {
       // This event fires only for a real change, so the sender counts as an editor.
       const ws = origin as WebSocket | null
       if (ws && typeof ws.deserializeAttachment === 'function') this.touched.add(attachmentOf(ws).user)
-      if (this.ctx.id.name?.startsWith('play:')) this.ctx.storage.put('editedAt', Date.now()) // the playground's clock
+      if (this.guest) this.ctx.storage.put('editedAt', Date.now()) // the guest document's clock
       // A few seconds after the last edit, alarm() writes the preview and the edit time to D1.
-      this.ctx.storage.getAlarm().then((at) => { if (at === null) this.ctx.storage.setAlarm(Date.now() + 3000) })
+      // A later alarm (a guest document's expiry) moves up; the alarm sets it again.
+      this.ctx.storage.getAlarm().then((at) => { if (at === null || at > Date.now() + 3000) this.ctx.storage.setAlarm(Date.now() + 3000) })
       const enc = encoding.createEncoder()
       encoding.writeVarUint(enc, SYNC)
       sync.writeUpdate(enc, update)
@@ -219,11 +224,24 @@ export class Doc extends DurableObject<Env> {
     const name = this.ctx.id.name ?? ''
     const editors = [...this.touched].filter(Boolean)
     this.touched.clear()
-    // A playground page writes nothing to D1. It deletes itself a week after its last edit.
-    if (name.startsWith('play:')) {
-      const at = (await this.ctx.storage.get<number>('editedAt')) ?? 0
-      if (Date.now() - at >= PLAY_TTL) await this.wipe()
-      else await this.ctx.storage.setAlarm(at + PLAY_TTL)
+    // ponytail: a room from the old playground (before guest documents). It goes when its alarm
+    // runs, at the latest 7 days after 2026-09-25; delete these three lines after 2026-10-03.
+    if (name.startsWith('play:')) { await this.wipe(); return }
+    // A guest document: its preview and edit time go to its guest row, and nothing else to D1.
+    // A month after its last edit it deletes itself, row and all.
+    if (this.guest) {
+      const at = (await this.ctx.storage.get<number>('editedAt')) ?? Date.now()
+      if (Date.now() - at >= GUEST_TTL) {
+        await this.env.DB.prepare('DELETE FROM guest_documents WHERE id = ?').bind(name).run()
+        await this.wipe()
+        return
+      }
+      if (this.changed) {
+        this.changed = false
+        const preview = this.doc.getXmlFragment('document-store').toString().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240)
+        await this.env.DB.prepare('UPDATE guest_documents SET preview = ?, updated_at = ? WHERE id = ?').bind(preview, at, name).run()
+      }
+      await this.ctx.storage.setAlarm(at + GUEST_TTL)
       return
     }
     if (name.endsWith(':space')) {
@@ -448,7 +466,7 @@ export class Doc extends DurableObject<Env> {
     const task = (text: string, assignee = '', assigneeName = '', due = '') => el('task', { taskId: crypto.randomUUID(), assignee, assigneeName, due, done: false }, text)
     const group = new Y.XmlElement('blockGroup')
     if (kind === 'play') {
-      // A playground page, on every visit: filled only while it is empty (new, or deleted after a week).
+      // A guest's first document: a short tour of what works without an account.
       if (this.doc.getXmlFragment('document-store').length) return
       const code = (s: string): [string, object] => [s, { code: {} }]
       const b = (s: string): [string, object] => [s, { bold: {} }]
@@ -456,18 +474,18 @@ export class Doc extends DurableObject<Env> {
       this.doc.transact(() => {
         this.doc.getXmlFragment('document-store').insert(0, [group])
         group.insert(0, [
-          el('paragraph', {}, 'This page is yours to try CoWrite. Nobody else can see it, and you do not need an account. Change anything.'),
+          el('paragraph', {}, 'This document is yours to try CoWrite. Nobody else can see it, and you do not need an account. Change anything, and make more from Your documents.'),
           el('heading', { level: 2 }, 'Write'),
           el('paragraph', {}, [['Type '], code('/'), [' on an empty line for headings, lists, quotes, code, tables, and tasks. Select words to make them bold or to add a link.']]),
           el('heading', { level: 2 }, 'Accept a suggestion'),
           el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits until someone accepts or rejects it. Accept this one from the bar at the top.'),
           el('paragraph', {}, [['CoWrite is where a team '], ['writes', { deletion: by }], ['writes, reviews, and decides', { insertion: by }], ['.']]),
           el('heading', { level: 2 }, 'Tick a task'),
-          task('Try the playground'),
+          task('Try CoWrite'),
           el('heading', { level: 2 }, 'Take it with you'),
-          el('paragraph', {}, [['Download this page as Word, Markdown, or plain text from '], b('Export'), [', print it to PDF, or show it as slides.']]),
+          el('paragraph', {}, [['Download this document as Word, Markdown, or plain text from '], b('Export'), [', print it to PDF, or show it as slides.']]),
           el('heading', { level: 2 }, 'Keep it'),
-          el('paragraph', {}, `This page stays in this browser for ${PLAY_DAYS} days after your last edit. Sign up to keep your work, write with other people, and use Nib, the assistant.`),
+          el('paragraph', {}, `Your documents stay in this browser for ${GUEST_DAYS} days after your last edit. Sign up, and they move into your account. Then you can also write with other people and use Nib, the assistant.`),
         ].map(container))
       })
       return
@@ -575,6 +593,21 @@ export class Doc extends DurableObject<Env> {
   }
 
   // The document was deleted: close everyone, forget the alarm, drop every table.
+  // A guest document (guest.server.ts). Claimed on sign-up, it becomes a normal room, and an alarm
+  // now writes its text, tasks, and decisions to the account's indexes.
+  async markGuest() {
+    this.guest = true
+    await this.ctx.storage.put('guest', true)
+    await this.ctx.storage.put('editedAt', Date.now())
+    await this.ctx.storage.setAlarm(Date.now() + GUEST_TTL) // so an untouched document expires too
+  }
+  async claim() {
+    this.guest = false
+    this.changed = true
+    await this.ctx.storage.delete(['guest', 'editedAt'])
+    await this.ctx.storage.setAlarm(Date.now())
+  }
+
   async wipe() {
     for (const ws of this.ctx.getWebSockets()) ws.close(1000, 'deleted')
     await this.ctx.storage.deleteAlarm()

@@ -1,42 +1,36 @@
-import { data, Link } from 'react-router'
-import { docStub } from '~/lib/versions.server'
-import { PLAY_DAYS, playCookie, playId } from '~/lib/play.server'
-import { Editor } from '~/components/editor'
-import { MoreMenu } from '~/components/more-menu'
+import { data, Link, redirect } from 'react-router'
+import { getAuth } from '~/lib/auth.server'
+import { createGuestDocument, GuestLimit, guestId, listGuestDocuments } from '~/lib/guest.server'
 import { Logo } from '~/components/logo'
 import type { Route } from './+types/play'
 
-export const meta = () => [{ title: 'Playground · cowrite' }, { name: 'robots', content: 'noindex' }]
+export const meta = () => [{ title: 'Try CoWrite' }, { name: 'robots', content: 'noindex' }]
 
-// Try CoWrite without an account: one page per browser, filled on the first visit. Each visit
-// renews the cookie; the page itself goes a week after its last edit (see the object's alarm).
-// ponytail: anyone can make a page per visit; they are small and delete themselves. Rate-limit if abused.
+// "Try it, no sign-up": the newest guest document of this browser, or a first one with a short tour.
 export async function loader({ request }: Route.LoaderArgs) {
-  const id = playId(request) ?? crypto.randomUUID()
-  await docStub(`play:${id}`).seed('play')
-  return data({ id: `play-${id}`, days: PLAY_DAYS }, { headers: { 'Set-Cookie': playCookie(id, request) } })
+  if (await getAuth().api.getSession({ headers: request.headers })) throw redirect('/')
+  const guest = guestId(request)
+  const newest = guest ? (await listGuestDocuments(guest))[0] : undefined
+  if (newest) throw redirect(`/g/${newest.id}`)
+  try {
+    const { id, cookie } = await createGuestDocument(request, true)
+    throw redirect(`/g/${id}`, { headers: { 'Set-Cookie': cookie } })
+  } catch (e) {
+    if (e instanceof GuestLimit) return data({ error: e.message }, { status: 429 })
+    throw e
+  }
 }
 
-// The editor reports accepted and rejected suggestions to the page it is on. Nobody to tell here.
-export const action = () => null
-
-const guest = { id: 'guest', name: 'You', color: '#2e7d32' }
-
+// Only when the limit on new guests is reached.
 export default function Play({ loaderData }: Route.ComponentProps) {
-  const { id, days } = loaderData
   return (
-    <main className="play">
-      <article className="document">
-        <Editor documentId={id} user={guest} canEdit canComment={false} canSuggest mustSuggest={false} canResolve nib={false} people={[]}
-          crumbs={<div className="doc-where"><Link to="/" className="brand"><Logo /></Link><span className="play-tag">Playground</span></div>}
-          actions={<>
-            <div className="tool-group" role="group" aria-label="Page"><MoreMenu documentId={id} /></div>
-            <Link className="tool play-cta" to="/login?mode=up">Sign up free</Link>
-          </>}>
-          <h1 className="title">Playground</h1>
-          <p className="play-note">Only you can see this page. It stays in this browser for {days} days after your last edit.</p>
-        </Editor>
-      </article>
+    <main className="guest">
+      <header className="guest-top"><Link to="/" className="brand"><Logo /></Link></header>
+      <section className="empty">
+        <h1>Try CoWrite</h1>
+        <p className="muted">{loaderData.error}</p>
+        <Link className="button primary" to="/login?mode=up">Sign up free</Link>
+      </section>
     </main>
   )
 }

@@ -14,13 +14,15 @@ export const meta = () => [{ title: 'Documents · cowrite' }]
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
-  const q = new URL(request.url).searchParams.get('q')?.trim() ?? ''
+  const url = new URL(request.url)
+  const q = url.searchParams.get('q')?.trim() ?? ''
+  const saved = Number(url.searchParams.get('saved')) || 0 // documents just claimed from before signing in
   const owner = { name: user.name, color: user.color, image: user.image }
-  if (!q) return { q, owner, documents: (await listDocuments(user.id)).map((d) => ({ ...d, hit: null })) }
+  if (!q) return { q, saved, owner, documents: (await listDocuments(user.id)).map((d) => ({ ...d, hit: null })) }
   // Search: full-text hits in rank order, each with the words it matched.
   const hits = await searchHits(user.id, q)
   const byId = new Map((await listDocuments(user.id)).map((d) => [d.id, d]))
-  return { q, owner, documents: hits.flatMap((h) => { const d = byId.get(h.document_id); return d ? [{ ...d, hit: h }] : [] }) }
+  return { q, saved, owner, documents: hits.flatMap((h) => { const d = byId.get(h.document_id); return d ? [{ ...d, hit: h }] : [] }) }
 }
 
 // Delete checks the role again: the form is not trusted.
@@ -38,7 +40,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Documents({ loaderData }: Route.ComponentProps) {
-  const { q, owner, documents } = loaderData
+  const { q, saved, owner, documents } = loaderData
   const n = documents.length
   const count = n === 1 ? '1 document' : `${n} documents`
   return (
@@ -49,6 +51,7 @@ export default function Documents({ loaderData }: Route.ComponentProps) {
           <p className="muted">{n === 0 ? (q ? 'No document matches.' : 'Nothing here yet.') : count}</p>
         </div>
       </header>
+      {saved > 0 && <p className="saved-note" role="status"><Icon name="check" />{saved === 1 ? 'Your document from before you signed in is now in your account.' : `Your ${saved} documents from before you signed in are now in your account.`}</p>}
       {n === 0 && !q ? (
         <section className="empty">
           <h2>Start your first document</h2>

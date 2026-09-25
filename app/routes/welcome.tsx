@@ -5,6 +5,7 @@ import { requireUser } from '~/lib/auth.server'
 import { createDocument } from '~/lib/db.server'
 import { docStub } from '~/lib/versions.server'
 import { createSpace, findUserByEmail, getSpace, roleOnSpace, setMember } from '~/lib/access.server'
+import { claimGuestDocuments, clearGuestCookie } from '~/lib/guest.server'
 import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import type { Role } from '~/lib/roles'
 import { Avatar } from '~/components/avatar'
@@ -14,8 +15,12 @@ import type { Route } from './+types/welcome'
 export const meta = () => [{ title: 'Welcome · cowrite' }]
 
 // Step 1 has no space yet. Step 2 is ?space=<id>, a space the person owns.
+// Documents made before signing in (without an account) become this account's own, and the
+// person lands on them, instead of on the welcome steps or home.
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request)
+  const saved = await claimGuestDocuments(request, user.id)
+  if (saved) throw redirect(`/documents?saved=${saved}`, { headers: { 'Set-Cookie': clearGuestCookie(request) } })
   const id = new URL(request.url).searchParams.get('space')
   const space = id && (await roleOnSpace(user.id, id)) === 'owner' ? await getSpace(id) : null
   if (id && !space) throw redirect('/welcome')

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { requireReadable } from '~/lib/play.server'
+import { requireReadable } from '~/lib/guest.server'
 import { docStub } from '~/lib/versions.server'
 import { ReadView } from '~/components/read-view'
 import type { Route } from './+types/print'
@@ -8,8 +8,8 @@ export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: loaderData?.ti
 
 // The document on a plain page with a print stylesheet. "Save as PDF" in the print dialog gives the PDF.
 export async function loader({ request, params }: Route.LoaderArgs) {
-  const { title, room } = await requireReadable(request, params.id)
-  return { title, blocks: (await docStub(room).readRich('now')) ?? [] }
+  const { title } = await requireReadable(request, params.id)
+  return { title, blocks: (await docStub(params.id).readRich('now')) ?? [] }
 }
 
 export default function Print({ loaderData }: Route.ComponentProps) {

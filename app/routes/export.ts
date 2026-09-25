@@ -1,13 +1,12 @@
-import { requireReadable } from '~/lib/play.server'
+import { requireReadable } from '~/lib/guest.server'
 import { docStub } from '~/lib/versions.server'
 import { inlineText, toMarkdown, toText, withOrigin, type Block, type Inline } from '~/lib/rich'
 import type { Route } from './+types/export'
 
 // /doc/:id/export?format=md|txt|docx — a download of the document as it is now.
 export async function loader({ request, params }: Route.LoaderArgs) {
-  const { title, room } = await requireReadable(request, params.id)
-  const document = { title }
-  const blocks = withOrigin((await docStub(room).readRich('now')) ?? [], new URL(request.url).origin)
+  const document = await requireReadable(request, params.id)
+  const blocks = withOrigin((await docStub(params.id).readRich('now')) ?? [], new URL(request.url).origin)
   const format = new URL(request.url).searchParams.get('format')
   const name = document.title.replace(/[^\w\- ]+/g, '').trim() || 'document'
   const download = (body: BodyInit, type: string, ext: string) =>

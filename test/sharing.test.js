@@ -110,14 +110,27 @@ test('the owner can delete a space; its documents stay with their owner, space-o
   assert.equal((await fetch(`${app.base}/doc/${docId}`, { headers: { cookie: grace.cookie } })).status, 404, 'access through the space is gone')
 })
 
-test('the playground needs no account, and only the browser that made it can read it', async () => {
-  const res = await fetch(`${app.base}/play`)
-  assert.equal(res.status, 200)
-  const cookie = res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ')
-  const id = cookie.match(/play=([\w-]+)/)[1]
-  const file = `${app.base}/doc/play-${id}/export?format=md`
-  const md = await fetch(file, { headers: { cookie } })
+test('a guest makes documents without an account, and they move into the account on sign-up', async () => {
+  // "Try it": a first guest document, and the guest cookie.
+  const play = await fetch(`${app.base}/play`, { redirect: 'manual' })
+  assert.equal(play.status, 302)
+  const guest = play.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ')
+  const id = play.headers.get('location').split('/').pop()
+  const file = `${app.base}/doc/${id}/export?format=md`
+  const md = await fetch(file, { headers: { cookie: guest } })
   assert.equal(md.status, 200)
-  assert.match(await md.text(), /This page is yours to try CoWrite/, 'filled on the first visit')
-  assert.equal((await fetch(file)).status, 404, 'another browser')
+  assert.match(await md.text(), /This document is yours to try CoWrite/, 'filled with the tour')
+  assert.equal((await fetch(file, { redirect: 'manual' })).status, 302, 'another browser is sent to sign in')
+
+  // Ten documents at most.
+  for (let i = 1; i < 10; i++) assert.equal((await app.post('/g', guest, {})).status, 302, `document ${i + 1}`)
+  assert.match(await (await app.post('/g', guest, {})).text(), /the most without an account/, 'the eleventh')
+
+  // Sign up in the same browser: the first page claims them.
+  const { cookie } = await app.signUpUser('Guest')
+  const welcome = await fetch(`${app.base}/welcome`, { headers: { cookie: `${cookie}; ${guest}` }, redirect: 'manual' })
+  assert.equal(welcome.headers.get('location'), '/documents?saved=10')
+  const mine = await fetch(file, { headers: { cookie } })
+  assert.equal(mine.status, 200, 'the account opens it')
+  assert.match(await mine.text(), /yours to try CoWrite/, 'with the same text')
 })
