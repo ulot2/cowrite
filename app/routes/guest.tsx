@@ -4,6 +4,7 @@ import { createGuestDocument, GUEST_DAYS, GuestLimit, guestId, listGuestDocument
 import { timeAgo } from '~/lib/time'
 import { Logo } from '~/components/logo'
 import { Icon } from '~/components/icon'
+import { ThemeToggle } from '~/components/theme-toggle'
 import type { Route } from './+types/guest'
 
 export const meta = () => [{ title: 'Your documents · cowrite' }, { name: 'robots', content: 'noindex' }]
@@ -33,7 +34,7 @@ export default function Guest({ loaderData }: Route.ComponentProps) {
     <main className="guest">
       <header className="guest-top">
         <Link to="/" className="brand"><Logo /></Link>
-        <Link className="button primary" to="/login?mode=up">Sign up to keep them</Link>
+        <span className="guest-top-actions"><ThemeToggle className="ghost" /><Link className="button primary" to="/login?mode=up">Sign up to keep them</Link></span>
       </header>
       <div className="page">
         <header className="page-head">

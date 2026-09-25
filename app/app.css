@@ -721,6 +721,15 @@ html[data-sidebar="collapsed"] .sidebar a {
   padding: 0.85rem clamp(1rem, 4vw, 2rem);
   border-bottom: 1px solid var(--border);
 }
+/* A guest is alone in the document, so "you" in the header says nothing; the room goes to the theme switch. */
+.guest .presence .avatars {
+  display: none;
+}
+.guest-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .guest .doc-where .brand {
   margin-right: 0.5rem;
 }

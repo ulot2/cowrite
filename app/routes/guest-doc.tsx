@@ -6,6 +6,7 @@ import { MoreMenu } from '~/components/more-menu'
 import { Confirm } from '~/components/confirm'
 import { Logo } from '~/components/logo'
 import { Icon } from '~/components/icon'
+import { ThemeToggle } from '~/components/theme-toggle'
 import type { Route } from './+types/guest-doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }, { name: 'robots', content: 'noindex' }]
@@ -47,6 +48,7 @@ export default function GuestDoc({ loaderData, params }: Route.ComponentProps) {
           actions={<>
             <div className="tool-group" role="group" aria-label="Document">
               <MoreMenu documentId={params.id} />
+              <ThemeToggle />
               <Confirm title={`Delete “${document.title}”?`} confirm="Delete document" busy="Deleting…" fields={{ intent: 'delete' }}
                 trigger={(open) => <button type="button" className="tool danger" data-tip="Delete" onClick={open}><Icon name="trash" /><span className="tool-label">Delete</span></button>}>
                 <p>The document and its versions go away. This cannot be undone.</p>
