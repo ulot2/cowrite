@@ -478,7 +478,7 @@ export class Doc extends DurableObject<Env> {
           el('heading', { level: 2 }, 'Write'),
           el('paragraph', {}, [['Type '], code('/'), [' on an empty line for headings, lists, quotes, code, tables, and tasks. Select words to make them bold or to add a link.']]),
           el('heading', { level: 2 }, 'Accept a suggestion'),
-          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits until someone accepts or rejects it. Accept this one from the bar at the top.'),
+          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits until someone accepts or rejects it. Accept this one from the suggestion bar above the text. On a phone, tap the round button at the bottom right.'),
           el('paragraph', {}, [['CoWrite is where a team '], ['writes', { deletion: by }], ['writes, reviews, and decides', { insertion: by }], ['.']]),
           el('heading', { level: 2 }, 'Tick a task'),
           task('Try CoWrite'),
@@ -499,7 +499,7 @@ export class Doc extends DurableObject<Env> {
         group.insert(0, [
           el('paragraph', {}, 'Everything here works, so try it as you read. It is in your space, so its members can see it too. Delete it when you are done.'),
           el('heading', { level: 2 }, 'Accept a suggestion'),
-          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits for you. Accept this one from the bar at the top.'),
+          el('paragraph', {}, 'A suggestion shows a change that someone wants. It waits until someone accepts or rejects it. Accept this one from the suggestion bar above the text. On a phone, tap the round button at the bottom right.'),
           el('paragraph', {}, [['CoWrite is where a team '], ['writes', { deletion: by }], ['writes, reviews, and decides', { insertion: by }], ['.']]),
           el('heading', { level: 2 }, 'Ask Nib'),
           el('paragraph', {}, [['Select the sentence below, click '], b('✦ Ask Nib'), [' in the toolbar, and choose '], b('Make shorter'), ['. Or type '], code('@nib'), [' on an empty line and tell it what to write.']]),

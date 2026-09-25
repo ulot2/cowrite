@@ -219,8 +219,47 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
     const next = found.all[(i + dir + found.all.length) % found.all.length]
     run(selectSuggestion(next.id))
     editor.prosemirrorView?.dispatch(editor.prosemirrorState.tr.scrollIntoView())
-    editor.focus()
+    if (!sheet) editor.focus() // on a phone, focus in the text would open the keyboard under the panel
   }
+
+  // Phones: the bar waits behind a round button with the count, and opens as a panel from the
+  // bottom. Tapping a suggestion in the text opens it too. It closes on a tap outside, a swipe down,
+  // ×, or Escape, and hands focus back to the button. Desktop keeps the bar; CSS hides the rest.
+  const [sheet, setSheet] = useState(false)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const fabRef = useRef<HTMLButtonElement>(null)
+  const closeSheet = useCallback(() => { setSheet(false); fabRef.current?.focus() }, [])
+  useEffect(() => { if (!found.all.length) setSheet(false) }, [found.all.length])
+  useEffect(() => { if (sheet) sheetRef.current?.querySelector<HTMLButtonElement>('button')?.focus() }, [sheet])
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const tap = (e: MouseEvent) => { if ((e.target as HTMLElement).closest('[data-suggestion]') && matchMedia('(max-width: 600px)').matches) setSheet(true) }
+    el.addEventListener('click', tap)
+    return () => el.removeEventListener('click', tap)
+  }, [])
+  // The on-screen keyboard covers the bottom of the page; the button rides above it.
+  const waiting = found.all.length > 0
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!waiting || !vv) return
+    const set = () => document.documentElement.style.setProperty('--keyboard', `${Math.max(0, innerHeight - vv.height - vv.offsetTop)}px`)
+    set()
+    vv.addEventListener('resize', set)
+    vv.addEventListener('scroll', set)
+    return () => { vv.removeEventListener('resize', set); vv.removeEventListener('scroll', set); document.documentElement.style.removeProperty('--keyboard') }
+  }, [waiting])
+  // Inside the open panel: Escape closes, Tab stays among its buttons.
+  const sheetKeys = (e: React.KeyboardEvent) => {
+    if (!sheet) return
+    if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return }
+    if (e.key !== 'Tab') return
+    const all = [...(sheetRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+    const first = all[0], last = all[all.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }
+  const swipeFrom = useRef(0)
 
   // The outline: the document's headings, live. A click puts the cursor there and scrolls to it.
   // In review, each heading is a section (it runs to the next heading of the same or a higher
@@ -293,8 +332,15 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
             // "2 of 5" while the cursor is in one; the total otherwise. Accept is the one filled button.
             const at = found.atCursor ? found.all.findIndex((x) => x.id === found.atCursor!.id) + 1 : 0
             const one = found.atCursor
+            const n = found.all.length
             return (
-              <div className="suggestion-bar" role="region" aria-label="Suggestions">
+              <>
+              <button type="button" ref={fabRef} className="suggestion-fab" aria-expanded={sheet} aria-controls="suggestion-bar" aria-label={`Suggestions, ${n} waiting`} onClick={() => setSheet(true)}>
+                <Icon name="suggest" /><span className="suggestion-count" aria-hidden="true">{n}</span>
+              </button>
+              {sheet && <div className="suggestion-backdrop" onClick={closeSheet} />}
+              <div id="suggestion-bar" ref={sheetRef} className="suggestion-bar" data-open={sheet || undefined} role={sheet ? 'dialog' : 'region'} aria-modal={sheet || undefined} aria-label="Suggestions"
+                onKeyDown={sheetKeys} onTouchStart={(e) => { swipeFrom.current = e.touches[0].clientY }} onTouchEnd={(e) => { if (sheet && e.changedTouches[0].clientY - swipeFrom.current > 60) closeSheet() }}>
                 <span className="suggestion-badge" aria-hidden="true"><Icon name={one?.author === 'ai' ? 'sparkle' : 'suggest'} /></span>
                 <span className="suggestion-info" role="status">
                   <strong>{one ? `Suggestion ${at} of ${found.all.length}` : found.all.length === 1 ? '1 suggestion' : `${found.all.length} suggestions`}</strong>
@@ -310,7 +356,9 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
                     <button type="button" className="suggestion-accept" onClick={() => resolve('accepted', one)}><Icon name="check" />{one ? 'Accept' : 'Accept all'}</button>
                   </span>
                 )}
+                <button type="button" className="ghost suggestion-close" aria-label="Close suggestions" onClick={closeSheet}><Icon name="close" /></button>
               </div>
+              </>
             )
           })()}
           <BlockNoteViewEditor />

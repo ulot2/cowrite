@@ -52,7 +52,7 @@ export default function GuestDoc({ loaderData, params }: Route.ComponentProps) {
                 <p>The document and its versions go away. This cannot be undone.</p>
               </Confirm>
             </div>
-            <Link className="tool guest-cta" to="/login?mode=up">Sign up to keep it</Link>
+            <Link className="tool guest-cta" to="/login?mode=up" aria-label="Sign up to keep it"><span className="cta-long">Sign up to keep it</span><span className="cta-short" aria-hidden="true">Sign up</span></Link>
           </>}>
           {/* The title saves when you leave the field or press Enter. */}
           <Form method="post" onBlur={(e) => e.currentTarget.requestSubmit()}>
