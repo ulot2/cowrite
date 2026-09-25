@@ -204,7 +204,7 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
   .nav-menu { display: block; margin-right: -0.5rem; }
 }
 @media (max-width: 560px) {
-  .nav-actions .link { display: none; }
+  .nav-actions .link, .nav-actions .btn { display: none; }
   .hero-actions .btn { flex: 1; }
   .stage { aspect-ratio: 1 / 1.15; }
   .foot { grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
