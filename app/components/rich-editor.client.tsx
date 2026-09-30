@@ -126,8 +126,9 @@ export function RichEditor({ documentId, user, canEdit, canComment, suggesting, 
       // Everyone else in the document. `cursor` is set by the editor while a selection is in the text.
       const others = [...provider.awareness.getStates()].filter(([id]) => id !== doc.clientID)
         .map(([, s]) => s.user && { ...s.user, editing: s.cursor != null }).filter(Boolean)
-      const open = [...threads.values()].filter((t) => (t as Y.Map<unknown>).get('resolved') !== true).length
-      setCounts({ open, resolved: threads.size - open })
+      const all = [...threads.values()].filter((t) => t instanceof Y.Map)
+      const open = all.filter((t) => t.get('resolved') !== true).length
+      setCounts({ open, resolved: all.length - open })
       onStatus(state, others, open)
     }
     provider.on('status', report)

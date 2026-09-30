@@ -281,8 +281,8 @@ export class Doc extends DurableObject<Env> {
     }
     if (name.endsWith(':threads')) {
       const id = name.slice(0, -8)
-      // One Y.Map per thread with a `resolved` flag.
-      const open = [...this.doc.getMap<Y.Map<unknown>>('threads').values()].filter((t) => t.get('resolved') !== true).length
+      // One Y.Map per thread with a `resolved` flag. A commenter can write anything here; skip the rest.
+      const open = [...this.doc.getMap<unknown>('threads').values()].filter((t) => t instanceof Y.Map && t.get('resolved') !== true).length
       await this.env.DB.prepare('UPDATE documents SET open_comments = ? WHERE id = ?').bind(open, id).run()
       for (const user of editors) await touchEvent(id, user, 'commented', 'commented')
       await this.logMentions(id)
@@ -328,7 +328,8 @@ export class Doc extends DurableObject<Env> {
   async logMentions(documentId: string) {
     const since = (await this.ctx.storage.get<number>('mentionsScannedAt')) ?? 0
     const now = Date.now()
-    for (const thread of this.doc.getMap<Y.Map<unknown>>('threads').values()) {
+    for (const thread of this.doc.getMap<unknown>('threads').values()) {
+      if (!(thread instanceof Y.Map)) continue
       for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) {
         if (((comment.get('createdAt') as number) ?? 0) <= since) continue
         const author = comment.get('userId') as string
@@ -407,8 +408,9 @@ export class Doc extends DurableObject<Env> {
       if (n.type === 'mention' && n.props?.name) words.push('@' + n.props.name)
       walk(n.content); walk(n.children)
     }
-    for (const thread of this.doc.getMap<Y.Map<unknown>>('threads').values())
-      for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) walk(comment.get('body'))
+    for (const thread of this.doc.getMap<unknown>('threads').values())
+      if (thread instanceof Y.Map)
+        for (const comment of (thread.get('comments') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []) walk(comment.get('body'))
     return words.join(' ')
   }
 
