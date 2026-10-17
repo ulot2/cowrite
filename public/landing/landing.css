@@ -123,7 +123,22 @@ mark.commented { background: var(--accent-soft); color: inherit; border-bottom: 
 @media (prefers-reduced-motion: reduce) { .nav, .nav-links a, .nav-links a::after, .nav-menu summary path { transition: none; } .nav .nav-menu nav { animation: none; } }
 main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3rem); max-width: 76rem; margin-inline: auto; }
 
-.hero { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-block: clamp(2.5rem, 7vw, 5.5rem) 4rem; }
+.hero { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-block: clamp(2.5rem, 7vw, 5.5rem) 4rem; }
+/* Paper and daylight sit behind the live demo, fading out beneath the copy and at the section edges. */
+body.landing { overflow-x: clip; }
+.hero::before {
+  content: ""; position: absolute; z-index: -1; inset: 0 calc(50% - 50vw); pointer-events: none;
+  background: url("/landing/hero-paper.webp") center right / cover no-repeat;
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 65%), linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 65%), linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent);
+  mask-composite: intersect;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero::before { filter: invert(1) hue-rotate(180deg) brightness(0.65); opacity: 0.6; }
+}
+:root[data-theme="dark"] .hero::before { filter: invert(1) hue-rotate(180deg) brightness(0.65); opacity: 0.6; }
 .hero h1 { margin: 0; font-size: clamp(2.5rem, 4.6vw, 3.75rem); line-height: 1.02; font-weight: 800; letter-spacing: -0.04em; }
 .hero h1 span { display: block; color: var(--accent); }
 .lede { margin: 1.5rem 0 0; max-width: 34rem; font-size: 1.125rem; color: var(--fg-muted); }
@@ -295,19 +310,21 @@ main > section { scroll-margin-top: 4.5rem; padding-inline: clamp(1rem, 4vw, 3re
 .stage .piece { z-index: 2; }
 .stage .doc.space { z-index: 1; }
 
-/* The desk: a grey surface behind the stage that runs off the right edge of the page, with a faint dot
-   grid that fades toward the headline. The reach to the edge is the gap outside the 76rem column plus
-   the section's own side padding. On one-column layouts it runs edge to edge. */
+/* The demo shares the hero's paper surface. A faint dot grid ties it to the product's workspace. */
 .stage-wrap { position: relative; isolation: isolate; --gutter: clamp(1rem, 4vw, 3rem); --edge: calc(max((100vw - 76rem) / 2, 0px) + var(--gutter)); }
-.stage-wrap::before, .stage-wrap::after { content: ""; position: absolute; z-index: -1; top: -3rem; bottom: -2.25rem; left: -2.5rem; right: calc(-1 * var(--edge)); border-radius: 28px 0 0 28px; pointer-events: none; }
-.stage-wrap::before { background: var(--tint); }
+.stage-wrap::after { content: ""; position: absolute; z-index: -1; top: -3rem; bottom: -2.25rem; left: -2.5rem; right: calc(-1 * var(--edge)); border-radius: 28px 0 0 28px; pointer-events: none; }
 .stage-wrap::after {
-  background: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--fg) 16%, transparent) 1px, transparent 1.6px) 0 0 / 22px 22px;
+  background: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1.6px) 0 0 / 22px 22px;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%), linear-gradient(0deg, transparent, #000 25%);
   -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent, #000 35%), linear-gradient(0deg, transparent, #000 25%); mask-composite: intersect;
 }
 @media (max-width: 960px) {
-  .stage-wrap::before, .stage-wrap::after { left: calc(-1 * var(--gutter)); right: calc(-1 * var(--gutter)); top: -1.75rem; bottom: -1.75rem; border-radius: 0; }
+  .stage-wrap::after { left: calc(-1 * var(--gutter)); right: calc(-1 * var(--gutter)); top: -1.75rem; bottom: -1.75rem; border-radius: 0; }
+  .hero::before {
+    background-size: auto 100%; background-position: 62% bottom;
+    -webkit-mask-image: linear-gradient(180deg, transparent 28%, #000 55%, #000 85%, transparent);
+    mask-image: linear-gradient(180deg, transparent 28%, #000 55%, #000 85%, transparent);
+  }
 }
 .player .step span { white-space: nowrap; }
 @media (max-width: 560px) {
