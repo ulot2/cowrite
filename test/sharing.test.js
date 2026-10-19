@@ -1,5 +1,6 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
+import * as Y from 'yjs'
 import { startApp, until } from './harness.js'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -46,8 +47,10 @@ test('a commenter can comment but still cannot change the text; a role change ap
   const ownerThreads = app.openTab(docId, ada.cookie, 'threads')
   const commenterThreads = app.openTab(docId, grace.cookie, 'threads')
   await until(() => commenterThreads.provider.synced, 'threads synced')
-  commenterThreads.threads.set('t2', 'a comment')
-  await until(() => ownerThreads.threads.get('t2') === 'a comment', 'the comment reached the owner')
+  const thread = new Y.Map()
+  thread.set('resolved', false); thread.set('text', 'a comment')
+  commenterThreads.threads.set('t2', thread)
+  await until(() => ownerThreads.threads.get('t2')?.get('text') === 'a comment', 'the comment reached the owner')
   owner.close(); commenter.close(); ownerThreads.close(); commenterThreads.close()
 })
 

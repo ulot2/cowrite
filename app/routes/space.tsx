@@ -18,6 +18,7 @@ import type { Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
 import { Avatar } from '~/components/avatar'
 import { DocCard } from '~/components/doc-card'
+import { ConnectedWork } from '~/components/connected-work'
 import { Icon } from '~/components/icon'
 import { NewMenu } from '~/components/new-menu'
 import { Confirm } from '~/components/confirm'
@@ -319,6 +320,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
             : <Link to={`/doc/${t.document_id}`}><Icon name="docs" />{t.source}</Link>}
           {t.assignee_id && <Avatar name={t.assignee ?? '?'} color={colorFor(t.assignee_id, members.find((m) => m.user_id === t.assignee_id)?.color)} size={22} />}
           {t.due && <time dateTime={t.due}>{day(t.due)}</time>}
+          <ConnectedWork kind="task" id={t.id} compact />
         </li>
       ))}
     </ul>

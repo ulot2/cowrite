@@ -32,17 +32,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Every menu in the app is a native <details>, which only closes from its own button. Make them
-// behave like menus: a click or tap outside, Escape, or picking an item closes the open one.
+// Native details menus close on outside clicks, Escape, or choosing an item.
+// Persistent content disclosures opt out so interacting with their content keeps them open.
 const useMenusClose = () => {
   useEffect(() => {
-    const open = () => [...document.querySelectorAll<HTMLDetailsElement>('details[open]')]
+    const open = () => [...document.querySelectorAll<HTMLDetailsElement>('details[open]:not([data-disclosure])')]
     const outside = (e: PointerEvent) => { for (const d of open()) if (!d.contains(e.target as Node)) d.open = false }
     const picked = (e: MouseEvent) => {
       // The path is kept from the moment of the click, so an item that its own click removed still counts.
       const path = e.composedPath().filter((n): n is HTMLElement => n instanceof HTMLElement)
       const item = path.find((n) => n.matches('a, button'))
-      const menu = path.find((n): n is HTMLDetailsElement => n instanceof HTMLDetailsElement && n.open)
+      const menu = path.find((n): n is HTMLDetailsElement => n instanceof HTMLDetailsElement && n.open && !n.hasAttribute('data-disclosure'))
       if (menu && item && !path.some((n) => n.tagName === 'SUMMARY')) setTimeout(() => { menu.open = false }) // after the click has done its job
     }
     const escape = (e: KeyboardEvent) => {

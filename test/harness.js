@@ -26,6 +26,9 @@ const wrangler = (args) => spawn(process.execPath, ['node_modules/wrangler/bin/w
 export const startApp = async () => {
   const persist = mkdtempSync(join(tmpdir(), 'cowrite-test-'))
   const migrate = wrangler(['d1', 'migrations', 'apply', 'cowrite', '--local', '--persist-to', persist])
+  // Wrangler prints a growing migration table. Drain it so a full stdout pipe
+  // cannot stall migration startup once the project has enough migrations.
+  migrate.stdout.resume()
   await new Promise((resolve, reject) => migrate.on('exit', (code) => code === 0 ? resolve() : reject(new Error('migrations failed'))))
 
   // The built config without the AI binding: Workers AI always runs remotely and needs a login,

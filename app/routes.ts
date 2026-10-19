@@ -9,6 +9,7 @@ export default [
   route('g/:id', 'routes/guest-doc.tsx'),
   route('api/auth/*', 'routes/api.auth.ts'),
   route('api/inbox', 'routes/api.inbox.ts'),
+  route('api/connections', 'routes/api.connections.ts'),
   route('api/ai', 'routes/api.ai.ts'),
   route('api/faq', 'routes/api.faq.ts'), // the landing page's "Ask your own question", no account
   route('s/:token', 'routes/share.tsx'),

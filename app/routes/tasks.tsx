@@ -1,4 +1,4 @@
-import { Link, useFetcher } from 'react-router'
+import { Link, useFetcher, useSearchParams } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { getTask, listTasks, setTaskDone, type TaskRow } from '~/lib/work.server'
@@ -6,6 +6,7 @@ import { logEvent, logSpaceEvent } from '~/lib/events.server'
 import { docStub } from '~/lib/versions.server'
 import { atLeast } from '~/lib/roles'
 import { Icon } from '~/components/icon'
+import { ConnectedWork } from '~/components/connected-work'
 import type { Route } from './+types/tasks'
 
 export const meta = () => [{ title: 'Tasks · cowrite' }]
@@ -49,12 +50,12 @@ const groups = (tasks: TaskRow[]) => {
   ] as const
 }
 
-function TaskItem({ task }: { task: TaskRow }) {
+function TaskItem({ task, focused }: { task: TaskRow; focused: boolean }) {
   const fetcher = useFetcher()
   // Show the new state at once; the server confirms a moment later.
   const done = fetcher.formData ? fetcher.formData.get('done') === 'true' : !!task.done
   return (
-    <li className="task-row" data-done={done || undefined} data-overdue={(!done && task.due && task.due < today()) || undefined}>
+    <li id={`task-${task.id}`} className="task-row" data-focused={focused || undefined} data-done={done || undefined} data-overdue={(!done && task.due && task.due < today()) || undefined}>
       <fetcher.Form method="post">
         <input type="hidden" name="id" value={task.id} />
         <button className="task-tick" name="done" value={String(!done)} aria-label={done ? `Mark “${task.text}” as not done` : `Mark “${task.text}” as done`} aria-pressed={done}>
@@ -64,18 +65,19 @@ function TaskItem({ task }: { task: TaskRow }) {
       <span className="task-row-text">{task.text || 'Untitled task'}</span>
       <Link to={task.discussion_id ? `/space/${task.space_id}?tab=discussions&d=${task.discussion_id}` : `/doc/${task.document_id}`} className="task-row-doc">{task.discussion_id && <Icon name="comment" />}{task.title}</Link>
       {task.due && <time dateTime={task.due} className="task-row-due">{new Date(task.due + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}</time>}
+      <ConnectedWork kind="task" id={task.id} compact defaultOpen={focused} />
     </li>
   )
 }
 
-function Section({ title, tasks, empty }: { title: string; tasks: TaskRow[]; empty: string }) {
+function Section({ title, tasks, empty, focus }: { title: string; tasks: TaskRow[]; empty: string; focus: string | null }) {
   return (
     <section className="task-section" aria-labelledby={`${title}-h`}>
       <h2 id={`${title}-h`}>{title} <span className="muted">{tasks.filter((t) => !t.done).length}</span></h2>
       {tasks.length === 0 ? <p className="muted">{empty}</p> : groups(tasks).map(([name, list]) => list.length > 0 && (
         <div key={name} className="task-group">
           <h3>{name}</h3>
-          <ul>{list.map((t) => <TaskItem key={t.id} task={t} />)}</ul>
+          <ul>{list.map((t) => <TaskItem key={t.id} task={t} focused={focus === t.id} />)}</ul>
         </div>
       ))}
     </section>
@@ -83,6 +85,7 @@ function Section({ title, tasks, empty }: { title: string; tasks: TaskRow[]; emp
 }
 
 export default function Tasks({ loaderData }: Route.ComponentProps) {
+  const [params] = useSearchParams()
   return (
     <div className="page tasks-page">
       <header className="page-title">
@@ -90,8 +93,8 @@ export default function Tasks({ loaderData }: Route.ComponentProps) {
         <h1>Tasks</h1>
         <p className="muted">Every task from your documents and your spaces’ discussions. Type <kbd>/task</kbd> in a document, or make one from a message in a discussion.</p>
       </header>
-      <Section title="Assigned to me" tasks={loaderData.mine} empty="Nothing assigned to you." />
-      <Section title="In my documents and spaces" tasks={loaderData.others} empty="No other tasks yet." />
+      <Section title="Assigned to me" tasks={loaderData.mine} empty="Nothing assigned to you." focus={params.get('task')} />
+      <Section title="In my documents and spaces" tasks={loaderData.others} empty="No other tasks yet." focus={params.get('task')} />
     </div>
   )
 }

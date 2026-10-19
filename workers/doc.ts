@@ -413,6 +413,20 @@ export class Doc extends DurableObject<Env> {
   }
 
   // A space room's discussion, for a decision's page: the question and every message, as plain data.
+  // Provenance for Connected work. Read directly so existing/offline board links
+  // need no backfill, and titles always reflect the current shared content.
+  readConnections() {
+    return {
+      cards: [...this.doc.getMap<Y.Map<unknown>>('cards').entries()].map(([id, c]) => ({
+        id, text: String(c.get('text') ?? ''), doc: String(c.get('doc') ?? ''), discussion: String(c.get('discussion') ?? ''),
+        task: c.get('task') as { done?: boolean } | undefined,
+      })),
+      discussions: [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({
+        id, title: String(d.get('title') ?? ''), status: String(d.get('status') ?? 'open'), idea: String(d.get('idea') ?? ''),
+      })),
+    }
+  }
+
   readDiscussion(id: string) {
     const d = this.doc.getMap<Y.Map<unknown>>('discussions').get(id)
     if (!d) return null

@@ -13,6 +13,7 @@ import { Icon } from '~/components/icon'
 import { ShareDialog } from '~/components/share-dialog'
 import { StatusMenu } from '~/components/status-menu'
 import { MoreMenu } from '~/components/more-menu'
+import { ConnectedWork } from '~/components/connected-work'
 import type { Route } from './+types/doc'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: `${loaderData?.document.title ?? 'Document'} · cowrite` }]
@@ -184,6 +185,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
         ) : (
           <h1 className="title">{document.title}</h1>
         )}
+        <ConnectedWork kind="document" id={params.id} />
       </Editor>
     </article>
   )

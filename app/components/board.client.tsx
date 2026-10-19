@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useFetcher } from 'react-router'
+import { Link, useFetcher, useSearchParams } from 'react-router'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import type { ConnectionState, Presence } from './rich-editor.client'
 import type { Person } from './mentions.client'
 import { Icon } from './icon'
 import { Select } from './select'
+import { ConnectedWork } from './connected-work'
+import { ideaRef } from '~/lib/connections'
 
 type Group = { id: string; name: string }
 type Task = { assignee?: string; assigneeName?: string; due?: string; done?: boolean }
@@ -47,6 +49,11 @@ export function Board({ documentId, user, canEdit, people, onStatus, room = docu
   })
   const [groups, setGroups] = useState<Group[]>([])
   const [cards, setCards] = useState<Card[]>([])
+  const [params] = useSearchParams()
+  const focused = params.get('idea')
+  useEffect(() => {
+    if (focused) document.getElementById(`idea-${focused}`)?.scrollIntoView({ block: 'center', inline: 'center' })
+  }, [focused, cards.length])
 
   // Connect on mount, read on every change, free everything a tick after unmount (see rich-editor).
   const destroyTimer = useRef<number>(undefined)
@@ -144,7 +151,7 @@ export function Board({ documentId, user, canEdit, people, onStatus, room = docu
           {!cards.some((c) => c.group === g.id) && <p className="board-empty">{canEdit ? 'No cards yet. Add one, or drop one here.' : 'No cards yet.'}</p>}
           <ol className="board-cards">
             {cards.filter((c) => c.group === g.id).map((c) => (
-              <li key={c.id} className="board-card" draggable={canEdit} data-dragging={dragging === c.id || undefined} data-done={c.task?.done || undefined}
+              <li key={c.id} id={`idea-${c.id}`} className="board-card" draggable={canEdit} data-focused={focused === c.id || undefined} data-dragging={dragging === c.id || undefined} data-done={c.task?.done || undefined}
                 onDragStart={() => setDragging(c.id)} onDragEnd={() => { setDragging(null); setOver(null) }}
                 onDragOver={(e) => { if (dragging && dragging !== c.id) e.preventDefault() }}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragging && dragging !== c.id) move(dragging, g.id, c.id); setDragging(null); setOver(null) }}>
@@ -162,6 +169,7 @@ export function Board({ documentId, user, canEdit, people, onStatus, room = docu
                     <input type="date" className="task-due" value={c.task.due ?? ''} disabled={!canEdit} aria-label="Due date" onChange={(e) => setTask(c.id, { due: e.target.value })} />
                   </div>
                 )}
+                <ConnectedWork {...ideaRef(space ? room : `doc/${documentId}`, c.id)} compact defaultOpen={focused === c.id} />
                 <div className="board-card-foot">
                   <button type="button" className="ghost vote" aria-pressed={c.votes.includes(user.id)} disabled={!canEdit} onClick={() => vote(c.id)} aria-label={`Vote. ${c.votes.length} ${c.votes.length === 1 ? 'vote' : 'votes'}`}>
                     <Icon name="up" />{c.votes.length}

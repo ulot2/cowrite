@@ -6,6 +6,7 @@ import { timeAgo } from '~/lib/time'
 import { Avatar } from './avatar'
 import { Icon } from './icon'
 import { Select } from './select'
+import { ConnectedWork } from './connected-work'
 
 export type Member = { id: string; name: string; color: string; image?: string | null }
 type Post = { id: string; userId: string; text: string; createdAt: number; taskId?: string }
@@ -253,6 +254,7 @@ function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply
         </section>
       )}
 
+      <ConnectedWork key={d.id} kind="discussion" id={d.id} />
       {canWrite && nib && d.posts.length > 0 && <NextSteps d={d} people={people} onAcceptTask={onAcceptTask} onAcceptDecision={onAcceptDecision} />}
 
       <ol className="posts">
@@ -273,6 +275,7 @@ function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply
                     <span className="post-task-text">{task.text}</span>
                     {task.assignee && <span className="chip person-chip"><Avatar name={person(task.assignee).name} color={person(task.assignee).color} image={person(task.assignee).image} size={18} />{person(task.assignee).name.split(' ')[0]}</span>}
                     {task.due && <span className="chip">{day(task.due)}</span>}
+                    <ConnectedWork kind="task" id={p.taskId!} compact />
                   </div>
                 ) : canWrite && (tasking === p.id ? (
                   <form className="task-form" onSubmit={(e) => {
