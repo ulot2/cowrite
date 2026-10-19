@@ -11,6 +11,7 @@ import { timeAgo } from '~/lib/time'
 import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { Select } from '~/components/select'
+import { ConnectedWork } from '~/components/connected-work'
 import type { Route } from './+types/decision'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: loaderData ? `D-${loaderData.decision.number}: ${loaderData.decision.text} · cowrite` : 'Decision · cowrite' }]
@@ -116,6 +117,8 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
           </Form>
         )}
       </section>
+
+      <ConnectedWork key={d.id} kind="decision" id={d.id} defaultOpen />
 
       <section className="why" aria-labelledby="why-title">
         <h2 id="why-title">Why</h2>
