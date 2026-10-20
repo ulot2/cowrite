@@ -1,0 +1,14 @@
+CoWrite — The thread / second cut
+
+Both final exports: 72.000 seconds, 1920 x 1080, 60 fps, 4,320 frames.
+Video: H.264, yuv420p, fast-start MP4. Audio: AAC stereo, 48 kHz.
+Both exports completed full FFmpeg decoding without errors.
+Main encoded audio: -15.07 LUFS integrated; -1.63 dBTP; 6.90 LU range.
+Original music, effects, and mix stems: 72 seconds each; no clipped samples.
+Reviewed: 17 storyboard frames, selected full-resolution transition frames,
+and a contact sheet decoded from the actual final MP4.
+Font coverage check: no unsupported source code points.
+Player checks: all local asset references resolve; JavaScript syntax passes.
+Interactive preview inspection was blocked by the browser tool's URL policy.
+Portable source ZIP passes CRC validation and contains the current film.py.
+First cut retained in output/ and preview-v1.html.
