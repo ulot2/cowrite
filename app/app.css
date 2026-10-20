@@ -4571,7 +4571,7 @@ button.link-button .icon,
 }
 .attention-rows :is(a, button) {
   display: grid;
-  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.875rem;
   width: 100%;
@@ -4603,6 +4603,7 @@ button.link-button .icon,
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+.attention-detail { display: block; margin-top: .25rem; font-size: .8125rem; line-height: 1.5; font-weight: 400; color: var(--fg-muted); }
 .attention-meta {
   display: inline-flex;
   align-items: center;
@@ -4635,7 +4636,7 @@ button.link-button .icon,
 }
 @media (max-width: 600px) {
   .attention-rows :is(a, button) {
-    grid-template-columns: 4.25rem minmax(0, 1fr);
+    grid-template-columns: 6rem minmax(0, 1fr);
     gap: 0.25rem 0.75rem;
   }
   .attention-meta {
@@ -6490,8 +6491,8 @@ a.tile:hover {
 
 /* Plan reviews compare immutable decision snapshots and leave the editor in charge. */
 .plan-review-trigger { margin-top: .5rem; }
-.plan-review-panel { grid-column: 1 / -1; min-width: 0; padding-block: 1.25rem .5rem; border-top: 1px solid var(--border); }
-.plan-review-panel > .brief-heading h3 { font-size: 1rem; }
+.plan-review-panel { grid-column: 1 / -1; min-width: 0; padding-block: 1.25rem .5rem; border-top: 1px solid var(--border); scroll-margin-top: calc(var(--topbar) + 1rem); }
+.plan-review-panel > .brief-heading h3 { font-size: 1rem; scroll-margin-top: calc(var(--topbar) + 1rem); }
 .plan-review-panel > .brief-heading h3:focus { outline: none; }
 .plan-review-panel > p { margin: 0 0 1.25rem; max-width: 70ch; }
 .plan-review-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin-block: 1.25rem; }

@@ -1,5 +1,7 @@
 # Review affected plans
 
+Home and space overviews now surface affected plans with direct comparison links; see [Affected plans in Needs attention](plan-attention.md).
+
 A plan keeps its original decision provenance. When that decision is revised, reopened, dropped or replaced, the decision page marks the plan as needing review. A replacement decision also lists accessible plans from the decisions it replaces. Each plan and its original decision are checked separately for access.
 
 Review decision change opens an inline comparison. Its left side shows the original choice and recorded reasoning, or the last reviewed decision when a review already exists. Its right side shows the current choice and reasoning. Replacement chains follow the latest accessible decision. A missing historical rationale is labeled honestly; the editable plan text is never treated as a historical snapshot.

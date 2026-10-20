@@ -2,8 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from './avatar'
 
-// One thing that waits for a person: a question to decide, a document to review, a task to do.
-export type Waiting = { key: string; verb: 'Decide' | 'Review' | 'Do'; title: string; who: string | null; whoId: string | null; due: string | null; note?: string; to?: string; open?: () => void }
+// THESIS: the next useful action is one readable row, including plans affected by a decision.
+// OWN-WORLD: Studio's verb tags, hairline rows and restrained secondary text.
+// STORY: see what needs attention, why it matters and who can act, then open the work.
+// FIRST VIEWPORT: personal work comes first; a plan names the changed decision below its title.
+// FORM: the existing attention list, with Review plan inside the Review filter.
+export type Waiting = { key: string; verb: 'Decide' | 'Review' | 'Do'; actionLabel?: string; title: string; detail?: string; who: string | null; whoId: string | null; due: string | null; note?: string; to?: string; open?: () => void }
 
 export const day = (d: string) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
 export const today = () => new Date().toISOString().slice(0, 10)
@@ -36,8 +40,8 @@ export function NeedsAttention({ rows: all, me, people = [], filtered = false }:
             const late = !!r.due && r.due < today()
             const body = (
               <>
-                <span className="verb" data-verb={r.verb}>{r.verb}</span>
-                <span className="attention-title">{r.title}</span>
+                <span className="verb" data-verb={r.verb}>{r.actionLabel || r.verb}</span>
+                <span className="attention-title">{r.title}{r.detail && <span className="attention-detail">{r.detail}</span>}</span>
                 <span className="attention-meta">
                   {r.whoId === me ? <span className="you">You</span> : r.who && <>{r.whoId && <Avatar name={r.who} color={people.find((p) => p.id === r.whoId)?.color ?? 'var(--fg-muted)'} image={people.find((p) => p.id === r.whoId)?.image} size={20} />}{r.who}</>}
                   {r.note && <span className="attention-note">{r.note}</span>}

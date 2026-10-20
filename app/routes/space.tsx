@@ -9,6 +9,7 @@ import type { Source } from '~/lib/search.server'
 import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState } from '~/lib/state.server'
 import { cancelInvite, createInvite, listInvites, canAddDocs, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
+import { pendingPlanReviews } from '~/lib/plan-attention.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
 import { atLeast } from '~/lib/roles'
 import { timeAgo } from '~/lib/time'
@@ -38,6 +39,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const space = role && await getSpace(params.id)
   if (!role || !space) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
+  const planReviews = pendingPlanReviews(user.id, params.id)
   // The ideas board lives in the space room. Its columns appear the first time a writer opens it.
   const tab = new URL(request.url).searchParams.get('tab')
   if (tab === 'ideas' && atLeast(role, 'commenter')) await docStub(`${params.id}:space`).seed('ideas')
@@ -65,6 +67,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     invites: isOwner ? await listInvites('space', params.id) : [],
     events: await listSpaceEvents(params.id),
     decisions: await listSpaceDecisions(params.id),
+    planReviews: await planReviews,
   }
 }
 
@@ -309,6 +312,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
   const showStart = (!!space.welcome_doc || empty) && !started.includes('hidden') && atLeast(role, 'commenter')
   const soon = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)
   const waiting: Waiting[] = [
+    ...loaderData.planReviews.map((plan): Waiting => ({ key: `plan-review:${plan.id}`, verb: 'Review', actionLabel: 'Review plan', title: plan.title, detail: plan.detail, who: plan.canConfirm ? null : plan.waitingForDecision ? 'Waiting for decision' : 'Editor review needed', whoId: plan.canConfirm ? me.id : null, due: null, to: plan.to })),
     ...questions.map((q): Waiting => ({ key: `q${q.id}`, verb: 'Decide', title: q.title, who: q.owner, whoId: q.owner_id, due: q.due, open: () => go('discussions', q.id) })),
     ...state.review.map((d): Waiting => ({ key: `r${d.id}`, verb: 'Review', title: d.title, who: null, whoId: null, due: null, note: d.concerns ? (d.concerns === 1 ? '1 concern' : `${d.concerns} concerns`) : 'Waiting for sign-off', to: `/doc/${d.id}` })),
     ...tasks.filter((t) => t.assignee_id === me.id || (t.due && t.due <= soon)).map((t): Waiting => ({

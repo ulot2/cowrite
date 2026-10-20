@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { roleOnDocument, roleOnSpace } from './access.server'
-import { atLeast } from './roles'
+import { atLeast, type Role } from './roles'
 import { decisionPlanVersion, validPlanId, type PlanReview, type PlanReviewEntry, type PlanSource } from './decision-plan'
 import { docStub } from './versions.server'
 import { getDecision, type DecisionRecord } from './work.server'
@@ -9,14 +9,16 @@ const decisionRole = (user: string, decision: DecisionRecord) => decision.space_
   ? roleOnSpace(user, decision.space_id) : roleOnDocument(user, decision.document_id)
 
 // Follow replacement decisions only while every record remains visible to this reader.
-export async function currentPlanDecision(user: string, origin: DecisionRecord): Promise<DecisionRecord | null> {
+export async function currentPlanDecision(user: string, origin: DecisionRecord, lookup?: {
+  read: typeof getDecision; role: (decision: DecisionRecord) => Promise<Role | null>
+}): Promise<DecisionRecord | null> {
   let current = origin
   const seen = new Set<string>()
   for (let step = 0; step < 100; step++) {
-    if (seen.has(current.id) || !await decisionRole(user, current)) return null
+    if (seen.has(current.id) || !await (lookup ? lookup.role(current) : decisionRole(user, current))) return null
     seen.add(current.id)
     if (!current.replaced_by) return current
-    const next = await getDecision(current.replaced_by)
+    const next = await (lookup?.read ?? getDecision)(current.replaced_by)
     if (!next) return null
     current = next
   }

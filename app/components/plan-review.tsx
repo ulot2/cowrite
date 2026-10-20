@@ -35,7 +35,7 @@ export function PlanReviewPanel({ decisionId, planId, onClose }: { decisionId: s
   const reload = () => { setReceipt(false); setChecked(false); setOutcome(''); fetcher.load(endpoint) }
   return <div className="plan-review-panel" id={`plan-review-${planId}`} aria-labelledby={`plan-review-title-${planId}`}>
     <div className="brief-heading"><h3 id={`plan-review-title-${planId}`} ref={heading} tabIndex={-1}>Review decision change</h3><button type="button" className="ghost small" onClick={onClose} disabled={busy}>Close review</button></div>
-    {!review && busy && <p className="muted small" role="status">Loading the decision comparison…</p>}
+    {!review && !fetcher.data?.error && <p className="muted small" role="status">Loading the decision comparison…</p>}
     {review && <>
       <p className="muted small">{review.sequence ? 'Compare the last reviewed decision with the current one.' : 'Compare the decision used to create this plan with the current one.'} Review the goal and tasks in <strong>{review.plan.title}</strong> before confirming.</p>
       <div className="plan-review-comparison"><ReviewSource source={review.baseline} title={review.sequence ? 'Last reviewed basis' : 'Original plan basis'} /><ReviewSource source={review.current} title="Current decision" /></div>

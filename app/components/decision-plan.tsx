@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link, useFetcher, useRevalidator } from 'react-router'
+import { Link, useFetcher, useNavigate, useRevalidator, useSearchParams } from 'react-router'
 import { initialPlanDraft, MAX_PLAN_TASKS, readPlanDraft, type LinkedPlan, type PlanDraft, type PlanPerson, type PlanSource, type PlanTask } from '~/lib/decision-plan'
 import { Icon } from './icon'
 import { Select } from './select'
@@ -13,7 +13,15 @@ import { PlanReviewPanel } from './plan-review'
 export function DecisionPlan({ source, reviewTarget, people, plans, canCreate, destination }: {
   source: PlanSource; reviewTarget: { id: string; version: string } | null; people: PlanPerson[]; plans: LinkedPlan[]; canCreate: boolean; destination: string
 }) {
-  const [reviewing, setReviewing] = useState<string | null>(null)
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const requested = params.get('review')
+  const reviewing = plans.find((plan) => plan.id === requested)?.id ?? null
+  const setReviewing = (id: string | null) => {
+    const next = new URLSearchParams(params)
+    if (id) next.set('review', id); else next.delete('review')
+    navigate({ search: next.toString() ? `?${next}` : '', hash: id ? `#plan-review-${id}` : '' }, { preventScrollReset: true, replace: !id })
+  }
   const reviewTriggers = useRef(new Map<string, HTMLButtonElement>())
   const [draft, setDraft] = useState<PlanDraft | null>(null)
   const [error, setError] = useState('')
@@ -27,11 +35,12 @@ export function DecisionPlan({ source, reviewTarget, people, plans, canCreate, d
   const cancel = () => { setDraft(null); setError(''); requestAnimationFrame(() => trigger.current?.focus()) }
   const changeTask = (id: string, patch: Partial<PlanTask>) => setDraft((current) => current && ({ ...current, tasks: current.tasks.map((task) => task.id === id ? { ...task, ...patch } : task) }))
   const serverError = fetcher.data?.planRequest === request ? fetcher.data.planError : ''
-  if (!canCreate && !plans.length && !draft) return null
+  if (!canCreate && !plans.length && !draft && !requested) return null
   return <section className="decision-planning" aria-label="Plans for this decision">
     <div className="brief-heading"><div><h2>Put this decision into action</h2><p className="muted small">A plan keeps the goal, the work and the decision together.</p></div>
       {!draft && canCreate && <button ref={trigger} type="button" className="primary" onClick={begin}><Icon name="plan" />{plans.length ? 'Create another plan' : 'Create plan'}</button>}
     </div>
+    {requested && !reviewing && <div className="plan-review-unavailable"><p className="muted small" role="status">This plan is no longer available here. It may have moved or your access may have changed.</p><button type="button" className="ghost small" onClick={() => setReviewing(null)}>Dismiss</button></div>}
     {plans.length > 0 && <><ul className="decision-plans">{plans.map((plan) => {
       const stale = !reviewTarget || (plan.reviewedDecisionId || plan.decisionId) !== reviewTarget.id || (plan.reviewedVersion || plan.version) !== reviewTarget.version
       return <li key={plan.id}>
