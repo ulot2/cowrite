@@ -25,11 +25,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!role || !document) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
   if (document.space_id) await markStart('welcome_doc', params.id, 'opened') // a "Get started" step
+  const [members, spaceMembers] = await Promise.all([
+    listMembers('document', params.id),
+    document.space_id ? roleOnSpace(user.id, document.space_id).then((spaceRole) => spaceRole ? listMembers('space', document.space_id!) : []) : [],
+  ])
   return {
     user: { id: user.id, name: user.name, color: user.color },
     nib: user.settings.nib,
     role, document, isOwner,
-    members: await listMembers('document', params.id),
+    members,
+    editorMembers: [...new Map([...spaceMembers, ...members].map((member) => [member.user_id, member])).values()],
     signoffs: await listSignoffs(params.id),
     check: document.check_state ? { state: document.check_state, at: document.check_at, findings: JSON.parse(document.check_findings || '[]') as Finding[] } : null,
     link: isOwner ? await getShareLink('document', params.id) : null,
@@ -166,12 +171,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
-  const { user, role, document, isOwner, members, link, invites, spaces, nib, signoffs, check } = loaderData
+  const { user, role, document, isOwner, members, editorMembers, link, invites, spaces, nib, signoffs, check } = loaderData
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={editorMembers.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
         review={document.status === 'review' ? { signoffs, canSign: canEdit } : undefined}
         check={check} canCheck={canEdit && nib}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}

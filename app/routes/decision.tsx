@@ -1,4 +1,4 @@
-import { Form, Link, useNavigation } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { roleOnDocument, roleOnSpace } from '~/lib/access.server'
 import { getDecision, replaceableDecisions, setSupersedes, wouldCycle } from '~/lib/work.server'
@@ -14,6 +14,9 @@ import { Select } from '~/components/select'
 import { ConnectedWork } from '~/components/connected-work'
 import { DecisionBriefView, hasDecisionBrief } from '~/components/decision-brief-view'
 import { decisionRecordings } from '~/lib/discussions.server'
+import { createDecisionPlan, linkedDecisionPlans, planPeople } from '~/lib/decision-plans.server'
+import { decisionPlanVersion } from '~/lib/decision-plan'
+import { DecisionPlan } from '~/components/decision-plan'
 import type { Route } from './+types/decision'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: loaderData ? `D-${loaderData.decision.number}: ${loaderData.decision.text} · cowrite` : 'Decision · cowrite' }]
@@ -28,7 +31,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const { role, need } = decision ? await access(user.id, decision) : { role: null, need: 'editor' as const }
   if (!decision || !role) throw new Response('Not found', { status: 404 })
   const canEdit = atLeast(role, need)
-  const recordings = decision.source_type === 'discussion' ? await decisionRecordings(decision.id) : []
+  const [recordings, plans, planMembers] = await Promise.all([
+    decision.source_type === 'discussion' ? decisionRecordings(decision.id) : [],
+    linkedDecisionPlans(user.id, decision.id),
+    canEdit ? planPeople(decision) : [],
+  ])
 
   // Why: the discussion that produced it, read from the space's room.
   const discussion = decision.source_type === 'discussion' && decision.space_id && decision.source_id
@@ -38,6 +45,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     decision,
     recordings,
+    plans, planMembers,
     canEdit,
     discussion: discussion && { ...discussion, owner: discussion.owner ? look(discussion.owner) : null, posts: discussion.posts.map((p) => ({ ...p, who: look(p.userId) })) },
     choices: canEdit ? await replaceableDecisions(decision) : [],
@@ -49,8 +57,17 @@ export async function action({ request, params }: Route.ActionArgs) {
   const decision = await getDecision(params.id)
   const { role, need } = decision ? await access(user.id, decision) : { role: null, need: 'editor' as const }
   if (!decision || !role) throw new Response('Not found', { status: 404 })
-  if (!atLeast(role, need)) throw new Response('Only editors can link decisions', { status: 403 })
+  if (!atLeast(role, need)) throw new Response('Only editors can change decisions or create plans', { status: 403 })
   const f = await request.formData()
+  if (f.get('intent') === 'create-plan') {
+    let result: Awaited<ReturnType<typeof createDecisionPlan>>
+    try { result = await createDecisionPlan(user.id, decision, f) } catch (error) {
+      console.error('Decision plan unavailable', error)
+      return { planError: 'The plan could not be created right now. Your draft is still here; try again.', planRequest: String(f.get('request') ?? '') }
+    }
+    if ('error' in result) return { planError: result.error, planRequest: String(f.get('request') ?? '') }
+    throw redirect(`/doc/${result.id}`)
+  }
   if (f.get('intent') !== 'supersede') return null
   const olderId = String(f.get('older') ?? '')
   if (!olderId) { await setSupersedes(decision.id, null); return { ok: true } }
@@ -71,7 +88,7 @@ const pill = (status: string) => (status === 'decided' ? 'approved' : status ===
 const date = (ms: number) => new Date(ms).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export default function Decision({ loaderData, actionData }: Route.ComponentProps) {
-  const { decision: d, canEdit, discussion, choices, recordings } = loaderData
+  const { decision: d, canEdit, discussion, choices, recordings, plans, planMembers } = loaderData
   const recording = recordings.find((item) => item.id === d.recording_id)
   const earlier = recordings.filter((item) => item.id !== d.recording_id)
   const saving = useNavigation().state !== 'idle'
@@ -110,6 +127,9 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
       )}
       {recording && <section className="decision-rationale" aria-label="Final reasoning"><h2>Final reasoning</h2><p>{recording.reasoning}</p></section>}
       {d.status === 'reopened' && <p className="muted small">This question is open again. The last recorded choice and its brief are preserved below until another decision is recorded.</p>}
+
+      <DecisionPlan key={`plan:${d.id}`} source={{ decisionId: d.id, number: d.number, text: d.text, choice: d.outcome || d.text, reasoning: recording?.reasoning ?? '', version: decisionPlanVersion(d) }}
+        people={planMembers} plans={plans} canCreate={canEdit && d.status === 'decided' && !replaced} destination={d.space_id ? `in ${d.space_name || 'this space'}` : 'with the source document’s members'} />
 
       <section className="chain" aria-label="Related decisions">
         {d.supersedes && <p><Icon name="history" />Replaces <Link to={`/decision/${d.supersedes}`}>{`D-${d.supersedes_number}`}</Link>: {d.supersedes_text}</p>}

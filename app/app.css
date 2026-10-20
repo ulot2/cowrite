@@ -6451,3 +6451,39 @@ a.tile:hover {
 .decision-history details > div { padding: 0 0 1.25rem; }
 .decision-history h4 { font-size: .8125rem; color: var(--fg-muted); margin: 1rem 0 .5rem; }
 @media (max-width: 600px) { .record-decision .form-actions { flex-wrap: wrap; } }
+
+/* Decision plans use real document tasks; the review draft stays inline. */
+.decision-planning { margin: 2rem 0; padding-block: 1.5rem; border-block: 1px solid var(--border); container-type: inline-size; }
+.decision-planning .brief-heading { align-items: center; }
+.decision-planning h2 { margin: 0; font-size: 1.0625rem; }
+.decision-planning .brief-heading > button { flex: none; }
+.decision-plans { list-style: none; margin: 0; padding: 0; }
+.decision-plans > li { display: grid; grid-template-columns: minmax(0, 1fr) 10rem; align-items: center; gap: .75rem 1.25rem; padding: 1rem 0; border-top: 1px solid var(--border); }
+.decision-plans a { display: inline-flex; align-items: baseline; gap: .5rem; font-size: .875rem; }
+.decision-plans a .icon { flex: none; width: 1rem; height: 1rem; align-self: center; }
+.decision-plans strong { overflow-wrap: anywhere; }
+.plan-earlier { display: block; margin-top: .375rem; color: var(--fg-muted); }
+.plan-progress { display: grid; gap: .5rem; }
+.plan-progress progress { width: 100%; height: .375rem; appearance: none; border: 0; border-radius: 3px; overflow: hidden; background: var(--tint-2); }
+.plan-progress progress::-webkit-progress-bar { background: var(--tint-2); }
+.plan-progress progress::-webkit-progress-value { background: var(--ok); border-radius: 3px; }
+.plan-progress progress::-moz-progress-bar { background: var(--ok); border-radius: 3px; }
+.decision-plan-form { margin-top: 1.25rem; }
+.decision-plan-form fieldset { display: grid; gap: 1rem; border: 0; padding: 0; margin: 0; min-width: 0; }
+.decision-plan-form legend { font-size: 1rem; font-weight: 650; padding: 0; margin-bottom: .5rem; }
+.decision-plan-form label { display: grid; gap: .375rem; font-size: .8125rem; font-weight: 600; min-width: 0; }
+.decision-plan-form input, .decision-plan-form textarea { width: 100%; min-width: 0; font-size: .875rem; font-weight: 400; }
+.decision-plan-form textarea { font-family: var(--font); line-height: 1.6; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: .625rem .75rem; resize: vertical; }
+.decision-plan-form textarea:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
+.plan-draft-note, .plan-confirmation { margin: 0; max-width: 68ch; }
+.plan-tasks-heading { display: flex; align-items: baseline; gap: 1rem; margin-top: .75rem; }
+.plan-tasks-heading h3 { margin: 0; font-size: 1rem; }
+.plan-draft-tasks { margin: 0; padding: 0; list-style: none; }
+.plan-draft-tasks > li { display: grid; gap: .75rem; padding: 1rem 0; border-top: 1px solid var(--border); }
+.plan-draft-tasks > li:last-child { border-bottom: 1px solid var(--border); }
+.plan-task-title { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .5rem; }
+.plan-task-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .75rem; }
+.plan-task-fields .select, .plan-task-fields .select-button { width: 100%; }
+.plan-task-fields > label { align-content: start; }
+.plan-task-fields input[type="date"] { height: 2.5rem; }
+@container (max-width: 500px) { .decision-planning .brief-heading { flex-wrap: wrap; } .plan-task-fields, .decision-plans > li { grid-template-columns: minmax(0, 1fr); } .plan-progress { max-width: 16rem; } .decision-plan-form .form-actions { flex-wrap: wrap; } }

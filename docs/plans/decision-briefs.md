@@ -17,7 +17,7 @@ The existing discussion Y.Map contains a brief Y.Map. Context, recommendation, a
 
 Saving writes the fields changed from the original draft, preserving independent edits by other people. A conflicting edit already received from a collaborator asks the user to load the latest brief instead of silently overwriting it. Yjs resolves simultaneous edits to the same field through its existing conflict rules. Brief data is bounded and rendered as text.
 
-Explicit decision recording now preserves the brief. See `decision-recording.md` for versioning, final choice and reasoning. Older plain answers still label the live source brief honestly. Decision-to-plan creation remains a later increment.
+Explicit decision recording now preserves the brief. See `decision-recording.md` for versioning, final choice and reasoning. Older plain answers still label the live source brief honestly. Reviewed plan creation is described in `decision-to-plan.md`.
 
 ## Validation
 

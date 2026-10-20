@@ -10,7 +10,7 @@ Migration 0022 adds `decisions.recording_id` and `decision_recordings`. The room
 
 Reopening leaves the previous outcome, person, date and snapshot intact. Recording again creates another version under the existing D-number, and the record shows the earlier versions. On the first explicit replacement of a legacy plain answer, preserve the original answer/person/date as a clearly labeled legacy version with no invented rationale or brief. An untouched legacy answer still displays the current source brief, labeled as unsnapshotted.
 
-The record separates final choice and final reasoning from the proposal preserved under Why. It retains Connected work, replacement links and source discussion links. Earlier snapshots remain readable when the source discussion is gone. Decision-to-plan creation remains a later increment.
+The record separates final choice and final reasoning from the proposal preserved under Why. It retains Connected work, replacement links and source discussion links. Earlier snapshots remain readable when the source discussion is gone. Decision-to-plan creation is described in `decision-to-plan.md`; it requires an explicit reviewed confirmation.
 
 Validation covers choosing against the recommendation, custom choices, missing rationale, stale briefs, duplicate submission guards, snapshot encoding, source edits, reopening, rerecording, old-ID replay, legacy preservation, permissions and connected-work regression.
 
