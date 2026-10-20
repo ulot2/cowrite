@@ -24,6 +24,7 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 - People open a document in several tabs, devices, and places at once; cursors carry names. Edits made offline merge when the device reconnects.
 - Documents live in spaces with members and roles: viewer, commenter, reviewer, editor, owner. Share by email or by link.
+- Creating a space requires only its name, with an optional description. Both onboarding and the sidebar open the new private space directly; adding people stays optional. Spaces can be pinned per account in this browser, and the active space exposes its sections in the sidebar, including while reading its documents or decisions.
 - A document can be published as a public page, exported (Markdown, Word, text, PDF), or presented as slides.
 - New documents start from a mode: Write, Brainstorm (a board of cards), Plan (a template with goals, tasks, a decision, a timeline), or Review.
 
@@ -31,6 +32,11 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 - Rich text editor (BlockNote on Yjs) with live cursors, comments with @mentions, suggestions, version history with compare and restore, activity timelines, a notification bell, search across text and comments.
 - Tasks with an assignee and a due date, a Tasks page; decisions numbered per space (D-1, D-2) and a decision log.
+- Optional decision briefs on questions: context, options with benefits and tradeoffs, and a recommendation with its reasoning. Briefs sync with the discussion, appear in the decision record, and help Nib find relevant context.
+- Recording a discussion decision requires an explicit final choice (a brief option or another approach) and final reasoning. It preserves the brief with that version. Reopening keeps the last outcome; recording again adds history under the same D-number. Nib proposals enter the same review form. Older plain answers remain readable without claiming a historical brief snapshot.
+- A current decided record can become a plan: review an editable goal, reasoning and starter checklist, choose task owners and dates, then confirm. Confirmation creates a normal document and task blocks linked as implementations of the decision. The record lists its plans and progress from their current tasks, and flags plans based on an earlier version. Drafting creates no assignments or notifications.
+- When a decision changes, compare the original or last reviewed choice and reasoning with the current decision. Edit the real plan if needed, then confirm it still applies or was updated. Confirmation requires editing access to the plan and decisions, records who reviewed which version and when, and preserves the original provenance and review history. Replacement decisions also show affected plans; open decisions wait for a recorded outcome.
+- Affected plans appear in Needs attention. Home counts the reviews this person can confirm; space overviews also show readable team reviews and plans waiting for a new decision. Review plan names the plan and changed decision and opens that plan's comparison directly. A confirmed review clears its item on the next load; another decision change brings it back. The queue creates no assignments or notifications.
 - Connected work across documents, decisions, discussions, ideas, and tasks: automatic source links, explicit Related/Implements connections, and a wider chain filtered by each person's access. Links load when opened and refresh on demand; they do not grant access to another item.
 - A space ideas board; an idea becomes a discussion or a document.
 - A document lifecycle: Idea, Draft, In review, Approved, Done. Reviewers sign off section by section, and an open concern blocks approval.

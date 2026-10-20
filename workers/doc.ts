@@ -13,6 +13,8 @@ import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/
 import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 import { GUEST_DAYS } from '~/lib/guest.server'
+import { decisionBriefText, readDecisionBrief, readDecisionRecording } from '~/lib/decision-brief'
+import type { PlanSeed } from '~/lib/decision-plan'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -257,6 +259,8 @@ export class Doc extends DurableObject<Env> {
           lastAt: Number(last?.get('createdAt') ?? d.get('createdAt') ?? Date.now()), lastBy: str(last?.get('userId')),
           createdBy: String(d.get('createdBy') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: str(d.get('answeredBy')),
           decisionNumber: Number(d.get('decisionNumber') ?? 0),
+          recording: readDecisionRecording(d.get('recording')),
+          recordings: d.get('recordings') instanceof Y.Map ? [...(d.get('recordings') as Y.Map<unknown>).values()].flatMap((value) => { const recording = readDecisionRecording(value); return recording ? [recording] : [] }) : [],
         }
       })
       const tasks: SpaceTaskItem[] = [...this.doc.getMap<Record<string, unknown>>('tasks').entries()].map(([id, t]) => ({
@@ -267,7 +271,7 @@ export class Doc extends DurableObject<Env> {
       const numbered = await syncDiscussions(spaceId, items, tasks, editors[0] ?? null)
       if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) this.doc.getMap<Y.Map<unknown>>('discussions').get(id)?.set('decisionNumber', number) }, 'index')
       // What Nib searches when someone asks the space: each discussion's words, and the ideas board.
-      const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''),
+      const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''), readDecisionRecording(d.get('recording'))?.reasoning ?? '', d.get('kind') === 'question' ? decisionBriefText(readDecisionBrief(d.get('brief'))) : '',
         ...((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => String(p.get('text') ?? ''))].filter(Boolean).join('\n') }))
       const ideas = cardsOf(this.doc).map((c) => c.text).filter(Boolean).join('\n')
       await indexSpace(spaceId, ideas ? [...said, { key: 'ideas', text: ideas }] : said)
@@ -431,7 +435,7 @@ export class Doc extends DurableObject<Env> {
     const d = this.doc.getMap<Y.Map<unknown>>('discussions').get(id)
     if (!d) return null
     const posts = ((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => ({ userId: String(p.get('userId') ?? ''), text: String(p.get('text') ?? ''), createdAt: Number(p.get('createdAt') ?? 0) }))
-    return { title: String(d.get('title') ?? ''), owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), posts }
+    return { title: String(d.get('title') ?? ''), owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), posts, brief: readDecisionBrief(d.get('kind') === 'question' ? d.get('brief') : null) }
   }
 
   readRich(id: number | 'now'): RichBlock[] | null {
@@ -452,6 +456,48 @@ export class Doc extends DurableObject<Env> {
       else spaceTasks.set(id, { ...spaceTasks.get(id), ...patch })
     }, 'list')
     return true
+  }
+
+  readPlanSource(kind: 'discussion' | 'document', id: string) {
+    if (kind === 'discussion') {
+      const discussion = this.doc.getMap<Y.Map<unknown>>('discussions').get(id)
+      if (!discussion) return null
+      const recording = readDecisionRecording(discussion.get('recording'))
+      return { status: discussion.get('status') === 'answered' ? 'decided' : 'reopened', recordingId: recording?.id ?? null, choice: recording?.choice ?? String(discussion.get('answer') ?? '') }
+    }
+    const block = findBlock(this.doc, id)
+    return block ? { status: String(block.getAttribute('status') ?? 'proposed'), recordingId: null, choice: inlineText(inlineOf(block)) } : null
+  }
+
+  // Internal RPC: seal a confirmed plan once, before its D1 document is published.
+  // The ordinary editor reads the same BlockNote XML as every other document.
+  seedDecisionPlan(seed: PlanSeed): PlanSeed {
+    const metadata = this.doc.getMap<unknown>('decision-plan')
+    const existing = metadata.get('seed') as PlanSeed | undefined
+    if (existing) return existing
+    if (this.doc.getXmlFragment('document-store').length) throw new Error('This document already has content.')
+    const node = (type: string, text: string, attrs: Record<string, unknown> = {}, href?: string) => {
+      const content = new Y.XmlElement(type), textNode = new Y.XmlText(), wrapper = new Y.XmlElement('blockContainer')
+      wrapper.setAttribute('id', crypto.randomUUID())
+      for (const [key, value] of Object.entries(attrs)) content.setAttribute(key, value as string)
+      if (text) { textNode.insert(0, text, href ? { link: { href } } : {}); content.insert(0, [textNode]) }
+      wrapper.insert(0, [content]); return wrapper
+    }
+    const names = new Map(seed.people.map((person) => [person.id, person.name]))
+    this.doc.transact(() => {
+      metadata.set('seed', seed)
+      const group = new Y.XmlElement('blockGroup')
+      this.doc.getXmlFragment('document-store').insert(0, [group])
+      group.insert(0, [
+        node('paragraph', `Implements D-${seed.source.number}: ${seed.source.text}`, {}, `/decision/${seed.source.decisionId}`),
+        node('heading', 'Goal', { level: 2 }), node('paragraph', seed.draft.goal),
+        node('heading', 'Decision and reasoning', { level: 2 }), node('paragraph', seed.source.choice),
+        ...(seed.draft.why ? [node('paragraph', seed.draft.why)] : []),
+        node('heading', 'Tasks', { level: 2 }),
+        ...seed.draft.tasks.map((task) => node('task', task.text, { taskId: task.id, assignee: task.assignee, assigneeName: names.get(task.assignee) || '', due: task.due, done: false })),
+      ])
+    }, 'plan')
+    return seed
   }
 
   // New content for a new document: a plan template, the welcome document (its task goes to `who`),

@@ -3,6 +3,7 @@ import { ask, readJson } from './ai.server'
 import { spaceContext, type Source } from './search.server'
 import { listMembers } from './access.server'
 import { logEvent } from './events.server'
+import { decisionBriefText } from './decision-brief'
 
 // Nib's work across a space: answer a question, propose next steps from a discussion, and check a
 // document against the decisions in force. Prompts live in ai.server.ts; this file builds their
@@ -26,7 +27,7 @@ export const proposeNextSteps = async (spaceId: string, discussionId: string): P
   if (!d) return null
   const members = await listMembers('space', spaceId)
   const name = (id: string) => (id === 'ai' ? 'Nib' : members.find((m) => m.user_id === id)?.name ?? 'Someone')
-  const thread = [`Title: ${d.title}`, ...d.posts.map((p) => `${name(p.userId)}: ${p.text}`)].join('\n')
+  const thread = [`Title: ${d.title}`, decisionBriefText(d.brief), ...d.posts.map((p) => `${name(p.userId)}: ${p.text}`)].filter(Boolean).join('\n')
   const context = `People: ${members.map((m) => m.name).join(', ')}\nToday: ${new Date().toISOString().slice(0, 10)}`
   const out = readJson(await ask('propose', thread, context)) as { tasks?: unknown; decision?: unknown } | null
   if (!out) throw new Error('Nib did not answer in the expected shape')

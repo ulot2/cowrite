@@ -12,7 +12,7 @@ export type SpaceRow = {
   logo: string | null; color: string | null; description: string; nib: number; add_docs: 'editor' | 'commenter'
 }
 export type Member = { user_id: string; name: string; email: string; role: Role; color: string | null; image: string | null }
-export type ShareLink = { token: string; target_type: 'document' | 'space'; target_id: string; role: Role; created_at: number }
+export type ShareLink = { token: string; target_type: 'document' | 'space'; target_id: string; role: Role; created_at: number; email: string | null }
 
 // A person's role on a space: their membership, or viewer when the space is public.
 export const roleOnSpace = async (userId: string, spaceId: string): Promise<Role | null> => {
@@ -38,11 +38,12 @@ export const getSpace = (id: string) => env.DB.prepare('SELECT * FROM spaces WHE
 export const listSpaces = async (userId: string) =>
   (await env.DB.prepare('SELECT s.* FROM spaces s JOIN space_memberships m ON m.space_id = s.id WHERE m.user_id = ? ORDER BY s.name').bind(userId).all<SpaceRow>()).results
 
-export const createSpace = async (userId: string, name: string) => {
+export const createSpace = async (userId: string, name: string, description = '') => {
   const id = crypto.randomUUID()
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO spaces (id, name, owner_id, visibility, created_at) VALUES (?, ?, ?, ?, ?)').bind(id, name, userId, 'private', Date.now()),
+    env.DB.prepare('INSERT INTO spaces (id, name, description, owner_id, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id, name, description, userId, 'private', Date.now()),
     env.DB.prepare('INSERT INTO space_memberships (space_id, user_id, role) VALUES (?, ?, ?)').bind(id, userId, 'owner'),
+    env.DB.prepare('INSERT INTO events (space_id, actor_id, type, text, at) VALUES (?, ?, ?, ?, ?)').bind(id, userId, 'space', `created the space “${name}”`, Date.now()),
   ])
   return id
 }
@@ -114,22 +115,60 @@ export const findUserByEmail = (email: string) =>
   env.DB.prepare('SELECT id, name FROM "user" WHERE email = ?').bind(email.trim().toLowerCase()).first<{ id: string; name: string }>()
 
 // Share links. One per target: creating a new one replaces the old, which revokes it.
+// Rows with an email are invitations, below; these functions leave them alone.
+const newToken = () => crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '')
+
 export const getShareLink = (target: 'document' | 'space', id: string) =>
-  env.DB.prepare('SELECT * FROM share_links WHERE target_type = ? AND target_id = ?').bind(target, id).first<ShareLink>()
+  env.DB.prepare('SELECT * FROM share_links WHERE target_type = ? AND target_id = ? AND email IS NULL').bind(target, id).first<ShareLink>()
 
 export const createShareLink = async (target: 'document' | 'space', id: string, role: Role, userId: string) => {
-  const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '')
+  const token = newToken()
   await env.DB.batch([
-    env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ?').bind(target, id),
+    env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ? AND email IS NULL').bind(target, id),
     env.DB.prepare('INSERT INTO share_links (token, target_type, target_id, role, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(token, target, id, role, userId, Date.now()),
   ])
   return token
 }
 
 export const revokeShareLink = (target: 'document' | 'space', id: string) =>
-  env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ?').bind(target, id).run()
+  env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ? AND email IS NULL').bind(target, id).run()
 
-export const findShareLink = (token: string) => env.DB.prepare('SELECT * FROM share_links WHERE token = ?').bind(token).first<ShareLink>()
+// Invitations: a share link for one email address that has no account yet. It works once (the
+// /s/ route deletes it) and expires after INVITE_DAYS. The token is the permission, not the email:
+// sign-up does not verify addresses, so checking the email would add no safety.
+const INVITE_DAYS = 14
+const INVITES_PER_DAY = 20 // per person, so nobody can use CoWrite to send spam
+const inviteCutoff = () => Date.now() - INVITE_DAYS * 86_400_000
+
+export const findShareLink = (token: string) =>
+  env.DB.prepare('SELECT * FROM share_links WHERE token = ? AND (email IS NULL OR created_at > ?)').bind(token, inviteCutoff()).first<ShareLink>()
+
+export const deleteShareLink = (token: string) => env.DB.prepare('DELETE FROM share_links WHERE token = ?').bind(token).run()
+
+export const listInvites = async (target: 'document' | 'space', id: string) =>
+  (await env.DB.prepare('SELECT * FROM share_links WHERE target_type = ? AND target_id = ? AND email IS NOT NULL AND created_at > ? ORDER BY created_at').bind(target, id, inviteCutoff()).all<ShareLink>()).results
+
+export const cancelInvite = (target: 'document' | 'space', id: string, token: string) =>
+  env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ? AND token = ? AND email IS NOT NULL').bind(target, id, token).run()
+
+// Inviting the same email again replaces the old invitation with a new link.
+export const createInvite = async (target: 'document' | 'space', id: string, rawEmail: string, role: Role, userId: string) => {
+  const email = rawEmail.trim().toLowerCase()
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'That does not look like an email address.' }
+  // Counted in daily_counts, not from share_links, so cancelling invitations does not reset the count.
+  const day = new Date().toISOString().slice(0, 10)
+  const [count] = await env.DB.batch<{ n: number }>([
+    env.DB.prepare('INSERT INTO daily_counts (day, key, n) VALUES (?, ?, 1) ON CONFLICT DO UPDATE SET n = n + 1 RETURNING n').bind(day, `invite:${userId}`),
+    env.DB.prepare('DELETE FROM daily_counts WHERE day < ?').bind(day),
+  ])
+  if (count.results[0].n > INVITES_PER_DAY) return { error: `You sent ${INVITES_PER_DAY} invitations today. Try again tomorrow.` }
+  const token = newToken()
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM share_links WHERE target_type = ? AND target_id = ? AND email = ?').bind(target, id, email),
+    env.DB.prepare('INSERT INTO share_links (token, target_type, target_id, role, created_by, created_at, email) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(token, target, id, role, userId, Date.now(), email),
+  ])
+  return { token, email }
+}
 
 // Following a link grants its role, unless the person already has a higher one. True when it granted.
 export const redeemShareLink = async (link: ShareLink, userId: string) => {

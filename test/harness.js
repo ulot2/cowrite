@@ -33,13 +33,15 @@ export const startApp = async () => {
 
   // The built config without the AI binding: Workers AI always runs remotely and needs a login,
   // which CI does not have. The tests set AI_FAKE, so the app never calls it.
-  const config = JSON.parse(readFileSync('build/server/wrangler.json', 'utf8'))
+  const buildDirectory = process.env.COWRITE_BUILD_DIRECTORY || 'build'
+  const configPath = join(buildDirectory, 'server', 'wrangler.test.json')
+  const config = JSON.parse(readFileSync(join(buildDirectory, 'server', 'wrangler.json'), 'utf8'))
   delete config.ai
-  writeFileSync('build/server/wrangler.test.json', JSON.stringify(config))
+  writeFileSync(configPath, JSON.stringify(config))
 
   const port = await freePort()
   const base = `http://localhost:${port}`
-  const proc = wrangler(['dev', '--config', 'build/server/wrangler.test.json', '--port', String(port), '--inspector-port', String(await freePort()), '--persist-to', persist,
+  const proc = wrangler(['dev', '--config', configPath, '--port', String(port), '--inspector-port', String(await freePort()), '--persist-to', persist,
     '--var', 'BETTER_AUTH_SECRET:test-secret-test-secret-test-secret', '--var', `BETTER_AUTH_URL:${base}`, '--var', 'AI_FAKE:1'])
   await new Promise((resolve, reject) => {
     proc.stdout.on('data', (d) => { if (d.toString().includes('Ready on')) resolve() })

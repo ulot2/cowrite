@@ -65,17 +65,34 @@ test('needs attention lists the late task and the document in review, once each;
   assert.match((await page(fresh, ada.cookie)).html, /Get started/)
 })
 
-test('the welcome steps make a space with its welcome document, and add only people who have an account', async () => {
-  const space = (await app.post('/welcome', dee.cookie, { intent: 'space', name: 'Hiring' })).headers.get('location').split('=').pop()
-  const people = new URLSearchParams([['space', space], ['email', 'nobody@example.test'], ['role', 'editor'], ['email', bea.email], ['role', 'editor']])
-  assert.equal((await app.post('/welcome', dee.cookie, people)).status, 200, 'an unknown email stops the step')
-  const html = (await page(`/space/${space}`, dee.cookie)).html
-  assert.match(html, /Welcome to CoWrite/)
-  assert.doesNotMatch(html, /title="Bea"/, 'nobody was added')
-  assert.match(html, /<strong>1 of 5 done\.<\/strong>/)
-  const doc = html.match(/href="\/doc\/([\w-]+)"/)[1]
-  await page(`/doc/${doc}`, dee.cookie)
-  assert.match((await page(`/space/${space}`, dee.cookie)).html, /<strong>2 of 5 done\.<\/strong>/, 'opening the welcome document ticks its step')
+test('onboarding and the sidebar create the same private space and open its three starting actions', async () => {
+  for (const path of ['/welcome', '/?index']) {
+    const response = await app.post(path, dee.cookie, { intent: 'new-space', name: '  Hiring  ', description: '  Find our next designer.  ' })
+    assert.equal(response.status, 302)
+    const target = response.headers.get('location')
+    assert.match(target, /^\/space\/[\w-]+$/)
+    const html = (await page(target, dee.cookie)).html
+    for (const text of ['Hiring', 'Find our next designer.', 'Add an idea', 'Start a discussion', 'Write a document', 'Add people', 'only members can open it', 'No email is sent']) assert.ok(html.includes(text), text)
+    assert.doesNotMatch(html, /Welcome to CoWrite/, 'no starter document is added without asking')
+    assert.equal((await page(target, bea.cookie)).status, 404, 'a new space is private')
+    const oldBookmark = await fetch(`${app.base}/welcome?space=${target.split('/').pop()}`, { headers: { cookie: dee.cookie }, redirect: 'manual' })
+    assert.equal(oldBookmark.headers.get('location'), target, 'old onboarding bookmarks still work')
+    const createdDoc = await app.post(target, dee.cookie, { intent: 'create', mode: 'write' })
+    assert.equal(createdDoc.status, 302, 'the starting document action works')
+    assert.equal((await page(createdDoc.headers.get('location'), dee.cookie)).status, 200)
+  }
+})
+
+test('both creation entry points validate names and descriptions before writing a space', async () => {
+  for (const path of ['/welcome', '/?index']) {
+    for (const fields of [{ name: '  ' }, { name: 'N'.repeat(61) }, { name: 'Too long', description: 'D'.repeat(141) }]) {
+      const response = await app.post(path, dee.cookie, { intent: 'new-space', ...fields })
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('location'), null)
+      assert.match(await response.text(), /Give the space a name|60 characters or fewer|140 characters or fewer/)
+    }
+  }
+  assert.doesNotMatch((await page('/', dee.cookie)).html, /aria-label="Too long"/, 'invalid descriptions do not leave a space behind')
 })
 
 test('a member can leave a space; the owner cannot', async () => {

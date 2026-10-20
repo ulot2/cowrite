@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Y from 'yjs'
 import { startApp, until } from './harness.js'
+import { emptyDecisionBrief, readDecisionBrief, saveDecisionBrief } from '../app/lib/decision-brief.ts'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const ALARM = 3800 // the room indexes into D1 three seconds after a change
@@ -75,6 +76,23 @@ test('a task from a post reaches the Tasks page, and ticking it there ticks it i
   assert.equal((await app.post('/tasks', bea.cookie, { id: 't-1', done: 'true' })).status, 200)
   await until(() => a.doc.getMap('tasks').get('t-1')?.done === true, 'the room ticks the task')
   a.close()
+})
+
+test('question briefs sync to members, survive reconnecting, and reject viewer edits', async () => {
+  const a = room(ada.cookie), b = room(bea.cookie), c = room(cy.cookie)
+  await until(() => a.provider.synced && b.provider.synced && c.provider.synced, 'brief rooms synced')
+  const d = ask(a, 'How should we onboard?', { kind: 'question' })
+  assert.equal(saveDecisionBrief(d, { context: 'New teammates need one clear starting point.', options: [{ id: 'guide', title: 'Create a guide', benefits: 'Easy to search', tradeoffs: 'Needs maintenance' }], recommendation: 'guide', reasoning: 'Keep the first week simple.' }, emptyDecisionBrief()), null)
+  await until(() => readDecisionBrief(discussions(b).get('How should we onboard?')?.get('brief')).context === 'New teammates need one clear starting point.', 'the brief reaches Bea')
+  await until(() => !!discussions(c).get('How should we onboard?')?.get('brief'), 'the viewer receives the brief')
+  discussions(c).get('How should we onboard?').get('brief').set('context', 'A viewer tried to change this')
+  await sleep(300)
+  assert.equal(readDecisionBrief(d.get('brief')).context, 'New teammates need one clear starting point.')
+  a.close(); b.close(); c.close()
+  const reopened = room(bea.cookie)
+  await until(() => reopened.provider.synced, 'reconnected')
+  assert.equal(readDecisionBrief(discussions(reopened).get('How should we onboard?').get('brief')).recommendation, 'guide')
+  reopened.close()
 })
 
 test('deleting the space takes its discussions and their tasks', async () => {

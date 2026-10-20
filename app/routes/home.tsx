@@ -2,10 +2,11 @@ import { env } from 'cloudflare:workers'
 import { Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listDocuments, reviewQueue, type Mode } from '~/lib/db.server'
-import { createSpace } from '~/lib/access.server'
+import { createSpaceFromForm } from '~/lib/create-space.server'
 import { claimGuestDocuments, clearGuestCookie } from '~/lib/guest.server'
-import { listInbox, logEvent, logSpaceEvent } from '~/lib/events.server'
+import { listInbox, logEvent } from '~/lib/events.server'
 import { listTasks } from '~/lib/work.server'
+import { pendingPlanReviews } from '~/lib/plan-attention.server'
 import { statusLabel, type Status } from '~/lib/status'
 import { colorFor } from '~/lib/color'
 import { timeAgo } from '~/lib/time'
@@ -36,7 +37,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const week = Array.from({ length: 7 }, (_, i) => new Date(monday + i * 864e5).toISOString().slice(0, 10))
   const mySpaces = 'SELECT space_id FROM space_memberships WHERE user_id = ?1'
 
-  const [docs, tasks, events, questions, decided, summaries] = await Promise.all([
+  const [docs, tasks, events, questions, decided, summaries, planReviews] = await Promise.all([
     listDocuments(user.id),
     listTasks(user.id),
     listInbox(user.id),
@@ -51,6 +52,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Nib's saved summary of each space. Home only reads them; a space page writes them when due.
     env.DB.prepare(`SELECT id, name, state_text AS text, state_at AS at FROM spaces WHERE id IN (${mySpaces}) AND nib = 1 AND state_text != '' ORDER BY state_at DESC LIMIT 3`)
       .bind(user.id).all<{ id: string; name: string; text: string; at: number | null }>(),
+    pendingPlanReviews(user.id),
   ])
   const review = await reviewQueue(user.id, docs)
   const mine = tasks.filter((t) => t.assignee_id === user.id)
@@ -58,6 +60,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   // Everything that waits for this person, from every space. Late things first, then by date.
   const waiting: Waiting[] = [
+    ...planReviews.map((plan): Waiting => ({ key: `plan-review:${plan.id}`, verb: 'Review', actionLabel: 'Review plan', title: plan.title, detail: plan.detail, who: null, whoId: user.id, due: null, note: plan.space || undefined, to: plan.to })),
     ...questions.results.filter((q) => q.owner_id === user.id).map((q): Waiting => ({
       key: `q${q.id}`, verb: 'Decide', title: q.title, who: null, whoId: null, due: q.due, note: q.space, to: `/space/${q.space_id}?tab=discussions&d=${q.id}` })),
     ...review.map((d): Waiting => ({
@@ -98,11 +101,7 @@ export async function action({ request }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = f.get('intent')
   if (intent === 'new-space') {
-    const name = String(f.get('name') ?? '').trim().slice(0, 60)
-    if (!name) return null
-    const id = await createSpace(user.id, name)
-    await logSpaceEvent(id, user.id, 'space', `created the space “${name}”`)
-    throw redirect(`/space/${id}`)
+    return createSpaceFromForm(user.id, f)
   }
   if (intent !== 'create') return null
   const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, null, String(f.get('title') ?? '').trim().slice(0, 120))

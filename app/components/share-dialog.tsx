@@ -18,10 +18,12 @@ type Props = {
   isOwner: boolean
   members: Member[]
   link: ShareLink | null
+  invites: ShareLink[] // owner only: invitations not used yet
   spaces?: SpaceRow[]
   spaceId?: string | null
   published?: { slug: string | null; at: number | null } // documents only: the public page
   className?: string // "tool" on the document page: icon plus label, icon only on phones
+  label?: string
 }
 
 type Fetcher = FetcherWithComponents<{ error?: string } | null>
@@ -41,10 +43,28 @@ function Saving({ fetcher }: { fetcher: Fetcher }) {
   return fetcher.state !== 'idle' ? <span className="saving" role="status"><span className="spinner" aria-hidden="true" />Saving…</span> : null
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600) }
-  return <button type="button" onClick={copy} aria-live="polite">{copied ? <><Icon name="check" />Copied</> : 'Copy'}</button>
+  return <button type="button" onClick={copy} aria-live="polite">{copied ? <><Icon name="check" />Copied</> : label}</button>
+}
+
+// Someone invited by email who has no account yet. The owner copies the link and sends it.
+function InviteRow({ invite, url }: { invite: ShareLink; url: string }) {
+  const fetcher = useFetcher() as Fetcher
+  return (
+    <li data-leaving={fetcher.state !== 'idle' || undefined}>
+      <Avatar name={invite.email!} color={colorFor(invite.email!, null)} size={32} />
+      <span className="member-name"><strong>{invite.email}</strong><span className="muted">Invited · {describe[invite.role]}</span></span>
+      <span className="member-actions">
+        <CopyButton text={url} label="Copy link" />
+        <fetcher.Form method="post">
+          <input type="hidden" name="token" value={invite.token} />
+          <Submit fetcher={fetcher} intent="invite-cancel" busy="" className="ghost icon-only"><Icon name="close" /><span className="sr-only">Cancel the invitation for {invite.email}</span></Submit>
+        </fetcher.Form>
+      </span>
+    </li>
+  )
 }
 
 function MemberRow({ m, isOwner }: { m: Member; isOwner: boolean }) {
@@ -73,7 +93,7 @@ function MemberRow({ m, isOwner }: { m: Member; isOwner: boolean }) {
 }
 
 // A native <dialog>: the browser handles focus, Escape, and the backdrop. A sheet from the bottom on phones.
-export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, published, className }: Props) {
+export function ShareDialog({ target, isOwner, members, link, invites, spaces, spaceId, published, className, label = 'Share' }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   // The server renders the path; the browser adds its origin after mount, so both render the same HTML.
   const [origin, setOrigin] = useState('')
@@ -92,7 +112,7 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, p
 
   return (
     <>
-      <button type="button" className={className} title="Share" onClick={() => ref.current?.showModal()}>{className?.startsWith('tool') ? <><Icon name="share" /><span className="tool-label">Share</span></> : 'Share'}</button>
+      <button type="button" className={className} title={label} onClick={() => ref.current?.showModal()}>{className?.startsWith('tool') ? <><Icon name="share" /><span className="tool-label">{label}</span></> : label}</button>
       <dialog ref={ref} className="share" aria-labelledby="share-title" onClick={(e) => { if (e.target === ref.current) ref.current.close() }}>
         <header className="share-head">
           <div>
@@ -111,13 +131,19 @@ export function ShareDialog({ target, isOwner, members, link, spaces, spaceId, p
                 <Select name="role" options={roleOptions} defaultValue="editor" label="Role" />
                 <Submit fetcher={add} intent="add" busy="Adding…" className="primary">Add</Submit>
               </add.Form>
-              {add.data?.error ? <p className="error small" role="alert">{add.data.error}</p> : <p className="muted small">They need a cowrite account with that email. No email is sent.</p>}
+              {add.data?.error ? <p className="error small" role="alert">{add.data.error}</p> : <p className="muted small">No account yet? You get an invitation link to send them. It works once, for 14 days.</p>}
             </section>
           )}
 
           <ul className="members" aria-label="People with access">
             {members.map((m) => <MemberRow key={m.user_id} m={m} isOwner={isOwner} />)}
           </ul>
+
+          {invites.length > 0 && (
+            <ul className="members" aria-label="Invited">
+              {invites.map((i) => <InviteRow key={i.token} invite={i} url={`${origin}/s/${i.token}`} />)}
+            </ul>
+          )}
 
           {isOwner && (
             <>

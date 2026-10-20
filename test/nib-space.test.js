@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Y from 'yjs'
 import { startApp, until } from './harness.js'
+import { emptyDecisionBrief, saveDecisionBrief } from '../app/lib/decision-brief.ts'
 
 // The harness starts the app with AI_FAKE: "propose" answers a fixed JSON (a task for Bea, dated
 // 2031-05-04, and "Launch in November"), and "check" reports D-1 whenever the text is not empty.
@@ -41,6 +42,12 @@ before(async () => {
     })
   }
   talk('w1', { title: 'Webinar speakers' }, 'Bea will ask two partners to speak at the webinar.')
+  talk('brief-only', { title: 'Welcome plan', kind: 'question' }, 'Opening this discussion.')
+  assert.equal(saveDecisionBrief(room.doc.getMap('discussions').get('brief-only'), {
+    context: 'The orchid handbook gives new teammates one searchable starting point.',
+    options: [{ id: 'orchid', title: 'Orchid handbook', benefits: 'Searchable', tradeoffs: 'Needs an editor' }], recommendation: 'orchid', reasoning: 'Maintain a single practical reference.',
+  }, emptyDecisionBrief()), null)
+  room.doc.getMap('discussions').get('brief-only').set('status', 'closed') // found through search, never through the open-question source list
   talk('q1', { title: 'October or November?', kind: 'question', status: 'answered', answer: 'November, after the security review.', answeredBy: 'x' }, 'Security needs two more weeks.')
   await until(() => room.doc.getMap('discussions').get('q1').get('decisionNumber') === 1, 'D-1 recorded')
   await sleep(ALARM)
@@ -63,6 +70,12 @@ test('asking the space answers from its documents and discussions, and names the
   assert.match(out.text, /\/decision\/q:q1/, 'the decision in force is a source')
   assert.equal((await app.post(`/space/${spaceId}`, dee.cookie, { intent: 'ask', question: 'webinar' })).status, 404, 'a stranger')
   assert.match((await act(`/space/${spaceId}`, eve.cookie, { intent: 'ask', question: 'webinar' })).text, /Nib is off/)
+})
+
+test('a question can find a discussion through the words in its decision brief', async () => {
+  const out = await act(`/space/${spaceId}`, cy.cookie, { intent: 'ask', question: 'orchid handbook' })
+  assert.equal(out.status, 200)
+  assert.match(out.text, /Welcome plan/, 'the brief-only match is a source')
 })
 
 test('next steps map the proposed assignee to a member and keep a valid date; viewers cannot ask', async () => {

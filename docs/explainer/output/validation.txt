@@ -1,0 +1,13 @@
+CoWrite explainer — export validation
+
+Standard export: 60.000 s; H.264; 1920 x 1080; 30 fps; stereo AAC; 48 kHz.
+Measured standard audio: -15.76 LUFS integrated; -1.74 dB true peak.
+Reduced-motion export: full FFmpeg decode completed without errors.
+Ten scenes; 1,800 frames per export.
+Source layout check: no text or stable layers outside their containing frame.
+Font coverage check: no unsupported code points in the rendering source.
+Visual review: storyboard and full-resolution scene frames inspected.
+Chrome playback: metadata, actual video playback and chapter seeking passed.
+Preview: gentler-motion switching preserves time; system reduced-motion
+preference automatically selects the gentle export; no JavaScript page errors.
+Audio is original synthesized music and effects. No voiceover.

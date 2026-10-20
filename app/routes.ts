@@ -2,7 +2,7 @@ import { type RouteConfig, index, layout, route } from '@react-router/dev/routes
 
 export default [
   route('login', 'routes/login.tsx'),
-  route('welcome', 'routes/welcome.tsx'), // after sign-up: name the first space, add people
+  route('welcome', 'routes/welcome.tsx'), // after sign-up: create a first space; sharing stays optional
   // Without an account: "Try it", the guest's documents, and one guest document.
   route('play', 'routes/play.tsx'),
   route('g', 'routes/guest.tsx'),
@@ -10,6 +10,7 @@ export default [
   route('api/auth/*', 'routes/api.auth.ts'),
   route('api/inbox', 'routes/api.inbox.ts'),
   route('api/connections', 'routes/api.connections.ts'),
+  route('api/plan-review', 'routes/api.plan-review.ts'),
   route('api/ai', 'routes/api.ai.ts'),
   route('api/faq', 'routes/api.faq.ts'), // the landing page's "Ask your own question", no account
   route('s/:token', 'routes/share.tsx'),

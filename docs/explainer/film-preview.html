@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoWrite — The thread</title>
+<style>
+@font-face{font-family:Manrope;src:url(assets/Manrope.ttf);font-weight:200 800;font-display:swap}
+@font-face{font-family:Instrument;src:url(assets/InstrumentSerif-Italic.ttf);font-style:italic;font-display:swap}
+:root{color-scheme:dark;font-family:Manrope,system-ui,sans-serif;background:#101216;color:#f6f7fa}
+*{box-sizing:border-box}body{margin:0}main{width:min(1440px,100%);margin:auto;padding:32px 40px 72px}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 0 26px;gap:24px}.brand{font:italic 36px Instrument,Georgia,serif;color:#a8b8ff;text-decoration:none}.edition{font-size:11px;font-weight:650;color:#9ea5b4;letter-spacing:.13em;text-transform:uppercase}
+.screen{position:relative;background:#2d4ff5;box-shadow:0 20px 80px #0005;border-radius:12px;overflow:hidden}video{width:100%;display:block;aspect-ratio:16/9}video:focus-visible{outline:3px solid #8da5ff;outline-offset:-3px}
+.info{display:flex;align-items:start;justify-content:space-between;gap:32px;margin:30px 0 27px}h1{font-size:clamp(25px,3vw,39px);font-weight:650;letter-spacing:-.045em;margin:0 0 10px}.description{font-size:14px;color:#aeb5c2;margin:0;line-height:1.7}.downloads{display:flex;gap:10px;flex-shrink:0}.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:11px 17px;background:#2d4ff5;color:#fff;border:1px solid #2d4ff5;border-radius:7px;text-decoration:none;font-size:13px;font-weight:650}.button.secondary{color:#d7dce7;background:#1b1e25;border-color:#323844}
+.options{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:20px 0;border-block:1px solid #292e38;color:#aeb5c2;font-size:12px}label{display:flex;align-items:center;gap:8px;cursor:pointer}input{accent-color:#7f99ff}a{color:#a8b8ff}.options a{text-decoration:none}.spec{margin-left:auto;color:#858e9f}.chapters{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:10px;margin-top:24px}.chapters button{background:none;border:0;border-top:2px solid #343b4a;color:#aab3c4;text-align:left;padding:12px 0;cursor:pointer;font:500 11px/1.6 Manrope,system-ui;transition:color 150ms,border-color 150ms}.chapters span{display:block;color:#6e788c;font-variant-numeric:tabular-nums}.chapters button[aria-current=true]{color:#fff;border-color:#7590ff}.chapters button[aria-current=true] span{color:#a8b8ff}
+details{margin-top:40px;max-width:900px;font-size:14px;color:#aeb5c2}summary{font-weight:650;cursor:pointer;color:#d9dfe9}details p{line-height:1.85}a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid #a8b8ff;outline-offset:4px}
+@media(max-width:760px){main{padding:20px 16px 48px}.info{display:block}.downloads{margin-top:22px}.chapters{grid-template-columns:repeat(3,1fr)}.spec{width:100%;margin:0}.edition{max-width:150px;text-align:right;line-height:1.8}.screen{border-radius:6px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body><main>
+<header><span class="brand">cowrite</span><span class="edition">The thread · A product film</span></header>
+<div class="screen"><video id="film" controls playsinline preload="metadata" poster="film/poster.jpg" aria-label="CoWrite — The thread. A motion graphics explainer with original music, sound effects and on-screen text."><source src="film/cowrite-the-thread.mp4" type="video/mp4"></video></div>
+<div class="info"><div><h1>From idea to done. Together.</h1><p class="description">One idea becomes a shared draft, a decision, and work that gets done.</p></div><div class="downloads"><a class="button" id="download" href="film/cowrite-the-thread.mp4" download>Download film</a><a class="button secondary" href="film/cowrite-film-source.zip" download>Editable source</a></div></div>
+<div class="options"><label><input type="checkbox" id="gentle"> Gentler motion</label><a href="film/storyboard.jpg">Storyboard</a><a href="preview-v1.html">First cut</a><span class="spec">01:12 &nbsp; / &nbsp; 1080p · 60 fps &nbsp; / &nbsp; Original score + sound design</span></div>
+<nav class="chapters" aria-label="Film chapters">
+<button data-time="0"><span>00:00</span>The idea</button><button data-time="8"><span>00:08</span>Bring it together</button><button data-time="13"><span>00:13</span>Write together</button><button data-time="23"><span>00:23</span>Review</button><button data-time="31"><span>00:31</span>Meet Nib</button><button data-time="39"><span>00:39</span>Keep the why</button><button data-time="49"><span>00:49</span>Keep moving</button><button data-time="57"><span>00:57</span>Share</button><button data-time="64"><span>01:04</span>Together</button>
+</nav>
+<details><summary>Read the story</summary>
+<p>It starts with a good idea. Then the work goes everywhere: the draft, the chat, the task list, the review. Bring it together in CoWrite, a shared space for ideas to become work.</p>
+<p>One draft. Many minds. Write together live. See Ada and Bea’s cursors, and keep Tomi’s feedback attached to the sentence it is about. Suggest a better phrase, accept the change, and sign off on the work.</p>
+<p>Meet Nib, your writing assistant inside the work. Ask for a clearer introduction. Nib proposes a change; you choose whether to accept. AI suggests. You decide.</p>
+<p>A conversation becomes a decision, and a decision becomes a next step. Keep what was decided, who decided, and the discussion behind it. Assign the task to Ada, set Friday as the due date, and keep it linked to the guide.</p>
+<p>Every version is still there to compare and restore. Keep writing offline; edits merge when you reconnect. Publish the finished guide, present it as slides, or export to Word and PDF.</p>
+<p>One idea. All the way through. From idea to done, together. <a href="https://cowrite.cowrite.workers.dev">Try CoWrite</a>.</p>
+</details>
+</main>
+<script>
+const film=document.querySelector('#film'),gentle=document.querySelector('#gentle'),download=document.querySelector('#download'),chapters=[...document.querySelectorAll('[data-time]')];
+let loadId=0;
+function setVersion(reduced){const id=++loadId,t=Number.isFinite(film.currentTime)?film.currentTime:0,playing=!film.paused;gentle.checked=reduced;const path=`film/cowrite-the-thread${reduced?'-gentle':''}.mp4`;film.addEventListener('loadedmetadata',()=>{if(id!==loadId)return;film.currentTime=Math.min(t,film.duration);if(playing)film.play().catch(()=>{})},{once:true});film.src=path;download.href=path;film.load()}
+const preference=matchMedia('(prefers-reduced-motion: reduce)');
+if(preference.matches)setVersion(true);
+preference.addEventListener('change',e=>setVersion(e.matches));
+gentle.addEventListener('change',()=>setVersion(gentle.checked));
+chapters.forEach(button=>button.addEventListener('click',()=>{film.currentTime=+button.dataset.time;film.focus()}));
+film.addEventListener('timeupdate',()=>{const current=chapters.findLast(b=>film.currentTime>=+b.dataset.time);chapters.forEach(b=>b.setAttribute('aria-current',String(b===current)))});
+</script></body></html>

@@ -4,7 +4,7 @@ import { clearPublished, clearSignoff, clearSignoffs, createInMode, getDocument,
 import { docStub } from '~/lib/versions.server'
 import { markCheckPending, type Finding } from '~/lib/nib.server'
 import { canMove, moves, statusLabel, type Move } from '~/lib/status'
-import { createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, markStart, listSpaces, moveDocument, removeMember, revokeShareLink, nibInSpace, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
+import { cancelInvite, createInvite, listInvites, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, markStart, listSpaces, moveDocument, removeMember, revokeShareLink, nibInSpace, roleOnDocument, roleOnSpace, setMember } from '~/lib/access.server'
 import { logEvent, touchEvent } from '~/lib/events.server'
 import { atLeast, type Role } from '~/lib/roles'
 import { colorFor } from '~/lib/color'
@@ -25,14 +25,20 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!role || !document) throw new Response('Not found', { status: 404 })
   const isOwner = role === 'owner'
   if (document.space_id) await markStart('welcome_doc', params.id, 'opened') // a "Get started" step
+  const [members, spaceMembers] = await Promise.all([
+    listMembers('document', params.id),
+    document.space_id ? roleOnSpace(user.id, document.space_id).then((spaceRole) => spaceRole ? listMembers('space', document.space_id!) : []) : [],
+  ])
   return {
     user: { id: user.id, name: user.name, color: user.color },
     nib: user.settings.nib,
     role, document, isOwner,
-    members: await listMembers('document', params.id),
+    members,
+    editorMembers: [...new Map([...spaceMembers, ...members].map((member) => [member.user_id, member])).values()],
     signoffs: await listSignoffs(params.id),
     check: document.check_state ? { state: document.check_state, at: document.check_at, findings: JSON.parse(document.check_findings || '[]') as Finding[] } : null,
     link: isOwner ? await getShareLink('document', params.id) : null,
+    invites: isOwner ? await listInvites('document', params.id) : [],
     spaces: isOwner ? (await listSpaces(user.id)).filter((s) => s.owner_id === user.id) : [],
     error: new URL(request.url).searchParams.get('error'),
   }
@@ -118,7 +124,12 @@ export async function action({ request, params }: Route.ActionArgs) {
   switch (intent) {
     case 'add': {
       const person = await findUserByEmail(String(f.get('email') ?? ''))
-      if (!person) return { error: 'No account has that email. Ask them to sign up first.' }
+      if (!person) {
+        const invite = await createInvite('document', params.id, String(f.get('email') ?? ''), granted, user.id)
+        if ('error' in invite) return invite
+        await logEvent(params.id, user.id, 'shared', `invited someone by email as ${granted}`)
+        return null
+      }
       if (person.id !== user.id) {
         await setMember('document', params.id, person.id, granted)
         await logEvent(params.id, user.id, 'shared', `added ${person.name} as ${granted}`)
@@ -142,6 +153,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       return null
     }
     case 'unpublish': await clearPublished(params.id); await logEvent(params.id, user.id, 'published', 'unpublished it'); return null
+    case 'invite-cancel': await cancelInvite('document', params.id, String(f.get('token'))); return null
     case 'link-create': await createShareLink('document', params.id, granted, user.id); await logEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
     case 'link-revoke': await revokeShareLink('document', params.id); await logEvent(params.id, user.id, 'shared', 'revoked the link'); return null
     case 'move': {
@@ -159,12 +171,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function Doc({ loaderData, actionData, params }: Route.ComponentProps) {
-  const { user, role, document, isOwner, members, link, spaces, nib, signoffs, check } = loaderData
+  const { user, role, document, isOwner, members, editorMembers, link, invites, spaces, nib, signoffs, check } = loaderData
   // A reviewer types too, in suggest mode; the editor enforces that, the server lets reviewers write.
   const canEdit = atLeast(role, 'reviewer')
   return (
     <article className="document" data-kind={document.kind} key={params.id}>
-      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
+      <Editor documentId={params.id} user={user} canEdit={canEdit} canComment={atLeast(role, 'commenter')} canSuggest={canEdit} mustSuggest={role === 'reviewer'} canResolve={atLeast(role, 'editor')} nib={nib} people={editorMembers.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))} kind={document.kind}
         review={document.status === 'review' ? { signoffs, canSign: canEdit } : undefined}
         check={check} canCheck={canEdit && nib}
         crumbs={<div className="doc-where"><nav className="crumbs" aria-label="Breadcrumb"><Link to="/documents"><Icon name="collapse" />Documents</Link></nav><StatusMenu status={document.status} role={role} /></div>}
@@ -173,7 +185,7 @@ export default function Doc({ loaderData, actionData, params }: Route.ComponentP
             <Link className="tool" data-tip="Version history" to={`/doc/${params.id}/history`}><Icon name="history" /><span className="tool-label">History</span></Link>
             <MoreMenu documentId={params.id} />
           </div>
-          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} spaces={spaces} spaceId={document.space_id} published={{ slug: document.published_slug, at: document.published_at }} className="tool share-cta" />
+          <ShareDialog target="document" isOwner={isOwner} members={members} link={link} invites={invites} spaces={spaces} spaceId={document.space_id} published={{ slug: document.published_slug, at: document.published_at }} className="tool share-cta" />
         </>}>
         {atLeast(role, 'editor') ? (
           // The title saves when you leave the field or press Enter. Enter must not add a line break.

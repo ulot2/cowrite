@@ -82,9 +82,13 @@ export const renameDocument = async (id: string, title: string) => {
   await indexTitle(id, title)
 }
 
-// Memberships go with it (ON DELETE CASCADE). Then both objects (text and comments) drop their storage.
+// Memberships go with it (ON DELETE CASCADE); share links and invitations have no foreign key, so
+// they go here. Then both objects (text and comments) drop their storage.
 export const deleteDocument = async (id: string) => {
-  await env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(id).run()
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(id),
+    env.DB.prepare("DELETE FROM share_links WHERE target_type = 'document' AND target_id = ?").bind(id),
+  ])
   await unindex(id)
   await unindexWork(id)
   for (const room of [id, `${id}:threads`]) await env.DOC.get(env.DOC.idFromName(room)).wipe()
