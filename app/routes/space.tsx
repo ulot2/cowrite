@@ -26,6 +26,7 @@ import { Confirm } from '~/components/confirm'
 import { NeedsAttention, day, today, type Waiting } from '~/components/attention'
 import { ShareDialog } from '~/components/share-dialog'
 import { SpaceMark } from '~/components/space-mark'
+import { spaceSections, spaceTab } from '~/lib/space-navigation'
 import type { Route } from './+types/space'
 
 const SpaceRoom = lazy(() => import('~/components/space-room.client').then((m) => ({ default: m.SpaceRoom })))
@@ -232,8 +233,14 @@ function NibCard({ saved, nib, canRefresh }: { saved: SavedState; nib: boolean; 
   )
 }
 
-// A space made from the welcome steps: five first steps. Each is ticked by doing it, not by the card.
+// Three ways to begin. Each is ticked by doing it, not by the card.
 type Step = { title: string; hint: string; done: boolean; act?: React.ReactNode }
+function StartDocument() {
+  const create = useFetcher()
+  const pending = create.state !== 'idle'
+  return <create.Form method="post"><input type="hidden" name="intent" value="create" /><input type="hidden" name="mode" value="write" /><button className="small" disabled={pending} aria-busy={pending}>{pending ? 'Creating…' : 'Write a document'}</button></create.Form>
+}
+
 function GetStarted({ steps }: { steps: Step[] }) {
   const hide = useFetcher()
   const done = steps.filter((s) => s.done).length
@@ -243,7 +250,7 @@ function GetStarted({ steps }: { steps: Step[] }) {
       <header>
         <div>
           <h2 id="start-title">Get started</h2>
-          <p className="muted"><strong>{`${done} of ${steps.length} done.`}</strong> Each step ticks itself when you do it.</p>
+          <p className="muted">Choose where to begin. Each step ticks itself when you do it.</p>
         </div>
         <span className="steps-bar" aria-hidden="true">{steps.map((s, i) => <i key={i} data-on={s.done || undefined} />)}</span>
         <hide.Form method="post"><input type="hidden" name="intent" value="hide-start" /><button className="ghost small">Hide</button></hide.Form>
@@ -261,13 +268,13 @@ function GetStarted({ steps }: { steps: Step[] }) {
   )
 }
 
-const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Discussions'], ['documents', 'Documents'], ['decisions', 'Decisions'], ['tasks', 'Tasks']] as const
+const tabs = spaceSections.map(([tab, label]) => [tab, label] as const)
 type Tab = (typeof tabs)[number][0]
 
 export default function Space({ loaderData }: Route.ComponentProps) {
   const { owner, me, nib, state, space, role, isOwner, canAdd, documents, members, link, invites, events, decisions, questions, discussions, tasks } = loaderData
   const [params, setParams] = useSearchParams()
-  const tab = (tabs.some(([t]) => t === params.get('tab')) ? params.get('tab') : 'overview') as Tab
+  const tab = spaceTab(params.get('tab'))
   const go = (t: Tab, d?: string | null) => setParams(d ? { tab: t, d } : t === 'overview' ? {} : { tab: t }, { preventScrollReset: true })
   const people = members.map((m) => ({ id: m.user_id, name: m.name, color: colorFor(m.user_id, m.color), image: m.image }))
   const [mounted, setMounted] = useState(false)
@@ -296,17 +303,13 @@ export default function Space({ loaderData }: Route.ComponentProps) {
   const [allDecisions, setAllDecisions] = useState(false)
   const empty = discussions.length === 0 && documents.length === 0 && !events.some((e) => e.type === 'idea')
   const started = space.start_done.split(',')
-  const others = members.filter((m) => m.user_id !== me.id).map((m) => m.name.split(' ')[0])
   const steps: Step[] = [
-    { title: 'Name your space', hint: others.length ? `${space.name}, with ${others.slice(0, 3).join(' and ')}${others.length > 3 ? ` and ${others.length - 3} more` : ''}.` : `${space.name}.`, done: true },
-    ...(space.welcome_doc ? [{ title: 'Open the welcome document', hint: 'It is in this space, and everything in it works.', done: started.includes('opened') || !documents.some((d) => d.id === space.welcome_doc),
-      act: <Link className="button small" to={`/doc/${space.welcome_doc}`}>Open</Link> }] : []),
     { title: 'Add an idea', hint: 'Put a thought on the board before it is a plan.', done: events.some((e) => e.type === 'idea'),
-      act: <button type="button" className="small" onClick={() => go('ideas')}>Open Ideas</button> },
-    { title: 'Ask a question that needs a decision', hint: 'Say who decides and by when. It waits on this page until it is answered.', done: discussions.some((d) => d.kind === 'question') || decisions.some((d) => d.source_type === 'discussion'),
-      act: <button type="button" className="small" onClick={() => go('discussions')}>Ask</button> },
-    ...(nib ? [{ title: 'Ask Nib about the space', hint: 'Try “What is still open?” once there is something to read.', done: started.includes('asked'),
-      act: <button type="button" className="small" onClick={() => document.querySelector<HTMLInputElement>('.ask-space-form input')?.focus()}>Try it</button> }] : []),
+      act: <button type="button" className="small" onClick={() => go('ideas')}>Add an idea</button> },
+    { title: 'Start a discussion', hint: 'Talk through a question together, and decide what comes next.', done: discussions.length > 0,
+      act: <button type="button" className="small" onClick={() => go('discussions')}>Start a discussion</button> },
+    ...(canAdd ? [{ title: 'Write a document', hint: 'Start a draft, a brief, or a plan. Every member can find it here.', done: documents.length > 0,
+      act: <StartDocument /> }] : []),
   ]
   // Spaces made from the welcome steps keep the card until it is done or hidden; others, while empty.
   const showStart = (!!space.welcome_doc || empty) && !started.includes('hidden') && atLeast(role, 'commenter')
@@ -350,7 +353,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
               <p>To come back, ask the owner to add you again.</p>
             </Confirm>
           )}
-          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} invites={invites} className="tool" />
+          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} invites={invites} className={isOwner && empty ? 'tool space-add-people' : 'tool'} label={isOwner && empty ? 'Add people' : 'Share'} />
         </div>
       </div>
       <header className="page-title">
@@ -374,6 +377,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
       {tab === 'overview' && (empty && !atLeast(role, 'commenter') ? <p className="attention-empty">Nothing here yet. The people who can edit this space have not started.</p> : (
         <div className="overview">
           {showStart && <GetStarted steps={steps} />}
+          {showStart && isOwner && <p className="start-sharing-note">Working with others? Use {empty ? 'Add people' : 'Share'} above. No email is sent; copy an invitation link to send yourself.</p>}
           <NeedsAttention rows={waiting} me={me.id} people={people} />
           {space.nib !== 0 && <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />}
           <Activity events={events} filtered limit={5} title="Latest" />

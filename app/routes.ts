@@ -2,7 +2,7 @@ import { type RouteConfig, index, layout, route } from '@react-router/dev/routes
 
 export default [
   route('login', 'routes/login.tsx'),
-  route('welcome', 'routes/welcome.tsx'), // after sign-up: name the first space, add people
+  route('welcome', 'routes/welcome.tsx'), // after sign-up: create a first space; sharing stays optional
   // Without an account: "Try it", the guest's documents, and one guest document.
   route('play', 'routes/play.tsx'),
   route('g', 'routes/guest.tsx'),

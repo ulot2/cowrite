@@ -38,11 +38,12 @@ export const getSpace = (id: string) => env.DB.prepare('SELECT * FROM spaces WHE
 export const listSpaces = async (userId: string) =>
   (await env.DB.prepare('SELECT s.* FROM spaces s JOIN space_memberships m ON m.space_id = s.id WHERE m.user_id = ? ORDER BY s.name').bind(userId).all<SpaceRow>()).results
 
-export const createSpace = async (userId: string, name: string) => {
+export const createSpace = async (userId: string, name: string, description = '') => {
   const id = crypto.randomUUID()
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO spaces (id, name, owner_id, visibility, created_at) VALUES (?, ?, ?, ?, ?)').bind(id, name, userId, 'private', Date.now()),
+    env.DB.prepare('INSERT INTO spaces (id, name, description, owner_id, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id, name, description, userId, 'private', Date.now()),
     env.DB.prepare('INSERT INTO space_memberships (space_id, user_id, role) VALUES (?, ?, ?)').bind(id, userId, 'owner'),
+    env.DB.prepare('INSERT INTO events (space_id, actor_id, type, text, at) VALUES (?, ?, ?, ?, ?)').bind(id, userId, 'space', `created the space “${name}”`, Date.now()),
   ])
   return id
 }

@@ -20,7 +20,7 @@
   --radius: 8px;
   --radius-lg: 12px;
   --topbar: 3.5rem;
-  --sidebar: 14rem;
+  --sidebar: 15.5rem;
   --rail: 3.5rem;
   --measure: 42rem;
   --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -415,6 +415,7 @@ html[data-sidebar="collapsed"] .shell {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -458,6 +459,7 @@ html[data-sidebar="collapsed"] .shell {
   margin: 0 -0.5rem 0.75rem;
   padding: 0 0.625rem 0 0.875rem;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 /* The logo in the sidebar is not a nav row: no gap, no row weight, no "current page" box. */
 .side-head .brand {
@@ -475,7 +477,7 @@ html[data-sidebar="collapsed"] .shell {
   padding: 0.35rem;
   border: 0;
 }
-html[data-sidebar="collapsed"] .sidebar span {
+html[data-sidebar="collapsed"] .sidebar :is(.side-label, .logo-rest) {
   display: none;
 }
 html[data-sidebar="collapsed"] .side-head {
@@ -531,7 +533,7 @@ html[data-sidebar="collapsed"] .sidebar a {
   .sidebar[data-open="true"] {
     transform: none;
   }
-  html[data-sidebar="collapsed"] .sidebar span {
+  html[data-sidebar="collapsed"] .sidebar :is(.side-label, .logo-rest) {
     display: inline;
   }
   html[data-sidebar="collapsed"] .side-head {
@@ -1019,34 +1021,76 @@ input.title:focus-visible {
   animation: rise var(--t-base) var(--ease-out);
 }
 
-/* Sidebar: the new-space form and the space links. */
-.side-heading {
-  margin: 0.75rem 0 0.125rem;
-  padding: 0 0.625rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
-.new-space {
+/* Personal navigation stays fixed while a growing list of spaces scrolls independently. */
+.side-personal { flex: none; }
+.side-spaces-head {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem 0.25rem;
+  justify-content: space-between;
+  flex: none;
+  margin-top: 1.5rem;
+  padding: 0 0.25rem 0.4rem 0.625rem;
 }
-.new-space input {
-  padding: 0.35rem 0.6rem;
-  font-size: 0.875rem;
-  background: var(--tint);
-  border-color: transparent;
+.side-heading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--fg-muted);
 }
-.new-space .ghost {
-  padding: 0.35rem;
+.side-create { width: 1.875rem; height: 1.875rem; padding: 0; }
+.side-spaces-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
-html[data-sidebar="collapsed"] .side-heading,
-html[data-sidebar="collapsed"] .new-space {
-  display: none;
+.side-space-group + .side-space-group { margin-top: 0.8rem; }
+.side-group-label { margin: 0.35rem 0 0.3rem; padding: 0 0.625rem; font-size: 0.6875rem; color: var(--fg-muted); }
+.side-space-row { display: flex; align-items: center; position: relative; }
+.side-space-row > a { flex: 1; min-width: 0; padding-right: 2rem; }
+.side-label { overflow: hidden; text-overflow: ellipsis; }
+.side-space-row .space-mark { flex: none; }
+.side-pin {
+  position: absolute;
+  right: 0.125rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  opacity: 0;
+}
+.side-pin .icon { width: 0.875rem; height: 0.875rem; }
+.side-space-row:hover .side-pin, .side-space-row:focus-within .side-pin, .side-pin[aria-pressed="true"] { opacity: 1; }
+.side-pin[aria-pressed="true"] { color: var(--accent); }
+.side-space-sections { margin: 0.25rem 0 0.65rem 1.125rem; padding-left: 0.55rem; border-left: 1px solid var(--border); }
+.sidebar .side-space-sections a { gap: 0.5rem; padding: 0.4rem 0.55rem; font-size: 0.8125rem; }
+.side-space-sections .icon { width: 0.95rem; height: 0.95rem; }
+.sidebar .side-space-sections a.active { color: var(--accent); background: var(--accent-soft); }
+.side-empty { padding: 0.25rem 0.625rem; color: var(--fg-muted); font-size: 0.8125rem; }
+.side-empty p { margin: 0 0 0.5rem; }
+.side-empty button.ghost { padding: 0; white-space: normal; text-align: left; justify-content: flex-start; color: var(--accent); }
+.side-close { display: none; }
+.sidebar .side-settings { flex-shrink: 0; margin-top: 0.65rem; }
+@media (min-width: 768px) {
+  html[data-sidebar="collapsed"] .sidebar :is(.side-heading, .side-group-label, .side-pin, .side-space-sections, .side-empty) { display: none; }
+  html[data-sidebar="collapsed"] .side-spaces-head { justify-content: center; padding: 0; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.65rem; }
+  html[data-sidebar="collapsed"] .side-space-row > a { padding: 0.5rem; }
+  html[data-sidebar="collapsed"] .side-space-group + .side-space-group { margin-top: 0; }
+}
+@media (hover: none) { .side-pin { opacity: 1; } }
+@media (max-width: 767px) {
+  .side-close { display: inline-flex; width: 2.5rem; height: 2.5rem; padding: 0; }
+  .sidebar { height: 100dvh; width: min(19rem, 88vw); }
+  .sidebar a { min-height: 2.75rem; }
+  html[data-sidebar="collapsed"] .sidebar a { justify-content: flex-start; padding: 0.5rem 0.625rem; }
+  .side-head { margin-bottom: 0.5rem; }
+  html[data-sidebar="collapsed"] .side-head { justify-content: space-between; height: var(--topbar); padding: 0 0.625rem 0 0.875rem; }
+  .side-pin { opacity: 1; width: 2.5rem; height: 2.5rem; }
+  .side-space-row > a { padding-right: 2.75rem; }
+  html[data-sidebar="collapsed"] .side-space-row > a { padding-right: 2.75rem; }
+  .side-create { width: 2.5rem; height: 2.5rem; }
 }
 .head-actions {
   display: flex;
@@ -6528,3 +6572,48 @@ a.tile:hover {
 .plan-review-history li summary { padding-block: .5rem; cursor: pointer; color: var(--fg-muted); }
 .plan-review-error { margin-top: 1rem; }
 @container (max-width: 500px) { .plan-review-comparison { grid-template-columns: minmax(0, 1fr); gap: .5rem; } .plan-review-form .form-actions { flex-wrap: wrap; } }
+
+/* A short, shared space form: a dialog on desktop and a sheet on phones. */
+.create-space-dialog {
+  width: min(30rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 1.75rem;
+  overflow-y: auto;
+  border: 0;
+  border-radius: var(--radius-lg);
+  color: var(--fg);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+.create-space-dialog[open] { animation: rise var(--t-base) var(--ease-out); }
+.create-space-dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+.create-space-form { display: grid; gap: 1.25rem; }
+.create-space-form header { margin-bottom: 0.25rem; }
+.create-space-form h2 { font-size: 1.5rem; }
+.create-space-form header p { margin: 0.5rem 0 0; color: var(--fg-muted); line-height: 1.6; }
+.create-space-form label { display: grid; gap: 0.5rem; font-weight: 600; }
+.create-space-form input { min-height: 2.75rem; font-weight: 400; }
+.create-space-form input[aria-invalid="true"] { border-color: var(--danger); }
+.field-optional { margin-left: 0.35rem; color: var(--fg-muted); font-size: 0.8125rem; font-weight: 400; }
+.create-space-form .space-privacy { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--fg-muted); font-size: 0.8125rem; }
+.create-space-form .error { margin: 0; }
+.create-space-form footer { display: flex; justify-content: flex-end; gap: 0.625rem; padding-top: 0.5rem; }
+.create-space-form footer button { min-height: 2.75rem; }
+.space-onboarding-body { width: min(100%, 32rem); margin: auto; padding: 2rem 1.5rem 4rem; }
+.space-onboarding-body > p:first-child { margin: 0 0 1rem; }
+.space-onboarding-body > p:last-child { margin: 1.5rem 0 0; }
+.space-onboarding-body h1 { font-size: clamp(1.8rem, 4vw, 2.25rem); }
+.space-onboarding-body .create-space-form footer { justify-content: flex-start; }
+.start-card li > form { flex: none; }
+.start-sharing-note { margin: 0; color: var(--fg-muted); font-size: 0.8125rem; max-width: 65ch; }
+@media (max-width: 767px) {
+  .create-space-dialog { width: 100%; max-width: none; max-height: 90dvh; margin: auto 0 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 1.5rem 1.25rem max(1.5rem, env(safe-area-inset-bottom)); }
+  .create-space-form footer > button { flex: 1; }
+}
+.doc-tools .space-add-people .tool-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+@media (max-width: 600px) {
+  .start-card li { display: grid; grid-template-columns: 1.35rem minmax(0, 1fr); align-items: start; gap: 0.5rem 0.85rem; padding-block: 1rem; }
+  .start-tick { margin-top: 0.15rem; }
+  .start-card li > :is(button, a, form) { grid-column: 2; justify-self: start; margin-left: 0; }
+}

@@ -23,6 +23,7 @@ type Props = {
   spaceId?: string | null
   published?: { slug: string | null; at: number | null } // documents only: the public page
   className?: string // "tool" on the document page: icon plus label, icon only on phones
+  label?: string
 }
 
 type Fetcher = FetcherWithComponents<{ error?: string } | null>
@@ -92,7 +93,7 @@ function MemberRow({ m, isOwner }: { m: Member; isOwner: boolean }) {
 }
 
 // A native <dialog>: the browser handles focus, Escape, and the backdrop. A sheet from the bottom on phones.
-export function ShareDialog({ target, isOwner, members, link, invites, spaces, spaceId, published, className }: Props) {
+export function ShareDialog({ target, isOwner, members, link, invites, spaces, spaceId, published, className, label = 'Share' }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   // The server renders the path; the browser adds its origin after mount, so both render the same HTML.
   const [origin, setOrigin] = useState('')
@@ -111,7 +112,7 @@ export function ShareDialog({ target, isOwner, members, link, invites, spaces, s
 
   return (
     <>
-      <button type="button" className={className} title="Share" onClick={() => ref.current?.showModal()}>{className?.startsWith('tool') ? <><Icon name="share" /><span className="tool-label">Share</span></> : 'Share'}</button>
+      <button type="button" className={className} title={label} onClick={() => ref.current?.showModal()}>{className?.startsWith('tool') ? <><Icon name="share" /><span className="tool-label">{label}</span></> : label}</button>
       <dialog ref={ref} className="share" aria-labelledby="share-title" onClick={(e) => { if (e.target === ref.current) ref.current.close() }}>
         <header className="share-head">
           <div>

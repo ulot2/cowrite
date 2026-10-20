@@ -2,9 +2,9 @@ import { env } from 'cloudflare:workers'
 import { Link, redirect } from 'react-router'
 import { requireUser } from '~/lib/auth.server'
 import { createInMode, listDocuments, reviewQueue, type Mode } from '~/lib/db.server'
-import { createSpace } from '~/lib/access.server'
+import { createSpaceFromForm } from '~/lib/create-space.server'
 import { claimGuestDocuments, clearGuestCookie } from '~/lib/guest.server'
-import { listInbox, logEvent, logSpaceEvent } from '~/lib/events.server'
+import { listInbox, logEvent } from '~/lib/events.server'
 import { listTasks } from '~/lib/work.server'
 import { pendingPlanReviews } from '~/lib/plan-attention.server'
 import { statusLabel, type Status } from '~/lib/status'
@@ -101,11 +101,7 @@ export async function action({ request }: Route.ActionArgs) {
   const f = await request.formData()
   const intent = f.get('intent')
   if (intent === 'new-space') {
-    const name = String(f.get('name') ?? '').trim().slice(0, 60)
-    if (!name) return null
-    const id = await createSpace(user.id, name)
-    await logSpaceEvent(id, user.id, 'space', `created the space “${name}”`)
-    throw redirect(`/space/${id}`)
+    return createSpaceFromForm(user.id, f)
   }
   if (intent !== 'create') return null
   const { id, title } = await createInMode(user.id, String(f.get('mode') ?? 'write') as Mode, null, String(f.get('title') ?? '').trim().slice(0, 120))

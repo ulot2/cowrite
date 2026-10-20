@@ -10,6 +10,7 @@ const paths: Record<string, string> = {
   space: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   share: 'M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 15V4M8 8l4-4 4 4',
   chevron: 'M7 10l5 5 5-5',
+  pin: 'M9 3h6l-1 6 4 4v2H6v-2l4-4zM12 15v6',
   check: 'M5 12l5 5L20 7',
   close: 'M6 6l12 12M18 6L6 18',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
