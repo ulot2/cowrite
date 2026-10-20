@@ -17,6 +17,7 @@ import { decisionRecordings } from '~/lib/discussions.server'
 import { createDecisionPlan, linkedDecisionPlans, planPeople } from '~/lib/decision-plans.server'
 import { decisionPlanVersion } from '~/lib/decision-plan'
 import { DecisionPlan } from '~/components/decision-plan'
+import { currentPlanDecision } from '~/lib/plan-reviews.server'
 import type { Route } from './+types/decision'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: loaderData ? `D-${loaderData.decision.number}: ${loaderData.decision.text} · cowrite` : 'Decision · cowrite' }]
@@ -36,6 +37,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     linkedDecisionPlans(user.id, decision.id),
     canEdit ? planPeople(decision) : [],
   ])
+  const reviewTarget = plans.length ? await currentPlanDecision(user.id, decision) : decision
 
   // Why: the discussion that produced it, read from the space's room.
   const discussion = decision.source_type === 'discussion' && decision.space_id && decision.source_id
@@ -45,7 +47,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     decision,
     recordings,
-    plans, planMembers,
+    plans, planMembers, reviewTarget: reviewTarget ? { id: reviewTarget.id, version: decisionPlanVersion(reviewTarget) } : null,
     canEdit,
     discussion: discussion && { ...discussion, owner: discussion.owner ? look(discussion.owner) : null, posts: discussion.posts.map((p) => ({ ...p, who: look(p.userId) })) },
     choices: canEdit ? await replaceableDecisions(decision) : [],
@@ -129,6 +131,7 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
       {d.status === 'reopened' && <p className="muted small">This question is open again. The last recorded choice and its brief are preserved below until another decision is recorded.</p>}
 
       <DecisionPlan key={`plan:${d.id}`} source={{ decisionId: d.id, number: d.number, text: d.text, choice: d.outcome || d.text, reasoning: recording?.reasoning ?? '', version: decisionPlanVersion(d) }}
+        reviewTarget={loaderData.reviewTarget}
         people={planMembers} plans={plans} canCreate={canEdit && d.status === 'decided' && !replaced} destination={d.space_id ? `in ${d.space_name || 'this space'}` : 'with the source document’s members'} />
 
       <section className="chain" aria-label="Related decisions">

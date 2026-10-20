@@ -3,15 +3,18 @@ import { Link, useFetcher, useRevalidator } from 'react-router'
 import { initialPlanDraft, MAX_PLAN_TASKS, readPlanDraft, type LinkedPlan, type PlanDraft, type PlanPerson, type PlanSource, type PlanTask } from '~/lib/decision-plan'
 import { Icon } from './icon'
 import { Select } from './select'
+import { PlanReviewPanel } from './plan-review'
 
 // THESIS: the decision becomes reviewable work before anyone gets an assignment.
 // OWN-WORLD: Studio's reading column, flat task rows and custom owner dropdowns.
 // STORY: review the goal, name the work, choose owners/dates, then create.
 // FIRST VIEWPORT: plans and progress follow the recorded outcome and reasoning.
 // FORM: inline draft with explicit confirmation, retained errors and Cancel.
-export function DecisionPlan({ source, people, plans, canCreate, destination }: {
-  source: PlanSource; people: PlanPerson[]; plans: LinkedPlan[]; canCreate: boolean; destination: string
+export function DecisionPlan({ source, reviewTarget, people, plans, canCreate, destination }: {
+  source: PlanSource; reviewTarget: { id: string; version: string } | null; people: PlanPerson[]; plans: LinkedPlan[]; canCreate: boolean; destination: string
 }) {
+  const [reviewing, setReviewing] = useState<string | null>(null)
+  const reviewTriggers = useRef(new Map<string, HTMLButtonElement>())
   const [draft, setDraft] = useState<PlanDraft | null>(null)
   const [error, setError] = useState('')
   const [request, setRequest] = useState('')
@@ -29,10 +32,15 @@ export function DecisionPlan({ source, people, plans, canCreate, destination }: 
     <div className="brief-heading"><div><h2>Put this decision into action</h2><p className="muted small">A plan keeps the goal, the work and the decision together.</p></div>
       {!draft && canCreate && <button ref={trigger} type="button" className="primary" onClick={begin}><Icon name="plan" />{plans.length ? 'Create another plan' : 'Create plan'}</button>}
     </div>
-    {plans.length > 0 && <><ul className="decision-plans">{plans.map((plan) => <li key={plan.id}>
-      <div><Link to={`/doc/${plan.id}`}><Icon name="plan" /><strong>{plan.title}</strong></Link>{plan.version !== source.version && <span className="plan-earlier small">From an earlier version · review against the current decision</span>}</div>
+    {plans.length > 0 && <><ul className="decision-plans">{plans.map((plan) => {
+      const stale = !reviewTarget || (plan.reviewedDecisionId || plan.decisionId) !== reviewTarget.id || (plan.reviewedVersion || plan.version) !== reviewTarget.version
+      return <li key={plan.id}>
+      <div><Link to={`/doc/${plan.id}`}><Icon name="plan" /><strong>{plan.title}</strong></Link>{stale ? <span className="plan-earlier small">From an earlier version · needs review</span> : plan.reviewedAt && <span className="plan-earlier small">Reviewed by {plan.reviewedBy || 'a former member'} · {new Date(plan.reviewedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>}
+        <button ref={(node) => { if (node) reviewTriggers.current.set(plan.id, node); else reviewTriggers.current.delete(plan.id) }} type="button" className="ghost small plan-review-trigger" aria-expanded={reviewing === plan.id} aria-controls={`plan-review-${plan.id}`} onClick={() => setReviewing(reviewing === plan.id ? null : plan.id)}>{stale ? 'Review decision change' : plan.reviewedAt ? 'View review' : 'Review plan basis'}</button>
+      </div>
       <div className="plan-progress"><span className="muted small">{plan.total ? `${plan.done} of ${plan.total} tasks done` : 'No tasks in this plan'}</span>{plan.total > 0 && <progress value={plan.done} max={plan.total} aria-label={`${plan.title}: ${plan.done} of ${plan.total} tasks done`} />}</div>
-    </li>)}</ul><button className="ghost small" type="button" disabled={revalidator.state !== 'idle'} onClick={() => revalidator.revalidate()}><Icon name="history" />Refresh progress</button></>}
+      {reviewing === plan.id && <PlanReviewPanel decisionId={plan.decisionId} planId={plan.id} onClose={() => { setReviewing(null); requestAnimationFrame(() => reviewTriggers.current.get(plan.id)?.focus()) }} />}
+    </li>})}</ul><button className="ghost small" type="button" disabled={revalidator.state !== 'idle'} onClick={() => revalidator.revalidate()}><Icon name="history" />Refresh progress</button></>}
     {draft && <fetcher.Form method="post" className="decision-plan-form" aria-label="Review plan draft" onSubmit={(event) => {
       event.preventDefault()
       if (busy) return

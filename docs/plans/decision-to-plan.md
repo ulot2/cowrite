@@ -14,6 +14,8 @@ The decision lists accessible plans with completed/total counts from the plan's 
 
 This increment adds no milestones, dependency scheduling, AI generation, automatic assignments or separate planning subsystem. Progress follows normal task indexing; it is not continuous polling.
 
+Affected plans now have an explicit comparison and confirmation flow; see [Review affected plans](plan-review.md).
+
 ## Validation
 
 Typecheck and production build pass. The plan/decision/connected-work run passed 26 cases; the final plan/access/sharing run passed 16, including eight plan cases and eight sharing cases (35 distinct cases across both runs). Coverage includes simultaneous and repeated confirmation, invalid/stale drafts, the live indexing window, real task completion and later task additions, source revisions, standalone ownership, inherited owners and a private space roster boundary.

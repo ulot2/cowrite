@@ -1,19 +1,34 @@
 import { env } from 'cloudflare:workers'
-import { listMembers, roleOnDocument } from './access.server'
+import { listMembers, roleOnDocument, roleOnSpace } from './access.server'
 import { docStub } from './versions.server'
 import { decisionPlanVersion, readPlanDraft, validPlanId, type LinkedPlan, type PlanSeed } from './decision-plan'
-import type { DecisionRecord } from './work.server'
+import { getDecision, type DecisionRecord } from './work.server'
 
 export async function planPeople(decision: DecisionRecord) {
   return (await listMembers(decision.space_id ? 'space' : 'document', decision.space_id || decision.document_id)).map((person) => ({ id: person.user_id, name: person.name }))
 }
 
 export async function linkedDecisionPlans(user: string, decisionId: string): Promise<LinkedPlan[]> {
-  const rows = (await env.DB.prepare(`SELECT p.document_id AS id, d.title, p.source_version AS version, COUNT(t.id) AS total, COALESCE(SUM(t.done), 0) AS done
+  const rows = (await env.DB.prepare(`WITH RECURSIVE ancestors(id, depth) AS (
+    SELECT ?1, 0 UNION ALL SELECT d.supersedes, a.depth + 1 FROM decisions d JOIN ancestors a ON d.id = a.id WHERE d.supersedes IS NOT NULL AND a.depth < 99
+    ) SELECT p.document_id AS id, d.title, p.decision_id AS decisionId, p.source_version AS version, COUNT(t.id) AS total, COALESCE(SUM(t.done), 0) AS done,
+    r.source_version AS reviewedVersion, r.decision_id AS reviewedDecisionId, u.name AS reviewedBy, r.reviewed_at AS reviewedAt
     FROM decision_plans p JOIN documents d ON d.id = p.document_id LEFT JOIN tasks t ON t.document_id = d.id
-    WHERE p.decision_id = ? GROUP BY p.document_id ORDER BY p.created_at DESC`).bind(decisionId).all<LinkedPlan>()).results
-  const access = await Promise.all(rows.map((row) => roleOnDocument(user, row.id)))
-  return rows.filter((_, index) => access[index])
+    LEFT JOIN decision_plan_reviews r ON r.sequence = (SELECT MAX(sequence) FROM decision_plan_reviews WHERE document_id = p.document_id)
+    LEFT JOIN "user" u ON u.id = r.reviewed_by
+    WHERE p.decision_id IN (SELECT id FROM ancestors) GROUP BY p.document_id ORDER BY p.created_at DESC`).bind(decisionId).all<LinkedPlan>()).results
+  const access = await Promise.all(rows.map(async (row) => {
+    if (!await roleOnDocument(user, row.id)) return false
+    if (row.decisionId === decisionId) return true
+    const origin = await getDecision(row.decisionId)
+    return origin && await (origin.space_id ? roleOnSpace(user, origin.space_id) : roleOnDocument(user, origin.document_id))
+  }))
+  return Promise.all(rows.filter((_, index) => access[index]).map(async (row) => {
+    if (!row.reviewedDecisionId || row.reviewedDecisionId === decisionId) return row
+    const reviewed = await getDecision(row.reviewedDecisionId)
+    const visible = reviewed && await (reviewed.space_id ? roleOnSpace(user, reviewed.space_id) : roleOnDocument(user, reviewed.document_id))
+    return visible ? row : { ...row, reviewedVersion: null, reviewedDecisionId: null, reviewedBy: null, reviewedAt: null }
+  }))
 }
 
 // The same confirmation always addresses the same object, even after a network retry.

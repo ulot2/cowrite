@@ -3,7 +3,15 @@ export type PlanDraft = { title: string; goal: string; why: string; tasks: PlanT
 export type PlanPerson = { id: string; name: string }
 export type PlanSource = { decisionId: string; number: number; text: string; choice: string; reasoning: string; version: string }
 export type PlanSeed = { source: PlanSource; draft: PlanDraft; people: PlanPerson[] }
-export type LinkedPlan = { id: string; title: string; total: number; done: number; version: string }
+export type LinkedPlan = {
+  id: string; title: string; total: number; done: number; version: string; decisionId: string
+  reviewedVersion: string | null; reviewedDecisionId: string | null; reviewedBy: string | null; reviewedAt: number | null
+}
+export type PlanReviewEntry = { sequence: number; source: PlanSource; outcome: 'unchanged' | 'updated'; note: string; by: string; at: number }
+export type PlanReview = {
+  plan: { id: string; title: string }; baseline: PlanSource; current: PlanSource
+  sequence: number; history: PlanReviewEntry[]; canConfirm: boolean; blocked: string | null; currentReviewed: boolean
+}
 export const MAX_PLAN_TASKS = 12
 export const validPlanId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 
