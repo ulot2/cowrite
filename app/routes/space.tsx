@@ -7,7 +7,7 @@ import { askSpace, proposeNextSteps } from '~/lib/nib.server'
 import { AiLimit, MAX_INSTRUCTION } from '~/lib/ai.server'
 import type { Source } from '~/lib/search.server'
 import { getSavedState, markStatePending, REFRESH_EVERY, spaceState, stateDue, type SavedState } from '~/lib/state.server'
-import { canAddDocs, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember } from '~/lib/access.server'
+import { cancelInvite, createInvite, listInvites, canAddDocs, markStart, createShareLink, findUser, findUserByEmail, getShareLink, getSpace, listMembers, removeMember, revokeShareLink, roleOnSpace, setMember } from '~/lib/access.server'
 import { listSpaceDecisions } from '~/lib/work.server'
 import { listOpenQuestions, listRecentDiscussions, listSpaceTasks } from '~/lib/discussions.server'
 import { atLeast } from '~/lib/roles'
@@ -62,6 +62,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     documents: await listSpaceDocuments(params.id, role),
     members: await listMembers('space', params.id),
     link: isOwner ? await getShareLink('space', params.id) : null,
+    invites: isOwner ? await listInvites('space', params.id) : [],
     events: await listSpaceEvents(params.id),
     decisions: await listSpaceDecisions(params.id),
   }
@@ -143,7 +144,12 @@ export async function action({ request, params }: Route.ActionArgs) {
   switch (intent) {
     case 'add': {
       const person = await findUserByEmail(String(f.get('email') ?? ''))
-      if (!person) return { error: 'No account has that email. Ask them to sign up first.' }
+      if (!person) {
+        const invite = await createInvite('space', params.id, String(f.get('email') ?? ''), granted, user.id)
+        if ('error' in invite) return invite
+        await logSpaceEvent(params.id, user.id, 'shared', `invited someone by email as ${granted}`)
+        return null
+      }
       if (person.id !== user.id) {
         await setMember('space', params.id, person.id, granted)
         await logSpaceEvent(params.id, user.id, 'shared', `added ${person.name} as ${granted}`)
@@ -158,6 +164,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       await logSpaceEvent(params.id, user.id, 'shared', intent === 'role' ? `made ${person.name} ${granted}` : `removed ${person.name}`)
       return null
     }
+    case 'invite-cancel': await cancelInvite('space', params.id, String(f.get('token'))); return null
     case 'link-create': await createShareLink('space', params.id, granted, user.id); await logSpaceEvent(params.id, user.id, 'shared', `created a ${granted} link`); return null
     case 'link-revoke': await revokeShareLink('space', params.id); await logSpaceEvent(params.id, user.id, 'shared', 'revoked the link'); return null
   }
@@ -255,7 +262,7 @@ const tabs = [['overview', 'Overview'], ['ideas', 'Ideas'], ['discussions', 'Dis
 type Tab = (typeof tabs)[number][0]
 
 export default function Space({ loaderData }: Route.ComponentProps) {
-  const { owner, me, nib, state, space, role, isOwner, canAdd, documents, members, link, events, decisions, questions, discussions, tasks } = loaderData
+  const { owner, me, nib, state, space, role, isOwner, canAdd, documents, members, link, invites, events, decisions, questions, discussions, tasks } = loaderData
   const [params, setParams] = useSearchParams()
   const tab = (tabs.some(([t]) => t === params.get('tab')) ? params.get('tab') : 'overview') as Tab
   const go = (t: Tab, d?: string | null) => setParams(d ? { tab: t, d } : t === 'overview' ? {} : { tab: t }, { preventScrollReset: true })
@@ -339,7 +346,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
               <p>To come back, ask the owner to add you again.</p>
             </Confirm>
           )}
-          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} className="tool" />
+          <ShareDialog target="space" isOwner={isOwner} members={members} link={link} invites={invites} className="tool" />
         </div>
       </div>
       <header className="page-title">

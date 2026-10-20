@@ -73,6 +73,26 @@ test('a share link lets a stranger in with the role on the link', async () => {
   assert.equal(anonymous.headers.get('location'), `/login?next=${encodeURIComponent(`/s/${token}`)}`)
 })
 
+test('an email with no account gets an invitation link that works once', async () => {
+  const invited = await app.createDocument(ada.cookie, 'Invited')
+  assert.equal((await app.post(`/doc/${invited}`, ada.cookie, { intent: 'add', email: 'New.Person@example.test', role: 'commenter' })).status, 200)
+  const html = await (await fetch(`${app.base}/doc/${invited}`, { headers: { cookie: ada.cookie } })).text()
+  assert.ok(html.includes('new.person@example.test'), 'the dialog lists the invitation')
+  const token = html.match(/[0-9a-f]{64}/)[0] // the document has no share link, so this is the invitation
+
+  // Signed out, an invitation opens the login page on sign-up.
+  const anonymous = await fetch(`${app.base}/s/${token}`, { redirect: 'manual' })
+  assert.equal(anonymous.headers.get('location'), `/login?next=${encodeURIComponent(`/s/${token}`)}&mode=up`)
+
+  const newcomer = await app.signUpUser('Newcomer')
+  const follow = await fetch(`${app.base}/s/${token}`, { headers: { cookie: newcomer.cookie }, redirect: 'manual' })
+  assert.equal(follow.headers.get('location'), `/doc/${invited}`)
+  assert.equal(await app.handshakeStatus(invited, newcomer.cookie), 101)
+
+  const again = await fetch(`${app.base}/s/${token}`, { headers: { cookie: grace.cookie }, redirect: 'manual' })
+  assert.equal(again.status, 404)
+})
+
 test('a space shares its documents with its members, and hides them from everyone else', async () => {
   const made = await app.post('/?index', ada.cookie, { intent: 'new-space', name: 'Marketing' })
   assert.equal(made.status, 302)
