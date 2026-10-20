@@ -101,13 +101,14 @@ export const listSpaceDecisions = async (spaceId: string) =>
   ).bind(spaceId).all<DecisionRow>()).results
 
 export type DecisionRecord = DecisionRow & {
+  recording_id: string | null
   space_id: string | null; space_name: string | null; owner_id: string; decided_by: string | null; decided_by_name: string | null
   supersedes_number: number | null; supersedes_text: string | null; replaced_at: number | null; document_status: string | null
 }
 
 export const getDecision = (id: string) => env.DB.prepare(
   `SELECT x.id, x.number, x.text, x.outcome, x.status, x.source_type, x.source_id, x.document_id, COALESCE(d.title, '') AS title, x.decided_at, x.updated_at,
-     x.supersedes, x.space_id, s.name AS space_name, x.owner_id, x.decided_by, u.name AS decided_by_name, d.status AS document_status,
+     x.supersedes, x.space_id, s.name AS space_name, x.owner_id, x.decided_by, u.name AS decided_by_name, d.status AS document_status, x.recording_id,
      o.number AS supersedes_number, o.text AS supersedes_text,
      r.id AS replaced_by, r.number AS replaced_by_number, r.decided_at AS replaced_at
    FROM decisions x LEFT JOIN documents d ON d.id = x.document_id LEFT JOIN spaces s ON s.id = x.space_id LEFT JOIN "user" u ON u.id = x.decided_by

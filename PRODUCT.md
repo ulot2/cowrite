@@ -31,6 +31,8 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 - Rich text editor (BlockNote on Yjs) with live cursors, comments with @mentions, suggestions, version history with compare and restore, activity timelines, a notification bell, search across text and comments.
 - Tasks with an assignee and a due date, a Tasks page; decisions numbered per space (D-1, D-2) and a decision log.
+- Optional decision briefs on questions: context, options with benefits and tradeoffs, and a recommendation with its reasoning. Briefs sync with the discussion, appear in the decision record, and help Nib find relevant context.
+- Recording a discussion decision requires an explicit final choice (a brief option or another approach) and final reasoning. It preserves the brief with that version. Reopening keeps the last outcome; recording again adds history under the same D-number. Nib proposals enter the same review form. Older plain answers remain readable without claiming a historical brief snapshot.
 - Connected work across documents, decisions, discussions, ideas, and tasks: automatic source links, explicit Related/Implements connections, and a wider chain filtered by each person's access. Links load when opened and refresh on demand; they do not grant access to another item.
 - A space ideas board; an idea becomes a discussion or a document.
 - A document lifecycle: Idea, Draft, In review, Approved, Done. Reviewers sign off section by section, and an open concern blocks approval.

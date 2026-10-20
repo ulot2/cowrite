@@ -12,6 +12,8 @@ import { Avatar } from '~/components/avatar'
 import { Icon } from '~/components/icon'
 import { Select } from '~/components/select'
 import { ConnectedWork } from '~/components/connected-work'
+import { DecisionBriefView, hasDecisionBrief } from '~/components/decision-brief-view'
+import { decisionRecordings } from '~/lib/discussions.server'
 import type { Route } from './+types/decision'
 
 export const meta = ({ loaderData }: Route.MetaArgs) => [{ title: loaderData ? `D-${loaderData.decision.number}: ${loaderData.decision.text} · cowrite` : 'Decision · cowrite' }]
@@ -26,6 +28,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const { role, need } = decision ? await access(user.id, decision) : { role: null, need: 'editor' as const }
   if (!decision || !role) throw new Response('Not found', { status: 404 })
   const canEdit = atLeast(role, need)
+  const recordings = decision.source_type === 'discussion' ? await decisionRecordings(decision.id) : []
 
   // Why: the discussion that produced it, read from the space's room.
   const discussion = decision.source_type === 'discussion' && decision.space_id && decision.source_id
@@ -34,6 +37,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const look = (id: string) => { const u = people.get(id); return { name: u?.name ?? 'Someone', color: colorFor(id, u?.color), image: u?.image ?? null } }
   return {
     decision,
+    recordings,
     canEdit,
     discussion: discussion && { ...discussion, owner: discussion.owner ? look(discussion.owner) : null, posts: discussion.posts.map((p) => ({ ...p, who: look(p.userId) })) },
     choices: canEdit ? await replaceableDecisions(decision) : [],
@@ -67,7 +71,9 @@ const pill = (status: string) => (status === 'decided' ? 'approved' : status ===
 const date = (ms: number) => new Date(ms).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export default function Decision({ loaderData, actionData }: Route.ComponentProps) {
-  const { decision: d, canEdit, discussion, choices } = loaderData
+  const { decision: d, canEdit, discussion, choices, recordings } = loaderData
+  const recording = recordings.find((item) => item.id === d.recording_id)
+  const earlier = recordings.filter((item) => item.id !== d.recording_id)
   const saving = useNavigation().state !== 'idle'
   const replaced = !!d.replaced_by
   const back = d.space_id ? `/space/${d.space_id}?tab=decisions` : `/doc/${d.document_id}`
@@ -102,6 +108,8 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
           <p>{d.outcome}</p>
         </section>
       )}
+      {recording && <section className="decision-rationale" aria-label="Final reasoning"><h2>Final reasoning</h2><p>{recording.reasoning}</p></section>}
+      {d.status === 'reopened' && <p className="muted small">This question is open again. The last recorded choice and its brief are preserved below until another decision is recorded.</p>}
 
       <section className="chain" aria-label="Related decisions">
         {d.supersedes && <p><Icon name="history" />Replaces <Link to={`/decision/${d.supersedes}`}>{`D-${d.supersedes_number}`}</Link>: {d.supersedes_text}</p>}
@@ -122,6 +130,10 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
 
       <section className="why" aria-labelledby="why-title">
         <h2 id="why-title">Why</h2>
+        {recording && <section className="decision-record-brief" aria-label="Preserved decision brief"><div className="brief-heading"><div><h3>Brief at the time of the decision</h3><p className="muted small">Saved with this decision. Later edits to the discussion do not change it.</p></div></div>
+          {hasDecisionBrief(recording.brief) ? <DecisionBriefView brief={recording.brief} /> : <p className="muted small">No brief was added before this decision was recorded.</p>}</section>}
+        {earlier.length > 0 && <section className="decision-history" aria-label="Decision history"><h3>Earlier recorded versions</h3>{earlier.map((item) => <details key={item.id} data-disclosure><summary><strong>{item.choice}</strong><span className="muted small">{item.at ? date(item.at) : 'Date not recorded'} · {item.byName}</span><Icon name="chevron" /></summary>
+          <div>{item.legacy ? <p className="muted small">Original plain answer. A separate rationale and brief snapshot were not recorded.</p> : <><h4>Final reasoning</h4><p>{item.reasoning}</p><h4>Brief preserved with this version</h4>{hasDecisionBrief(item.brief) ? <DecisionBriefView brief={item.brief} /> : <p className="muted small">No brief was added.</p>}</>}</div></details>)}</section>}
         {d.source_type === 'discussion' ? (
           discussion ? (
             <>
@@ -129,6 +141,7 @@ export default function Decision({ loaderData, actionData }: Route.ComponentProp
                 Decided in the discussion <Link to={`/space/${d.space_id}?tab=discussions&d=${d.source_id}`}>{discussion.title}</Link>
                 {discussion.owner && <>, with {discussion.owner.name} deciding</>}{discussion.due && <> by {new Date(discussion.due + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}</>}.
               </p>
+              {!recording && hasDecisionBrief(discussion.brief) && <section className="decision-record-brief" aria-label="Decision brief"><div className="brief-heading"><div><h3>Current source brief</h3><p className="muted small">This older decision has no saved brief snapshot. These are the current options and recommendation in the discussion.</p></div></div><DecisionBriefView brief={discussion.brief} /></section>}
               <ol className="transcript">
                 {discussion.posts.map((p, i) => (
                   <li key={i}>

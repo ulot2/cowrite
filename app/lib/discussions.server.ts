@@ -1,12 +1,15 @@
 import { env } from 'cloudflare:workers'
 import { logSpaceEvent } from './events.server'
 import { nextDecisionNumber } from './work.server'
+import { emptyDecisionBrief, readDecisionRecording, type DecisionRecording } from './decision-brief'
 
 // What a space room's alarm reads out of its Yjs data. The room is the source; these go to D1.
 export type DiscussionItem = {
   id: string; title: string; kind: 'talk' | 'question'; status: 'open' | 'answered' | 'closed'
   owner: string | null; due: string | null; posts: number; lastAt: number; lastBy: string | null
   createdBy: string; answer: string; answeredBy: string | null; decisionNumber: number
+  recording: DecisionRecording | null
+  recordings: DecisionRecording[]
 }
 export type SpaceTaskItem = { id: string; text: string; assignee: string | null; assigneeName: string; due: string | null; done: boolean; discussionId: string; createdBy: string }
 
@@ -59,22 +62,53 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
 
   // Decisions from questions. Once numbered, a record stays (reopened, if the question reopens).
   const questions = items.filter((d) => d.kind === 'question')
-  const known = new Map((await env.DB.prepare("SELECT source_id, number FROM decisions WHERE space_id = ? AND source_type = 'discussion'").bind(spaceId).all<{ source_id: string; number: number }>()).results.map((r) => [r.source_id, r.number]))
+  const known = new Map((await env.DB.prepare("SELECT source_id, number, recording_id, text, outcome, decided_by, decided_at FROM decisions WHERE space_id = ? AND source_type = 'discussion'").bind(spaceId).all<{ source_id: string; number: number; recording_id: string | null; text: string; outcome: string; decided_by: string | null; decided_at: number | null }>()).results.map((r) => [r.source_id, r]))
   let next = await nextDecisionNumber(spaceId, space.owner_id)
   const numbered: { id: string; number: number }[] = []
   const now = Date.now()
   for (const d of questions) {
-    const number = known.get(d.id)
-    if (!number && d.status !== 'answered') continue
+    const prior = known.get(d.id), number = prior?.number
+    if (!number && d.status !== 'answered' && !d.recording) continue
     const n = number ?? next++
     if (n !== d.decisionNumber) numbered.push({ id: d.id, number: n })
     const decided = d.status === 'answered'
+    if (d.recording && prior && !prior.recording_id && prior.outcome) {
+      // Retain an older plain answer honestly: its brief and rationale were never captured.
+      const legacy: DecisionRecording = { id: 'legacy', title: prior.text, choice: prior.outcome, optionId: '', reasoning: '', brief: emptyDecisionBrief(), by: prior.decided_by || 'unknown', at: prior.decided_at || 0, legacy: true }
+      await env.DB.prepare('INSERT OR IGNORE INTO decision_recordings (decision_id, id, payload, recorded_at) VALUES (?, ?, ?, ?)')
+        .bind(`q:${d.id}`, legacy.id, JSON.stringify(legacy), legacy.at).run()
+    }
+    // First create the parent row, then append a recording under its foreign key.
+    // Legacy clients can still answer, but cannot overwrite an explicit recording.
     await env.DB.prepare(
       `INSERT INTO decisions (id, document_id, space_id, owner_id, number, text, outcome, status, source_type, source_id, decided_by, decided_at, updated_at)
        VALUES (?1, '', ?2, ?3, ?4, ?5, ?6, ?7, 'discussion', ?8, ?9, ?10, ?10)
-       ON CONFLICT(id) DO UPDATE SET text = ?5, outcome = ?6, status = ?7, updated_at = ?10,
-         decided_by = CASE WHEN ?7 = 'decided' THEN ?9 ELSE decided_by END, decided_at = CASE WHEN ?7 = 'decided' THEN COALESCE(decided_at, ?10) ELSE decided_at END`,
+       ON CONFLICT(id) DO UPDATE SET text = CASE WHEN recording_id IS NULL AND ?7 = 'decided' THEN ?5 ELSE text END,
+         outcome = CASE WHEN recording_id IS NULL AND ?7 = 'decided' THEN ?6 ELSE outcome END, status = ?7, updated_at = ?10,
+         decided_by = CASE WHEN recording_id IS NULL AND ?7 = 'decided' THEN ?9 ELSE decided_by END,
+         decided_at = CASE WHEN recording_id IS NULL AND ?7 = 'decided' THEN COALESCE(decided_at, ?10) ELSE decided_at END`,
     ).bind(`q:${d.id}`, spaceId, space.owner_id, n, d.title, d.answer, decided ? 'decided' : 'reopened', d.id, d.answeredBy, now).run()
+    if (d.recording) {
+      const recording = d.recording, decisionId = `q:${d.id}`
+      const existing = await env.DB.prepare('SELECT payload FROM decision_recordings WHERE decision_id = ? AND id = ?').bind(decisionId, recording.id).first<{ payload: string }>()
+      // Replaying an earlier version must not make it the current decision again.
+      const history = d.recordings.filter((item) => item.id !== recording.id).sort((a, b) => a.at - b.at).map((item) => env.DB.prepare('INSERT OR IGNORE INTO decision_recordings (decision_id, id, payload, recorded_at) VALUES (?, ?, ?, ?)')
+        .bind(decisionId, item.id, JSON.stringify(item), now))
+      if (!existing || recording.id === prior?.recording_id) {
+        const saved = readDecisionRecording(existing?.payload ?? recording)!
+        await env.DB.batch([
+          ...history,
+          env.DB.prepare('INSERT OR IGNORE INTO decision_recordings (decision_id, id, payload, recorded_at) VALUES (?, ?, ?, ?)')
+            .bind(decisionId, recording.id, JSON.stringify(recording), now),
+          env.DB.prepare('UPDATE decisions SET recording_id = ?, text = ?, outcome = ?, decided_by = ?, decided_at = ? WHERE id = ?')
+            .bind(saved.id, saved.title || d.title, saved.choice, saved.by, saved.at, decisionId),
+        ])
+      } else if (history.length) await env.DB.batch(history)
+    } else if (d.recordings.length) {
+      // A rapid reopen may reach the alarm before the answered state was indexed.
+      await env.DB.batch(d.recordings.map((item) => env.DB.prepare('INSERT OR IGNORE INTO decision_recordings (decision_id, id, payload, recorded_at) VALUES (?, ?, ?, ?)')
+        .bind(`q:${d.id}`, item.id, JSON.stringify(item), now)))
+    }
     if (!number && d.answeredBy) await logSpaceEvent(spaceId, d.answeredBy, 'decision', `decided ${quote(d.title)} as D-${n}: ${quote(d.answer)}`, `/decision/q:${d.id}`)
   }
   for (const t of tasks) {
@@ -85,6 +119,12 @@ export const syncDiscussions = async (spaceId: string, items: DiscussionItem[], 
     if (actor && t.done && prev && !prev.done) await logSpaceEvent(spaceId, actor, 'task', `completed ${quote(t.text)}`, thread(t.discussionId))
   }
   return numbered
+}
+
+export const decisionRecordings = async (id: string) => {
+  const rows = await env.DB.prepare('SELECT r.payload, u.name AS by_name FROM decision_recordings r LEFT JOIN "user" u ON u.id = json_extract(r.payload, \'$.by\') WHERE r.decision_id = ? ORDER BY r.recorded_at DESC, r.rowid DESC')
+    .bind(id).all<{ payload: string; by_name: string | null }>()
+  return rows.results.flatMap((row) => { const recording = readDecisionRecording(row.payload); return recording ? [{ ...recording, byName: row.by_name ?? 'Someone' }] : [] })
 }
 
 export const unindexSpace = (spaceId: string) => env.DB.batch([

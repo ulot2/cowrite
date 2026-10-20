@@ -13,6 +13,7 @@ import { syncDiscussions, type DiscussionItem, type SpaceTaskItem } from '~/lib/
 import { ask } from '~/lib/ai.server'
 import { inlineText, safeHref, toText, type Block as RichBlock, type Inline } from '~/lib/rich'
 import { GUEST_DAYS } from '~/lib/guest.server'
+import { decisionBriefText, readDecisionBrief, readDecisionRecording } from '~/lib/decision-brief'
 
 // Message types of the y-websocket protocol. The first byte of every message.
 const SYNC = 0
@@ -257,6 +258,8 @@ export class Doc extends DurableObject<Env> {
           lastAt: Number(last?.get('createdAt') ?? d.get('createdAt') ?? Date.now()), lastBy: str(last?.get('userId')),
           createdBy: String(d.get('createdBy') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: str(d.get('answeredBy')),
           decisionNumber: Number(d.get('decisionNumber') ?? 0),
+          recording: readDecisionRecording(d.get('recording')),
+          recordings: d.get('recordings') instanceof Y.Map ? [...(d.get('recordings') as Y.Map<unknown>).values()].flatMap((value) => { const recording = readDecisionRecording(value); return recording ? [recording] : [] }) : [],
         }
       })
       const tasks: SpaceTaskItem[] = [...this.doc.getMap<Record<string, unknown>>('tasks').entries()].map(([id, t]) => ({
@@ -267,7 +270,7 @@ export class Doc extends DurableObject<Env> {
       const numbered = await syncDiscussions(spaceId, items, tasks, editors[0] ?? null)
       if (numbered.length) this.doc.transact(() => { for (const { id, number } of numbered) this.doc.getMap<Y.Map<unknown>>('discussions').get(id)?.set('decisionNumber', number) }, 'index')
       // What Nib searches when someone asks the space: each discussion's words, and the ideas board.
-      const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''),
+      const said = [...this.doc.getMap<Y.Map<unknown>>('discussions').entries()].map(([id, d]) => ({ key: `d:${id}`, text: [String(d.get('title') ?? ''), String(d.get('answer') ?? ''), readDecisionRecording(d.get('recording'))?.reasoning ?? '', d.get('kind') === 'question' ? decisionBriefText(readDecisionBrief(d.get('brief'))) : '',
         ...((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => String(p.get('text') ?? ''))].filter(Boolean).join('\n') }))
       const ideas = cardsOf(this.doc).map((c) => c.text).filter(Boolean).join('\n')
       await indexSpace(spaceId, ideas ? [...said, { key: 'ideas', text: ideas }] : said)
@@ -431,7 +434,7 @@ export class Doc extends DurableObject<Env> {
     const d = this.doc.getMap<Y.Map<unknown>>('discussions').get(id)
     if (!d) return null
     const posts = ((d.get('posts') as Y.Array<Y.Map<unknown>> | undefined)?.toArray() ?? []).map((p) => ({ userId: String(p.get('userId') ?? ''), text: String(p.get('text') ?? ''), createdAt: Number(p.get('createdAt') ?? 0) }))
-    return { title: String(d.get('title') ?? ''), owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), posts }
+    return { title: String(d.get('title') ?? ''), owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), posts, brief: readDecisionBrief(d.get('kind') === 'question' ? d.get('brief') : null) }
   }
 
   readRich(id: number | 'now'): RichBlock[] | null {

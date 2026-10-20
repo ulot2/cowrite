@@ -7,6 +7,9 @@ import { Avatar } from './avatar'
 import { Icon } from './icon'
 import { Select } from './select'
 import { ConnectedWork } from './connected-work'
+import { briefDraft, DecisionBriefFields, DecisionBriefPanel } from './decision-brief'
+import { RecordDecision } from './record-decision'
+import { emptyDecisionBrief, readDecisionBrief, readDecisionRecording, recordDecision, saveDecisionBrief, validateDecisionBrief, type DecisionBrief, type DecisionDraft, type DecisionRecording } from '~/lib/decision-brief'
 
 export type Member = { id: string; name: string; color: string; image?: string | null }
 type Post = { id: string; userId: string; text: string; createdAt: number; taskId?: string }
@@ -14,6 +17,8 @@ type Task = { text: string; assignee: string; assigneeName: string; due: string;
 type Discussion = {
   id: string; title: string; kind: 'talk' | 'question'; status: 'open' | 'answered' | 'closed'
   owner: string; due: string; answer: string; answeredBy: string; createdBy: string; createdAt: number; posts: Post[]; lastAt: number; decisionNumber: number; idea: string
+  brief: DecisionBrief
+  recording: DecisionRecording | null
 }
 
 type Props = {
@@ -58,6 +63,8 @@ export function SpaceRoom({ spaceId, user, canWrite, nib = false, people, open, 
           id, title: String(d.get('title') ?? ''), kind: d.get('kind') === 'question' ? 'question' : 'talk', status: (d.get('status') as Discussion['status']) ?? 'open',
           owner: String(d.get('owner') ?? ''), due: String(d.get('due') ?? ''), answer: String(d.get('answer') ?? ''), answeredBy: String(d.get('answeredBy') ?? ''),
           createdBy: String(d.get('createdBy') ?? ''), createdAt, posts, lastAt: posts.at(-1)?.createdAt ?? createdAt, decisionNumber: Number(d.get('decisionNumber') ?? 0), idea: String(d.get('idea') ?? ''),
+          brief: readDecisionBrief(d.get('brief')),
+          recording: readDecisionRecording(d.get('recording')),
         } satisfies Discussion
       }).sort((a, b) => b.lastAt - a.lastAt))
       setTasks(Object.fromEntries(tasks.entries()))
@@ -80,7 +87,7 @@ export function SpaceRoom({ spaceId, user, canWrite, nib = false, people, open, 
     return p
   }
 
-  const start = (f: { title: string; text: string; question: boolean; owner: string; due: string }) => {
+  const start = (f: { title: string; text: string; question: boolean; owner: string; due: string; brief: DecisionBrief }) => {
     const id = crypto.randomUUID()
     const d = new Y.Map<unknown>()
     const posts = new Y.Array<Y.Map<unknown>>()
@@ -89,6 +96,7 @@ export function SpaceRoom({ spaceId, user, canWrite, nib = false, people, open, 
       d.set('title', f.title); d.set('kind', f.question ? 'question' : 'talk'); d.set('status', 'open')
       d.set('createdBy', user.id); d.set('createdAt', Date.now())
       if (f.question) { d.set('owner', f.owner); d.set('due', f.due) }
+      if (f.question) saveDecisionBrief(d, f.brief, emptyDecisionBrief())
       d.set('posts', posts)
       if (f.text) posts.push([post(f.text)])
     })
@@ -117,15 +125,14 @@ export function SpaceRoom({ spaceId, user, canWrite, nib = false, people, open, 
       sync.tasks.set(taskId, { text: t.text, assignee: t.assignee, assigneeName: t.assignee ? person(t.assignee).name : '', due: t.due, done: false, discussionId: d.id, postId: String(p.get('id')), createdBy: user.id })
     })
   }
-  // An accepted decision answers the discussion (a plain talk becomes a question first); the room's
-  // alarm then records it as the next D-number.
-  const acceptDecision = (d: Discussion, outcome: string) => setField(d.id, { kind: 'question', status: 'answered', answer: outcome, answeredBy: user.id })
   const tick = (taskId: string) => { const t = sync.tasks.get(taskId); if (t) sync.tasks.set(taskId, { ...t, done: !t.done }) }
 
   const current = open ? list.find((d) => d.id === open) : null
   if (open && !current) return <p className="muted room-wait">{synced ? 'This discussion is gone.' : 'Loading the discussion…'} <button type="button" className="link-button" onClick={() => onOpen(null)}>All discussions</button></p>
-  if (current) return <Thread d={current} tasks={tasks} canWrite={canWrite} nib={nib} people={people} person={person} user={user}
-    onAcceptTask={(t) => acceptTask(current, t)} onAcceptDecision={(o) => acceptDecision(current, o)}
+  if (current) return <Thread key={current.id} d={current} tasks={tasks} canWrite={canWrite} nib={nib} people={people} person={person} user={user}
+    onSaveBrief={(brief, original) => canWrite ? saveDecisionBrief(map(current.id), brief, original) : 'You need commenter access to edit the brief.'}
+    onAcceptTask={(t) => acceptTask(current, t)}
+    onRecord={(draft, original) => canWrite ? recordDecision(map(current.id), draft, original, user.id) : 'You need commenter access to record a decision.'}
     onBack={() => onOpen(null)} onReply={(t) => reply(current.id, t)} onSet={(patch) => setField(current.id, patch)} onTask={(p, t) => makeTask(current, p, t)} onTick={tick} />
   return <DiscussionList list={list} synced={synced} canWrite={canWrite} people={people} person={person} user={user} onOpen={onOpen} onStart={start} />
 }
@@ -148,11 +155,13 @@ function QuestionBadge({ d, person }: { d: Discussion; person: PersonOf }) {
 
 function DiscussionList({ list, synced, canWrite, people, person, user, onOpen, onStart }: {
   list: Discussion[]; synced: boolean; canWrite: boolean; people: Member[]; person: PersonOf; user: { id: string }
-  onOpen: (id: string) => void; onStart: (f: { title: string; text: string; question: boolean; owner: string; due: string }) => void
+  onOpen: (id: string) => void; onStart: (f: { title: string; text: string; question: boolean; owner: string; due: string; brief: DecisionBrief }) => void
 }) {
   const [writing, setWriting] = useState(false)
   const [question, setQuestion] = useState(false)
   const [filter, setFilter] = useState<'open' | 'all'>('open')
+  const [brief, setBrief] = useState<DecisionBrief>(() => briefDraft())
+  const [briefError, setBriefError] = useState('')
   const shown = list.filter((d) => filter === 'all' || d.status === 'open')
   return (
     <div className="room">
@@ -168,20 +177,27 @@ function DiscussionList({ list, synced, canWrite, people, person, user, onOpen, 
         <form className="new-discussion" onSubmit={(e) => {
           e.preventDefault()
           const f = new FormData(e.currentTarget)
-          onStart({ title: String(f.get('title')).trim(), text: String(f.get('text') ?? '').trim(), question, owner: String(f.get('owner') ?? ''), due: String(f.get('due') ?? '') })
+          const invalid = question ? validateDecisionBrief(brief) : null
+          if (invalid) { setBriefError(invalid); return }
+          onStart({ title: String(f.get('title')).trim(), text: String(f.get('text') ?? '').trim(), question, owner: String(f.get('owner') ?? ''), due: String(f.get('due') ?? ''), brief: question ? readDecisionBrief(brief) : emptyDecisionBrief() })
           setWriting(false); setQuestion(false)
         }}>
-          <input name="title" required maxLength={200} placeholder="What do you want to talk about?" aria-label="Title" autoFocus />
-          <textarea name="text" rows={3} maxLength={5000} placeholder="Add the details, or the options you see" aria-label="First message" />
-          <label className="check"><input type="checkbox" role="switch" className="switch" checked={question} onChange={(e) => setQuestion(e.target.checked)} />This needs a decision</label>
-          {question && (
+          <input name="title" required maxLength={200} placeholder={question ? 'What needs deciding?' : 'What do you want to talk about?'} aria-label="Title" autoFocus />
+          <textarea name="text" rows={3} maxLength={5000} placeholder={question ? 'An opening message for the discussion (optional)' : 'Add the details, or the options you see'} aria-label="First message" />
+          <label className="check"><input type="checkbox" role="switch" className="switch" checked={question} onChange={(e) => { setQuestion(e.target.checked); setBriefError('') }} />This needs a decision</label>
+          {question && <>
             <div className="question-fields">
               <label>Who decides<Select name="owner" label="Who decides" defaultValue={user.id} options={people.map((p) => ({ value: p.id, label: p.name }))} /></label>
               <label>Decide by<input type="date" name="due" min={today()} /></label>
             </div>
-          )}
+            <details data-disclosure className="brief-compose" open={!!briefError || undefined}>
+              <summary><Icon name="plan" /><span>Add context and options<span className="muted">Optional decision brief</span></span><Icon name="chevron" /></summary>
+              <DecisionBriefFields value={brief} onChange={setBrief} />
+            </details>
+            {briefError && <p className="error small" role="alert">{briefError}</p>}
+          </>}
           <div className="form-actions">
-            <button type="button" className="ghost" onClick={() => { setWriting(false); setQuestion(false) }}>Cancel</button>
+            <button type="button" className="ghost" onClick={() => { setWriting(false); setQuestion(false); setBrief(briefDraft()); setBriefError('') }}>Cancel</button>
             <button className="primary">{question ? 'Ask the question' : 'Start the discussion'}</button>
           </div>
         </form>
@@ -218,21 +234,38 @@ function DiscussionList({ list, synced, canWrite, people, person, user, onOpen, 
   )
 }
 
-function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply, onSet, onTask, onTick, onAcceptTask, onAcceptDecision }: {
+function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply, onSet, onTask, onTick, onAcceptTask, onRecord, onSaveBrief }: {
   d: Discussion; tasks: Record<string, Task>; canWrite: boolean; nib: boolean; people: Member[]; person: PersonOf; user: { id: string }
   onBack: () => void; onReply: (text: string) => void; onSet: (patch: Record<string, unknown>) => void
   onTask: (p: Post, t: { text: string; assignee: string; due: string }) => void; onTick: (taskId: string) => void
-  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void; onAcceptDecision: (outcome: string) => void
+  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void
+  onRecord: (draft: DecisionDraft, original: DecisionBrief) => string | null
+  onSaveBrief: (brief: DecisionBrief, original: DecisionBrief) => string | null
 }) {
   const [answering, setAnswering] = useState(false)
+  const [briefEditing, setBriefEditing] = useState(false)
+  const [proposedChoice, setProposedChoice] = useState('')
+  const recordButton = useRef<HTMLButtonElement>(null)
+  const recordForm = useRef<HTMLDivElement>(null)
+  const cancelRecording = () => { setAnswering(false); requestAnimationFrame(() => recordButton.current?.focus()) }
+  const saveRecording = (draft: DecisionDraft, original: DecisionBrief) => { const error = onRecord(draft, original); if (!error) setAnswering(false); return error }
   const [tasking, setTasking] = useState<string | null>(null)
   const end = useRef<HTMLDivElement>(null)
-  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [d.posts.length])
+  const head = useRef<HTMLElement>(null)
+  const previousPosts = useRef(d.posts.length)
+  useEffect(() => {
+    if (d.kind === 'question') head.current?.scrollIntoView({ block: 'start' })
+    else end.current?.scrollIntoView({ block: 'nearest' })
+  }, [d.id, d.kind])
+  useEffect(() => {
+    if (d.posts.length > previousPosts.current) end.current?.scrollIntoView({ block: 'nearest' })
+    previousPosts.current = d.posts.length
+  }, [d.posts.length])
   const owner = d.owner ? person(d.owner) : null
   return (
     <div className="room thread">
       <button type="button" className="ghost back" onClick={onBack}><Icon name="collapse" />All discussions</button>
-      <header className="thread-head">
+      <header ref={head} className="thread-head">
         <h2>{d.title || 'Untitled'}</h2>
         <p className="muted">Started by {person(d.createdBy).name} · {timeAgo(d.createdAt)}{d.idea && <> · <a href="?tab=ideas">From an idea</a></>}</p>
       </header>
@@ -242,20 +275,19 @@ function Thread({ d, tasks, canWrite, nib, people, person, user, onBack, onReply
           <div className="question-facts">
             <span><span className="muted">Who decides</span>{owner ? <><Avatar name={owner.name} color={owner.color} image={owner.image} size={20} />{owner.name}</> : 'Nobody yet'}</span>
             <span><span className="muted">Decide by</span>{d.due ? day(d.due) : 'No date'}</span>
-            <span><span className="muted">Status</span>{d.status === 'answered' ? 'Answered' : d.status === 'closed' ? 'Closed' : d.due && d.due < today() ? 'Overdue' : 'Waiting for a decision'}</span>
+            <span><span className="muted">Status</span>{d.status === 'answered' ? 'Decided' : d.status === 'closed' ? 'Closed' : d.due && d.due < today() ? 'Overdue' : 'Waiting for a decision'}</span>
           </div>
-          {d.status === 'answered' && <blockquote className="answer"><strong>Answer</strong>{d.answer}<small>{person(d.answeredBy).name}{d.decisionNumber > 0 && <> · <a href={`/decision/q:${d.id}`}>Recorded as D-{d.decisionNumber} →</a></>}{d.decisionNumber === 0 && ' · becoming a decision…'}</small></blockquote>}
-          {canWrite && d.status === 'open' && (answering ? (
-            <form className="answer-form" onSubmit={(e) => { e.preventDefault(); const a = String(new FormData(e.currentTarget).get('answer')).trim(); if (a) { onSet({ status: 'answered', answer: a, answeredBy: user.id }); setAnswering(false) } }}>
-              <textarea name="answer" rows={2} required maxLength={1000} placeholder="What was decided?" aria-label="The answer" autoFocus />
-              <div className="form-actions"><button type="button" className="ghost" onClick={() => setAnswering(false)}>Cancel</button><button className="primary">Save the answer</button></div>
-            </form>
-          ) : <button type="button" className="primary" onClick={() => setAnswering(true)}><Icon name="check" />Mark answered</button>)}
+          {d.status === 'answered' && <blockquote className="answer"><strong>Final choice</strong>{d.recording?.choice ?? d.answer}{d.recording && <><strong className="answer-reason-label">Final reasoning</strong><p>{d.recording.reasoning}</p></>}<small>{person(d.recording?.by ?? d.answeredBy).name}{d.decisionNumber > 0 && <> · <a href={`/decision/q:${d.id}`}>Recorded as D-{d.decisionNumber} →</a></>}{d.decisionNumber === 0 && ' · becoming a decision…'}</small></blockquote>}
+          {d.status !== 'answered' && d.decisionNumber > 0 && <p className="muted small">This question has a previous decision. <a href={`/decision/q:${d.id}`}>View D-{d.decisionNumber} and its history →</a></p>}
+          <DecisionBriefPanel key={`${d.id}:${d.status}:${canWrite}`} brief={d.status === 'answered' && d.recording ? d.recording.brief : d.brief} canEdit={canWrite && d.status === 'open' && !answering} onSave={onSaveBrief} onEditingChange={setBriefEditing} />
+          {canWrite && d.status === 'open' && <div ref={recordForm} className="record-decision-slot">{answering ? <RecordDecision brief={d.brief} initialChoice={proposedChoice} onRecord={saveRecording} onCancel={cancelRecording} />
+            : <><button ref={recordButton} type="button" className="primary" disabled={briefEditing} onClick={() => { setProposedChoice(''); setAnswering(true) }}><Icon name="check" />Record decision</button>{briefEditing && <p className="muted small">Save or cancel your brief edits before recording a decision.</p>}</>}</div>}
         </section>
       )}
 
       <ConnectedWork key={d.id} kind="discussion" id={d.id} />
-      {canWrite && nib && d.posts.length > 0 && <NextSteps d={d} people={people} onAcceptTask={onAcceptTask} onAcceptDecision={onAcceptDecision} />}
+      {canWrite && nib && d.posts.length > 0 && <NextSteps d={d} people={people} onAcceptTask={onAcceptTask} onAcceptDecision={(choice) => { if (briefEditing) { recordForm.current?.scrollIntoView({ block: 'center' }); return false }; setProposedChoice(choice); setAnswering(true); requestAnimationFrame(() => recordForm.current?.scrollIntoView({ block: 'center' })); return true }} />}
+      {canWrite && d.kind !== 'question' && d.status === 'open' && answering && <RecordDecision brief={d.brief} initialChoice={proposedChoice} onRecord={saveRecording} onCancel={cancelRecording} />}
 
       <ol className="posts">
         {d.posts.map((p) => {
@@ -325,7 +357,7 @@ type Proposal = { tasks: { text: string; assignee: string; due: string }[]; deci
 // can be edited, then added or dismissed. Nothing is created until someone adds it.
 function NextSteps({ d, people, onAcceptTask, onAcceptDecision }: {
   d: Discussion; people: Member[]
-  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void; onAcceptDecision: (outcome: string) => void
+  onAcceptTask: (t: { text: string; assignee: string; due: string }) => void; onAcceptDecision: (outcome: string) => boolean
 }) {
   const fetcher = useFetcher<{ discussion?: string; proposal?: Proposal; error?: string }>()
   const [closed, setClosed] = useState<Set<string>>(new Set()) // cards added or dismissed: "t0", "decision"
@@ -374,14 +406,13 @@ function NextSteps({ d, people, onAcceptTask, onAcceptDecision }: {
                 e.preventDefault()
                 const outcome = String(new FormData(e.currentTarget).get('outcome') ?? '').trim()
                 if (!outcome) return
-                onAcceptDecision(outcome)
-                close('decision')
+                if (onAcceptDecision(outcome)) close('decision')
               }}>
                 <span className="proposal-kind"><Icon name="check" />Decision</span>
                 <textarea name="outcome" rows={2} required maxLength={1000} defaultValue={proposal.decision} aria-label="What was decided" />
                 <span className="proposal-actions">
                   <button type="button" className="ghost" onClick={() => close('decision')}>Dismiss</button>
-                  <button className="primary">Record decision</button>
+                  <button className="primary">Review decision</button>
                 </span>
               </form>
             </li>
