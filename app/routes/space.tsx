@@ -233,7 +233,7 @@ function NibCard({ saved, nib, canRefresh }: { saved: SavedState; nib: boolean; 
   )
 }
 
-// Three ways to begin. Each is ticked by doing it, not by the card.
+// First-time spaces retain their guided checklist; other empty spaces offer three ways to begin.
 type Step = { title: string; hint: string; done: boolean; act?: React.ReactNode }
 function StartDocument() {
   const create = useFetcher()
@@ -241,7 +241,7 @@ function StartDocument() {
   return <create.Form method="post"><input type="hidden" name="intent" value="create" /><input type="hidden" name="mode" value="write" /><button className="small" disabled={pending} aria-busy={pending}>{pending ? 'Creating…' : 'Write a document'}</button></create.Form>
 }
 
-function GetStarted({ steps }: { steps: Step[] }) {
+function GetStarted({ steps, guided }: { steps: Step[]; guided: boolean }) {
   const hide = useFetcher()
   const done = steps.filter((s) => s.done).length
   if (hide.state !== 'idle' || done === steps.length) return null
@@ -250,7 +250,7 @@ function GetStarted({ steps }: { steps: Step[] }) {
       <header>
         <div>
           <h2 id="start-title">Get started</h2>
-          <p className="muted">Choose where to begin. Each step ticks itself when you do it.</p>
+          <p className="muted">{guided ? <><strong>{`${done} of ${steps.length} done.`}</strong> Each step ticks itself when you do it.</> : 'Choose where to begin. Each step ticks itself when you do it.'}</p>
         </div>
         <span className="steps-bar" aria-hidden="true">{steps.map((s, i) => <i key={i} data-on={s.done || undefined} />)}</span>
         <hide.Form method="post"><input type="hidden" name="intent" value="hide-start" /><button className="ghost small">Hide</button></hide.Form>
@@ -303,7 +303,18 @@ export default function Space({ loaderData }: Route.ComponentProps) {
   const [allDecisions, setAllDecisions] = useState(false)
   const empty = discussions.length === 0 && documents.length === 0 && !events.some((e) => e.type === 'idea')
   const started = space.start_done.split(',')
-  const steps: Step[] = [
+  const others = members.filter((m) => m.user_id !== me.id).map((m) => m.name.split(' ')[0])
+  const steps: Step[] = space.welcome_doc ? [
+    { title: 'Name your space', hint: others.length ? `${space.name}, with ${others.slice(0, 3).join(' and ')}${others.length > 3 ? ` and ${others.length - 3} more` : ''}.` : `${space.name}.`, done: true },
+    { title: 'Open the welcome document', hint: 'It is in this space, and everything in it works.', done: started.includes('opened') || !documents.some((d) => d.id === space.welcome_doc),
+      act: <Link className="button small" to={`/doc/${space.welcome_doc}`}>Open</Link> },
+    { title: 'Add an idea', hint: 'Put a thought on the board before it is a plan.', done: events.some((e) => e.type === 'idea'),
+      act: <button type="button" className="small" onClick={() => go('ideas')}>Open Ideas</button> },
+    { title: 'Ask a question that needs a decision', hint: 'Say who decides and by when. It waits on this page until it is answered.', done: discussions.some((d) => d.kind === 'question') || decisions.some((d) => d.source_type === 'discussion'),
+      act: <button type="button" className="small" onClick={() => go('discussions')}>Ask</button> },
+    ...(nib ? [{ title: 'Ask Nib about the space', hint: 'Try “What is still open?” once there is something to read.', done: started.includes('asked'),
+      act: <button type="button" className="small" onClick={() => document.querySelector<HTMLInputElement>('.ask-space-form input')?.focus()}>Try it</button> }] : []),
+  ] : [
     { title: 'Add an idea', hint: 'Put a thought on the board before it is a plan.', done: events.some((e) => e.type === 'idea'),
       act: <button type="button" className="small" onClick={() => go('ideas')}>Add an idea</button> },
     { title: 'Start a discussion', hint: 'Talk through a question together, and decide what comes next.', done: discussions.length > 0,
@@ -376,7 +387,7 @@ export default function Space({ loaderData }: Route.ComponentProps) {
 
       {tab === 'overview' && (empty && !atLeast(role, 'commenter') ? <p className="attention-empty">Nothing here yet. The people who can edit this space have not started.</p> : (
         <div className="overview">
-          {showStart && <GetStarted steps={steps} />}
+          {showStart && <GetStarted steps={steps} guided={!!space.welcome_doc} />}
           {showStart && isOwner && <p className="start-sharing-note">Working with others? Use {empty ? 'Add people' : 'Share'} above. No email is sent; copy an invitation link to send yourself.</p>}
           <NeedsAttention rows={waiting} me={me.id} people={people} />
           {space.nib !== 0 && <NibCard saved={state.saved} nib={nib} canRefresh={nib && atLeast(role, 'commenter')} />}
