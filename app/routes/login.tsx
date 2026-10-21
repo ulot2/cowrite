@@ -74,7 +74,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
             <p><b>Tom</b> April 10, after the security review.</p>
           </div>
         </figure>
-        <p className="muted small">Free and open source.</p>
+        <p className="muted small">Free to use. No card needed.</p>
       </section>
 
       <form className="card-form" onSubmit={submit}>
