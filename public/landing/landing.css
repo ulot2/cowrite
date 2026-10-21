@@ -96,9 +96,6 @@ mark.commented { background: var(--accent-soft); color: inherit; border-bottom: 
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; font-weight: 600; }
 .link { text-decoration: none; color: var(--fg-muted); }
 .link:hover { color: var(--fg); }
-.nav-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius); color: var(--fg-muted); transition: color 150ms, background 150ms; }
-.nav-icon:hover { color: var(--fg); background: var(--tint); }
-.nav-icon svg { width: 1.2rem; height: 1.2rem; fill: currentColor; }
 
 /* Phones: the page links move into a full-width panel under the bar. The three lines turn into an X. */
 .nav-menu { display: none; }
@@ -219,7 +216,7 @@ body.landing { overflow-x: clip; }
 
 @media (max-width: 960px) {
   .hero, .nib, .live { grid-template-columns: minmax(0, 1fr); }
-  .nav-links, .nav-actions .nav-icon { display: none; }
+  .nav-links { display: none; }
   .nav-menu { display: block; margin-right: -0.5rem; }
 }
 @media (max-width: 560px) {
@@ -339,56 +336,6 @@ body.landing { overflow-x: clip; }
 .theme button[aria-pressed="true"] { background: var(--tint); color: var(--fg); }
 .theme svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-/* How it works: a chain of four steps. Text on the left, the CoWrite object on the right, a line
-   between them that fills as you scroll (--p, set by the page's script), and numbered nodes. */
-.how { padding-block: 6rem 5rem; }
-.chain { position: relative; list-style: none; margin: 3.5rem 0 0; padding: 0; display: grid; gap: 3.5rem; }
-.chain::before, .chain::after { content: ""; position: absolute; top: var(--top, 1rem); bottom: var(--bottom, 1rem); left: calc(40% + 1.75rem - 1px); width: 2px; border-radius: 2px; background: var(--border); }
-.chain::after { background: var(--accent); transform-origin: top; transform: scaleY(var(--p)); }
-.chain-step { position: relative; display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 3.5rem; align-items: center; }
-.link-text { position: relative; display: grid; gap: 0.4rem; padding-right: 1rem; }
-.link-text h3 { margin: 0; font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
-.link-text p { margin: 0; font-size: 1.02rem; color: var(--fg-muted); max-width: 26rem; }
-.link-n { position: absolute; left: calc(40% + 1.75rem); top: 50%; translate: -50% -50%; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 2px solid var(--border); background: var(--bg); color: var(--fg-muted); font-weight: 800; font-size: 0.9rem; z-index: 1; transition: border-color 400ms, color 400ms, background 400ms; }
-.chain-step.in .link-n { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
-.link-card > * { max-width: 30rem; }
-
-/* The reveal: text rises in, the card follows. */
-.chain-step .link-text, .chain-step .link-card { opacity: 0; transform: translateY(18px); transition: opacity 600ms var(--ease-out), transform 800ms var(--ease-out); }
-.chain-step .link-card { transition-delay: 120ms; }
-.chain-step.in .link-text, .chain-step.in .link-card { opacity: 1; transform: none; }
-
-/* The objects, drawn with the app's own parts. */
-.c-idea, .c-q, .c-doc { display: grid; gap: 0.55rem; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); box-shadow: var(--shadow); font-size: 0.92rem; }
-.c-idea p, .c-q p, .c-doc p { margin: 0; }
-.c-kicker { font-size: 0.75rem; font-weight: 700; color: var(--fg-muted); }
-.c-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.015em; }
-.c-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; font-size: 0.85rem; }
-.votes { flex: none; white-space: nowrap; padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
-.c-foot .faces i { width: 1.35rem; height: 1.35rem; }
-.to { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 0.82rem; }
-.from { justify-self: start; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--tint); color: var(--fg-muted); font-size: 0.75rem; font-weight: 600; }
-.c-q-head { display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem; }
-.c-q-meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--warn); font-weight: 600; }
-.c-q-meta i, .c-task .chip i { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; color: #fff; font-size: 0.55rem; font-weight: 700; font-style: normal; }
-.c-task { display: flex; align-items: center; gap: 0.55rem; margin-left: 1.85rem !important; padding: 0.45rem 0.6rem; border-radius: var(--radius); background: var(--tint); font-size: 0.85rem; }
-.c-doc-bar { display: flex; align-items: center; gap: 0.6rem; padding-bottom: 0.55rem; border-bottom: 1px solid var(--border); }
-.c-doc-bar .pill { margin-left: auto; }
-.c-doc-h { font-weight: 800; font-size: 1.05rem; }
-.c-doc-p { line-height: 1.6; }
-.c-sign { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.65rem; border-radius: var(--radius); background: var(--tint); font-size: 0.82rem; font-weight: 600; }
-.ok-dots { display: inline-flex; gap: 4px; }
-.ok-dots i { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--tint-2); }
-.ok-dots i.on { background: var(--ok); }
-.c-sign .muted { margin-left: auto; font-weight: 500; }
-
-@media (max-width: 760px) {
-  .chain { gap: 2.75rem; padding-left: 2.75rem; }
-  .chain::before, .chain::after { left: 1.05rem; }
-  .chain-step { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-  .link-text { padding-right: 0; }
-  .link-n { left: -1.7rem; top: 0.9rem; }
-}
 .q-mark { display: inline-grid; place-items: center; flex: none; width: 1.35rem; height: 1.35rem; border-radius: 50%; background: var(--warn-soft); color: var(--warn); font-size: 0.75rem; font-weight: 800; }
 
 /* Nib: what it does on the left, a window on the right where a pointer uses it. */
@@ -473,13 +420,9 @@ body.landing { overflow-x: clip; }
 .nw-cursor { position: absolute; left: 0; top: 0; z-index: 5; width: 1.35rem; height: 1.35rem; fill: var(--fg); stroke: var(--bg); stroke-width: 1.4; stroke-linejoin: round; opacity: 0; pointer-events: none; transition: opacity 300ms; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25)); }
 .nw-cursor.on { opacity: 1; }
 /* Labels in the demos never break mid-label; a row wraps as a whole instead. */
-.nw-who, .nw-btn, .c-task .chip { flex: none; white-space: nowrap; }
+.nw-who, .nw-btn { flex: none; white-space: nowrap; }
 .nw-prow, .nw-row { flex-wrap: wrap; }
 @media (max-width: 560px) {
-  /* How it works: slimmer cards, and the task row without its indent. */
-  .c-idea, .c-q, .c-doc { padding: 0.85rem 0.9rem; }
-  .c-task { margin-left: 0 !important; }
-  .from { border-radius: 8px; }
   /* Nib: more room for the window, and one height for every scene, so the page does not jump. */
   .nib-stage { padding: 0.6rem; border-radius: 18px; }
   .nw { min-height: 23.5rem; padding: 0.85rem 0.9rem 1rem; font-size: 0.88rem; }
@@ -560,8 +503,8 @@ body.landing { overflow-x: clip; }
 .faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(2rem, 5vw, 4.5rem); padding-block: 5rem; }
 .faq-head { align-self: start; position: sticky; top: 6rem; }
 .faq-own { margin: 1.25rem 0 0; max-width: 24rem; font-size: 0.9rem; color: var(--fg-muted); }
-.faq-code { margin: 1rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
-.faq-code a { font-weight: 700; }
+.faq-try { margin: 1rem 0 0; font-size: 0.9rem; color: var(--fg-muted); }
+.faq-try a { font-weight: 700; }
 .faq-list { margin: 0; border-top: 1px solid var(--border); }
 /* Each question opens and shuts (one at a time); the answer folds open where the browser can animate it. */
 .faq-list details { border-bottom: 1px solid var(--border); }

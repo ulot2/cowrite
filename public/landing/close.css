@@ -1,0 +1,31 @@
+/* A single, confident invitation closes the product story. */
+main > .close { display: block; padding-block: 2rem 5rem; }
+.close-invitation { position: relative; isolation: isolate; overflow: hidden; padding: 2.5rem 3rem 1.5rem; background: linear-gradient(135deg, #304ff3 10%, #2948e9 55%, #1935bb 100%); color: #fff; border-radius: 16px; text-align: center; }
+.close-invitation::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: url('/landing/closing-lines.svg') center / 100% 100% no-repeat; }
+.close-eyebrow { display: flex; align-items: center; gap: .6rem; text-align: left; font-size: .6rem; letter-spacing: .13em; font-weight: 600; margin: 0 0 3rem; color: #e0e6ff; }
+.close-eyebrow > span { font-size: 1.25rem; }
+.close .close-invitation h2 { max-width: none; margin: 0; font-size: clamp(3rem,6.5vw,5.7rem); line-height: 1.05; letter-spacing: -.05em; font-weight: 500; color: #fff; }
+.close h2 em { font-family: var(--font-display); font-weight: 400; letter-spacing: -.035em; color: #fff5d9; }
+.close-lede { color: #e0e6ff; font-size: 1rem; line-height: 1.85; margin: 1.75rem 0 0; }
+.close-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-top: 2rem; }
+.close-actions a { display: inline-flex; align-items: center; gap: 1.25rem; font-size: .85rem; font-weight: 700; text-decoration: none; padding: 1rem 1.25rem; border-radius: 5px; }
+.close-primary { background: #fff; color: #203ccc; transition: background 180ms; }
+.close-primary:hover { background: #fff5d9; }
+.close-actions .close-secondary { color: #fff; border-bottom: 1px solid #ffffff65; border-radius: 0; padding-inline: 0; }
+.close-secondary:hover { border-bottom-color: #fff; }
+.close-actions a:focus-visible { outline: 2px solid #fff; outline-offset: 5px; }
+.close-actions a > span { font-size: 1.15rem; }
+.close-reassurance { margin: 1rem 0 0; font-size: .7rem; color: #e0e6ff; }
+.close-signoff { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #ffffff40; padding-top: 1.25rem; margin-top: 4rem; text-align: left; font-size: .65rem; color: #e0e6ff; line-height: 1.7; }
+.close-signoff > span:last-child { color: #fff; font-weight: 700; }
+@media(max-width:600px) {
+  main > .close { padding-block: 1rem 3rem; }
+  .close-invitation { padding: 1.5rem 1.25rem 1.25rem; }
+  .close-invitation::before { opacity: .65; }
+  .close-eyebrow { margin-bottom: 2.5rem; }
+  .close .close-invitation h2 { font-size: clamp(2.6rem,10vw,3.75rem); }
+  .close-lede { font-size: .85rem; }
+  .close-lede br { display: none; }
+  .close-actions { flex-direction: column; gap: .5rem; margin-top: 1.5rem; }
+  .close-signoff { flex-direction: column; gap: .35rem; margin-top: 2.5rem; font-size: .6rem; }
+}

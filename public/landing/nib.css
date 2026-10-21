@@ -1,0 +1,82 @@
+/* Nib: a shared body of work beside the assistance it makes possible. */
+main > .nib { display: block; padding-block: 5rem 6rem; }
+.nib-heading { display: grid; grid-template-columns: 1.15fr 1fr; align-items: end; gap: 4rem; margin-bottom: 3rem; }
+.nib-heading .kicker { color: var(--accent); font-size: .8rem; margin: 0 0 1.25rem; }
+.nib-heading h2 { margin: 0; font-weight: 600; font-size: clamp(2.5rem, 4vw, 3.6rem); line-height: 1.12; letter-spacing: -.045em; }
+.nib-heading h2 em { font-family: var(--font-display); color: var(--accent); font-weight: 400; }
+.nib-intro { max-width: 27rem; padding-bottom: .2rem; }
+.nib-intro p { margin: 0 0 1rem; color: var(--fg-muted); line-height: 1.8; font-size: 1rem; }
+.nib-intro > span { font-size: .8rem; font-weight: 700; }
+.nib .nib-stage { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); align-items: center; gap: 3rem; padding: 2.5rem; background: #17234b; border-radius: 16px; }
+.nib-context { color: #f5f6ff; padding: 1rem .5rem; }
+.nib-context-label { margin: 0 0 1.5rem; font-size: .6rem; letter-spacing: .16em; color: #b6c3ec; font-weight: 700; }
+.nib-context h3 { margin: 0 0 .85rem; font-size: clamp(1.7rem, 2.6vw, 2.3rem); font-weight: 500; line-height: 1.2; letter-spacing: -.035em; }
+.nib-context > p:not([class]) { font-size: .85rem; line-height: 1.8; color: #c2cbe4; max-width: 29ch; }
+.nib-context-list { padding: 0; margin: 2rem 0; list-style: none; }
+.nib-context-list li { display: flex; align-items: center; gap: .85rem; padding-block: .85rem; border-bottom: 1px solid #ffffff20; }
+.nib-context-list li > span { display: grid; place-items: center; width: 1.7rem; height: 1.7rem; color: #c4d0ff; font-size: 1.1rem; }
+.nib-context-list b { display: block; font-size: .8rem; font-weight: 600; }
+.nib-context-list small { display: block; font-size: .7rem; color: #b6c3de; margin-top: .3rem; line-height: 1.5; }
+.nib-context-note { font-family: var(--font-display); font-size: 1.2rem; font-style: italic; color: #c4d0ff; margin: 0; }
+.nib-preview { min-width: 0; }
+.nib-demo-label { display: flex; gap: .5rem; align-items: center; color: #f5f6ff; font-size: .75rem; font-weight: 600; margin: 0 0 1rem; }
+.nib-demo-label > span:last-child { color: #b6c3de; font-size: .65rem; font-weight: 400; margin-left: auto; }
+.nib .nw { min-height: 26rem; padding: 1.5rem; border-radius: 8px; box-shadow: 0 15px 40px #050b2633; gap: 1.25rem; }
+.nib .nw-bar { padding-bottom: 1rem; font-size: .75rem; flex-wrap: wrap; }
+.nib .nw-scene { gap: 1rem; }
+.nib .nw-answer { background: transparent; padding: .6rem 0; gap: 1rem; }
+.nib .nw-q { color: var(--fg-muted); font-size: .75rem; font-weight: 500; }
+.nib .nw-a { font-size: 1.15rem; line-height: 1.7; letter-spacing: -.015em; }
+.nib .nw-sources { padding-top: 1rem; border-top: 1px solid var(--border); gap: .5rem; }
+.nib .nw-sources span { padding: .3rem .5rem; background: var(--tint); border-radius: 4px; font-size: .65rem; }
+.nib .nw-ask { font-size: .8rem; border-radius: 6px; }
+.nib .nw-ask .nw-btn { font-size: .75rem; border-radius: 4px; }
+.nib .nib-foot { margin-top: 1rem; color: #b6c3de; font-size: .65rem; }
+.nib .nib-pp { color: #e0e7ff; border-color: #ffffff40; background: transparent; }
+.nib .nib-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; margin-top: 1.75rem; }
+.nib .nib-acts button { border: 0; border-top: 2px solid var(--border); border-radius: 0; padding: 1.2rem 0 .6rem; background: transparent; box-shadow: none; gap: .55rem; height: 100%; transition: border-color 180ms; }
+.nib .nib-acts button[aria-current=true] { border-color: var(--accent); background: transparent; box-shadow: none; }
+.nib .nib-acts button[aria-current=true] b { color: var(--accent); }
+.nib .nib-acts button[aria-current=true] b::before { content: none; }
+.nib .nib-acts button b { font-size: .95rem; }
+.nib .nib-acts button b::after { content: ' ↗'; margin-left: .3rem; color: var(--accent); }
+.nib .nib-acts button span { font-size: .8rem; line-height: 1.7; max-width: 31ch; }
+.nib .nib-acts button:hover { border-color: var(--accent); }
+.nib .nib-acts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+.nib .nib-also { margin: 2rem 0 0; padding-top: 1.25rem; border-top: 1px solid var(--border); font-size: .75rem; line-height: 1.7; text-align: center; }
+@media (max-width: 900px) {
+  .nib-heading { gap: 2rem; }
+  .nib .nib-stage { gap: 1.5rem; padding: 1.75rem; }
+  .nib .nw { padding: 1rem; min-height: 28rem; }
+}
+@media (max-width: 700px) {
+  main > .nib { padding-block: 3rem 4rem; }
+  .nib-heading { grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  .nib-intro { max-width: 36rem; }
+  .nib-intro p { font-size: .9rem; }
+  .nib .nib-stage { grid-template-columns: 1fr; padding: 1.25rem; gap: 1.75rem; }
+  .nib-context { padding: .5rem .25rem 0; }
+  .nib-context h3 br { display: none; }
+  .nib-context > p:not([class]) { max-width: 40ch; }
+  .nib-context-label { margin-bottom: 1rem; }
+  .nib-context-list { margin: 1.25rem 0 0; }
+  .nib-context-list li { padding-block: .7rem; }
+  .nib-context-note { display: none; }
+  .nib .nw { min-height: 26rem; }
+  .nib .nw-a { font-size: 1rem; }
+  .nib .nib-acts { gap: 1rem; margin-top: 1.25rem; }
+  .nib .nib-acts button { padding-top: .8rem; }
+  .nib .nib-acts button b { font-size: .8rem; }
+  .nib .nib-acts button span { font-size: .7rem; }
+}
+@media (max-width: 400px) {
+  .nib .nib-stage { padding: 1rem .75rem; }
+  .nib .nw { padding: .85rem; min-height: 29rem; }
+  .nib .nw-bar [data-where] { display: none; }
+  .nib .nw-ask { flex-wrap: wrap; }
+  .nib .nw-input { flex-basis: 75%; min-width: 0; }
+  .nib .nib-acts { grid-template-columns: 1fr; gap: .3rem; }
+  .nib .nib-acts button { padding-block: .85rem; }
+  .nib .nib-acts button span { max-width: none; }
+}
+.nib .nib-pp[hidden] { display: none; }

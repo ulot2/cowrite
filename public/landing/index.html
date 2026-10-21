@@ -22,17 +22,25 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap">
 <link rel="stylesheet" href="/landing/landing.css">
+<link rel="stylesheet" href="/landing/how.css">
+<link rel="stylesheet" href="/landing/live.css">
+<link rel="stylesheet" href="/landing/begin.css">
+<link rel="stylesheet" href="/landing/faq.css">
+<link rel="stylesheet" href="/landing/close.css">
+<link rel="stylesheet" href="/landing/footer.css">
+<link rel="stylesheet" href="/landing/nav.css">
+  <link rel="stylesheet" href="/landing/nib.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<meta name="description" content="CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways. Free and open source.">
-<!-- The preview that chat apps and social sites show for a shared link. Image: public/landing/og.png, 1200 × 630. -->
+<meta name="description" content="CoWrite keeps your team's ideas, discussions, decisions, and documents in one space, linked both ways. Start a space for free.">
+<!-- The preview that chat apps and social sites show for a shared link. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CoWrite">
 <meta property="og:title" content="CoWrite: every decision, with the conversation that made it">
-<meta property="og:description" content="Your team's ideas, discussions, decisions, and documents in one space, linked both ways. Free and open source.">
+<meta property="og:description" content="Your team's ideas, discussions, decisions, and documents in one space, linked both ways. Start a space for free.">
 <meta property="og:url" content="https://cowrite.cowrite.workers.dev/">
-<meta property="og:image" content="https://cowrite.cowrite.workers.dev/landing/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image" content="https://cowrite.cowrite.workers.dev/landing/og-hosted.png">
+<meta property="og:image:width" content="1731">
+<meta property="og:image:height" content="909">
 <meta property="og:image:alt" content="The CoWrite logo and headline, “Every decision, with the conversation that made it”, next to the four parts of a space: ideas, discussions, decisions, and documents.">
 <meta name="twitter:card" content="summary_large_image">
 <script>try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch {}</script>
@@ -41,26 +49,24 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
 
 <header class="nav">
   <a class="brand" href="#top"><svg class="logo-c" viewBox="0 0 32 32" role="img" aria-label="CoWrite"><path d="M24.3 8.3A11 11 0 1 0 24.3 23.7" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/><path d="M6.6 19.6C7 24.2 5.6 27.6 2.6 30 7.5 30 11.6 27.7 13.7 24.8z" fill="var(--accent)"/></svg><span aria-hidden="true">oWrite</span></a>
-  <nav class="nav-links" aria-label="Page">
+  <nav class="nav-links" aria-label="Main navigation">
     <a href="#pieces">How it works</a>
-    <a href="#nib">Nib</a>
-    <a href="#questions">Questions</a>
-    <a href="/play">Try it</a>
+    <a href="#nib">Meet Nib</a>
+    <a href="#questions">FAQ</a>
+    <a href="/play">Try a document <span aria-hidden="true">↗</span></a>
   </nav>
   <div class="nav-actions">
-    <a class="nav-icon" href="https://github.com/ulot2/cowrite" aria-label="CoWrite on GitHub" title="CoWrite on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
     <a class="link" href="/login">Sign in</a>
-    <a class="btn primary" href="/login?mode=up">Start a space</a>
+    <a class="btn primary nav-start" href="/login?mode=up">Start a space <span aria-hidden="true">↗</span></a>
     <!-- Phones: the page links move into this menu. -->
     <details class="nav-menu">
-      <summary aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg></summary>
-      <nav aria-label="Page">
+      <summary aria-label="Open navigation menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="l1" d="M4 7h16"/><path class="l2" d="M4 12h16"/><path class="l3" d="M4 17h16"/></svg></summary>
+      <nav aria-label="Main navigation"><p class="nav-menu-label">FIND YOUR WAY</p>
         <a href="#pieces">How it works</a>
-        <a href="#nib">Nib</a>
-        <a href="#questions">Questions</a>
+        <a href="#nib">Meet Nib</a>
+        <a href="#questions">FAQ</a>
         <a href="/play">Try it, no sign-up</a>
         <span class="nav-menu-rule" aria-hidden="true"></span>
-        <a href="https://github.com/ulot2/cowrite">GitHub</a>
         <a href="/login">Sign in</a>
         <a class="nav-menu-cta" href="/login?mode=up">Start a space</a>
       </nav>
@@ -78,7 +84,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
         <a class="btn primary big" href="/login?mode=up">Start a space, free</a>
         <a class="btn big" href="/play">Try it, no sign-up</a>
       </div>
-      <p class="fine">Free and open source.</p>
+      <p class="fine">Free to use. No card needed.</p>
     </div>
 
     <div class="stage-wrap">
@@ -107,7 +113,7 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
         <!-- The same things in one space: fewer, larger, and the reason kept with the decision. -->
         <article class="doc space" aria-hidden="true">
           <div class="doc-bar">
-            <span class="crumb">Q4 launch</span>
+            <span class="crumb">Product launch</span>
             <span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i></span>
           </div>
           <p class="attn-h land" style="--d:0">Needs attention</p>
@@ -133,85 +139,106 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
     </div>
   </section>
 
-  <!-- 2. How it works: one piece of work followed through the space, as a chain that draws itself -->
-  <section class="how" id="pieces">
-    <h2 class="section-title">How it works</h2>
-    <p class="section-lede">Follow one piece of the Q4 launch from a thought to a signed-off plan. Every step links back to the one before it.</p>
-    <ol class="chain" style="--p:0">
-      <li class="chain-step">
-        <span class="link-n" aria-hidden="true">1</span>
-        <div class="link-text"><h3>It starts as an idea</h3><p>Put it on the space's board. The team votes.</p></div>
-        <div class="link-card">
-          <div class="c-idea">
-            <p class="c-kicker">Ideas · New</p>
-            <p class="c-title">Host a launch party at the venue</p>
-            <p class="c-foot"><span class="votes">▲ 4</span><span class="faces"><i style="background:#c2185b">M</i><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i></span><span class="to">Turned into a discussion →</span></p>
-          </div>
-        </div>
-      </li>
-      <li class="chain-step">
-        <span class="link-n" aria-hidden="true">2</span>
-        <div class="link-text"><h3>It becomes a question with a deadline</h3><p>Someone owns the answer, by a date. Any message can become a task.</p></div>
-        <div class="link-card">
-          <div class="c-q">
-            <p class="from">↩ From the idea “Host a launch party”</p>
-            <p class="c-q-head"><span class="q-mark" aria-hidden="true">?</span><b>Who books the venue?</b></p>
-            <p class="c-q-meta"><i style="background:#1565c0">T</i>Tom decides · by Mar 28</p>
-            <p class="msg"><i style="background:#c2185b">M</i><span><b>Maria</b> The Harbor Room holds 80 and is free that night.</span></p>
-            <p class="msg"><i style="background:#1565c0">T</i><span><b>Tom</b> Good. I'll call them today.</span></p>
-            <p class="c-task"><span class="tick"></span>Call the Harbor Room<span class="chip"><i style="background:#1565c0">T</i>Mar 26</span></p>
-          </div>
-        </div>
-      </li>
-      <li class="chain-step">
-        <span class="link-n" aria-hidden="true">3</span>
-        <div class="link-text"><h3>The answer becomes a decision</h3><p>It gets a number and keeps its reasons, so “why?” always has an answer.</p></div>
-        <div class="link-card">
-          <div class="dec-card">
-            <p class="from">↩ From the question “Who books the venue?”</p>
-            <p class="dec-top"><span class="dec-num">D-5</span><span class="dec-state"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Decided</span></p>
-            <p class="dec-title">Tom books the Harbor Room</p>
-            <div class="dec-why">
-              <p class="dec-why-h">Why · 2 messages</p>
-              <p class="msg"><i style="background:#c2185b">M</i><span><b>Maria</b> It holds 80 and is free that night.</span></p>
-            </div>
-          </div>
-        </div>
-      </li>
-      <li class="chain-step">
-        <span class="link-n" aria-hidden="true">4</span>
-        <div class="link-text"><h3>It lands in the plan</h3><p>Reviewers suggest changes and sign off section by section, until it is agreed.</p></div>
-        <div class="link-card">
-          <div class="c-doc">
-            <p class="from">↩ Uses decision D-5</p>
-            <p class="c-doc-bar"><b>Launch plan</b><span class="pill review">● In review</span></p>
-            <p class="c-doc-h">Venue</p>
-            <p class="c-doc-p">The party is at <del>a venue to be decided</del><ins>the Harbor Room</ins> on April 10.</p>
-            <p class="c-sign"><span>Sign-off</span><span class="ok-dots"><i class="on"></i><i class="on"></i><i></i></span><span class="muted">2 of 3 sections</span></p>
-          </div>
-        </div>
-      </li>
-    </ol>
-  </section>
-
-  <!-- 3. Nib -->
-  <section class="nib" id="nib">
-    <div class="nib-copy">
-      <p class="kicker"><span aria-hidden="true">✦</span> Nib, the assistant</p>
-      <h2 class="section-title">Nib suggests. You decide.</h2>
-      <p class="section-lede">Nib reads the whole space, and nothing it writes changes anything until someone accepts it.</p>
-      <ol class="nib-acts" aria-label="What Nib does">
-        <li><button type="button" data-scene-to="0" aria-current="true"><b>Ask the space</b><span>Ask a question. The answer names its sources.</span></button></li>
-        <li><button type="button" data-scene-to="1"><b>Suggest next steps</b><span>Nib proposes tasks from a discussion. You add or dismiss them.</span></button></li>
-        <li><button type="button" data-scene-to="2"><b>Check before review</b><span>Nib compares a draft with the decisions in force.</span></button></li>
-      </ol>
-      <p class="nib-also">It also improves, shortens, and summarizes text, as suggestions.</p>
+  <!--
+    THESIS: An idea becomes tangible as its shape changes from note to conversation to plan.
+    OWN-WORLD: Studio cobalt, ink, pale blue paper, Manrope with one Instrument Serif headline phrase.
+    STORY: Select a point on the journey, explore its artifact, follow the source or take the next step.
+    FIRST VIEWPORT: Centered headline, a connected path, a generous workbench with narrative and a paper artifact.
+    FORM: A reader-paced product story. Each stage has its own visual grammar. All scenes read without JS.
+  -->
+  <section class="how" id="pieces" aria-labelledby="how-title">
+    <div class="how-heading">
+      <p class="how-label">How it works</p>
+      <h2 id="how-title">From “what if” to <em>what’s next.</em></h2>
+      <p class="how-lede">Follow one idea all the way through. The conversation, the decision, and the work that follows stay connected.</p>
     </div>
 
+    <div class="how-demo">
+      <nav class="how-controls" aria-label="Follow the example">
+        <a id="how-tab-idea" href="#how-idea" data-how-step="0"><span class="how-number" aria-hidden="true">01</span><strong>The idea</strong><span class="how-step-detail">A little possibility</span></a>
+        <a id="how-tab-discussion" href="#how-discussion" data-how-step="1"><span class="how-number" aria-hidden="true">02</span><strong>The conversation</strong><span class="how-step-detail">A shared perspective</span></a>
+        <a id="how-tab-decision" href="#how-decision" data-how-step="2"><span class="how-number" aria-hidden="true">03</span><strong>The decision</strong><span class="how-step-detail">A clear direction</span></a>
+        <a id="how-tab-plan" href="#how-plan" data-how-step="3"><span class="how-number" aria-hidden="true">04</span><strong>The plan</strong><span class="how-step-detail">A way to get there</span></a>
+      </nav>
+
+      <div class="how-example">
+        <div class="how-window">
+          <article class="how-panel" id="how-idea" data-how-panel>
+            <div class="how-story"><span class="how-chapter">It starts with a spark</span><h3>A small thought.<br>A shared possibility.</h3><p>Give the idea somewhere to live. Your team can weigh in, vote, and help it find its feet.</p><a class="how-advance" href="#how-discussion" data-how-go="1">See the conversation <span aria-hidden="true">→</span></a></div>
+            <div class="how-artifact-area"><div class="how-artifact how-note">
+              <div class="how-panel-top"><span class="how-state">Exploring</span><span class="how-byline"><i class="how-avatar maria" aria-hidden="true">M</i>Maria's idea</span></div>
+              <h4>What if we brought everyone together?</h4>
+              <p class="how-panel-copy">Let's host a launch party. Meet the people behind the product, show what we've built, and celebrate together.</p>
+              <div class="how-idea-response"><span class="how-vote"><span aria-hidden="true">↑</span> 4 votes</span><span class="faces" aria-hidden="true"><i style="background:#1565c0">T</i><i style="background:#2e7d32">A</i><i style="background:#c2185b">M</i></span><span>The team is interested.</span></div>
+              <div class="how-artifact-foot"><span>Product launch</span><span>Ideas board <span aria-hidden="true">↗</span></span></div>
+            </div><p class="how-margin-note"><span aria-hidden="true">↳</span> The beginning of something.</p></div>
+          </article>
+
+          <article class="how-panel" id="how-discussion" data-how-panel>
+            <div class="how-story"><span class="how-chapter">Make room for the conversation</span><h3>Think it through.<br>Together.</h3><p>Explore the options in one thread. Give the question an owner and a date, so the conversation can move forward.</p><a class="how-advance" href="#how-decision" data-how-go="2">See the decision <span aria-hidden="true">→</span></a></div>
+            <div class="how-artifact-area"><div class="how-artifact how-thread">
+              <div class="how-panel-top"><span class="how-state question">Needs a decision</span><span class="how-byline">Tom · by Mar 28</span></div>
+              <h4>Which venue should we book?</h4>
+              <a class="how-source" href="#how-idea" data-how-go="0"><span aria-hidden="true">↖</span> From Maria's launch-party idea</a>
+              <div class="how-messages">
+                <div><i class="how-avatar maria" aria-hidden="true">M</i><p><b>Maria</b><span>The Harbor Room holds 80 and is available on April 10.</span></p></div>
+                <div><i class="how-avatar tom" aria-hidden="true">T</i><p><b>Tom</b><span>That fits the guest list. And it's an easy walk from the station.</span></p></div>
+              </div>
+              <div class="how-artifact-foot"><span>Product launch</span><span>2 voices, one thread</span></div>
+            </div><p class="how-margin-note"><span aria-hidden="true">↳</span> No more “where did we discuss that?”</p></div>
+          </article>
+
+          <article class="how-panel" id="how-decision" data-how-panel>
+            <div class="how-story"><span class="how-chapter">Give the work a direction</span><h3>The call is made.<br>The why stays.</h3><p>Record what you chose and what led you there. The next time someone asks “why?”, the answer is already attached.</p><a class="how-advance" href="#how-plan" data-how-go="3">See the plan <span aria-hidden="true">→</span></a></div>
+            <div class="how-artifact-area"><div class="how-artifact how-record">
+              <div class="how-panel-top"><span class="how-decision-number">Decision D-5</span><span class="how-state decided">✓ Decided</span></div>
+              <h4>Book the<br>Harbor Room.</h4>
+              <p class="how-panel-copy">April 10. Tom will confirm the booking.</p>
+              <div class="how-reason"><h5>Why this choice?</h5><p>Room for all 80 guests, available on our launch date, and an easy walk from the station.</p></div>
+              <a class="how-source" href="#how-discussion" data-how-go="1"><span aria-hidden="true">↖</span> Read the discussion that led here</a>
+              <div class="how-artifact-foot"><span><i class="how-avatar tom" aria-hidden="true">T</i> Decided by Tom</span><span>Product launch</span></div>
+            </div><p class="how-margin-note"><span aria-hidden="true">↳</span> A decision with a memory.</p></div>
+          </article>
+
+          <article class="how-panel" id="how-plan" data-how-panel>
+            <div class="how-story"><span class="how-chapter">Now, make it happen</span><h3>A decision becomes<br>a way forward.</h3><p>Build a plan from the decision. Add owners and dates, review it together, and keep the original thinking close.</p><a class="how-advance" href="/login?mode=up">Start your own space <span aria-hidden="true">→</span></a></div>
+            <div class="how-artifact-area"><div class="how-artifact how-document">
+              <div class="how-panel-top"><span class="how-state">Draft plan</span><span class="how-byline">From decision D-5</span></div>
+              <h4>Launch party.<br>Let's make it happen.</h4>
+              <a class="how-source" href="#how-decision" data-how-go="2"><span aria-hidden="true">↖</span> Implements D-5 · Book the Harbor Room</a>
+              <div class="how-tasks">
+                <p><span class="how-task-box" aria-hidden="true"></span><span>Confirm the venue</span><span class="how-task-owner"><i class="how-avatar tom" aria-hidden="true">T</i>Tom</span><span class="how-task-date">Mar 28</span></p>
+                <p><span class="how-task-box" aria-hidden="true"></span><span>Send the invitations</span><span class="how-task-owner"><i class="how-avatar maria" aria-hidden="true">M</i>Maria</span><span class="how-task-date">Apr 1</span></p>
+              </div>
+              <div class="how-plan-note"><span aria-hidden="true">↗</span><p>Every task has an owner. The original decision stays linked.</p></div>
+              <div class="how-artifact-foot"><span>Product launch</span><span>Launch plan <span aria-hidden="true">↗</span></span></div>
+            </div><p class="how-margin-note"><span aria-hidden="true">↳</span> Every next step has a reason.</p></div>
+          </article>
+        </div>
+        <div class="how-caption"><p><span class="how-caption-mark" aria-hidden="true">↔</span> One space. The whole story.</p><span>Product launch · Illustrative example</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Nib: the team's context becomes useful assistance. -->
+  <section class="nib" id="nib" aria-labelledby="nib-title">
+    <div class="nib-heading">
+      <div><p class="kicker"><span aria-hidden="true">✦</span> Meet Nib</p><h2 id="nib-title">Already in the loop.<br><em>Always on your side.</em></h2></div>
+      <div class="nib-intro"><p>An assistant that connects the dots across your space. Ask what was decided, find the next step, or catch what a draft missed.</p><span>Nib suggests. Your team makes the call.</span></div>
+    </div>
     <div class="nib-stage">
-      <p class="sr-only">Example: in the Q4 launch space, someone asks Nib when the launch party is. Nib answers “April 10 at the Harbor Room” and names its two sources: decision D-5 and the #launch discussion.</p>
+      <aside class="nib-context" aria-label="Context available to Nib">
+        <p class="nib-context-label">ONE SHARED SPACE</p>
+        <h3>The thinking is<br>already here.</h3>
+        <p>Nib draws on the work your team has put into the space.</p>
+        <ul class="nib-context-list"><li><span aria-hidden="true">↗</span><div><b>The original idea</b><small>Bring everyone together</small></div></li><li><span aria-hidden="true">↔</span><div><b>The conversation</b><small>A venue that works for everyone</small></div></li><li><span aria-hidden="true">✓</span><div><b>The decision</b><small>April 10. The Harbor Room.</small></div></li></ul>
+        <p class="nib-context-note">Your context. A clearer next move.</p>
+      </aside>
+      <div class="nib-preview">
+        <p class="nib-demo-label"><span aria-hidden="true">✦</span> Nib at work <span>Illustrative demo</span></p>
+        <p class="sr-only" data-nib-description>Example: Nib answers that the launch party is April 10 at the Harbor Room, citing decision D-5 and the launch discussion.</p>
       <div class="nw" aria-hidden="true">
-        <p class="nw-bar"><b>Q4 launch</b><span data-where>Overview</span><span class="nw-mark">✦ Nib</span></p>
+        <p class="nw-bar"><b>Product launch</b><span data-where>Overview</span><span class="nw-mark">✦ Nib</span></p>
 
         <!-- 1. Ask the space -->
         <div class="nw-scene" data-scene="ask">
@@ -251,17 +278,28 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
         </div>
         <svg class="nw-cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.6L10 19z"/></svg>
       </div>
+
       <p class="nib-foot"><button type="button" class="nib-pp" aria-pressed="false" aria-label="Pause the demo"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause" d="M5 3.5v9M11 3.5v9"/><path class="play" d="M5 3.5l7.5 4.5L5 12.5z"/></svg></button><span>Example. Names are made up.</span></p>
+      </div>
     </div>
+      <ol class="nib-acts" aria-label="What Nib does">
+        <li><button type="button" data-scene-to="0" aria-current="true"><b>Ask the space</b><span>Ask a question. The answer names its sources.</span></button></li>
+        <li><button type="button" data-scene-to="1"><b>Suggest next steps</b><span>Nib proposes tasks from a discussion. You add or dismiss them.</span></button></li>
+        <li><button type="button" data-scene-to="2"><b>Check before review</b><span>Nib compares a draft with the decisions in force.</span></button></li>
+      </ol>
+
+    <p class="nib-also">A second pair of eyes for your writing, too. Improve, shorten, or summarize text — then accept the suggestions you want.</p>
   </section>
 
   <!-- 4. Live and offline -->
-  <section class="live">
+  <section class="live" id="together" aria-labelledby="live-title">
     <div class="live-copy">
-      <h2 class="section-title">Write together. Keep writing offline.</h2>
-      <p class="section-lede">Every cursor carries a name. Lose the connection and keep typing: your words merge with everyone else's when you are back, with nothing to fix by hand.</p>
-      <p class="sync-state" data-sync><span class="dot"></span><span data-sync-text>In sync</span></p>
+      <p class="live-kicker">Made for working together</p>
+      <h2 id="live-title">Different places.<br><em>The same page.</em></h2>
+      <p class="live-lede">Write alongside your team. When the connection drops, keep your train of thought. Your edits come together when you’re back.</p>
     </div>
+    <div class="live-workbench">
+      <div class="live-demo-head"><span>ONE DOCUMENT · TWO PERSPECTIVES</span><p class="sync-state" data-sync><span class="dot"></span><span data-sync-text>In sync</span></p></div>
     <p class="sr-only">Example: Maria and Tom edit the launch plan on two laptops. Tom goes offline and keeps typing while Maria edits too. When Tom is back, both laptops show both changes, with nothing to fix by hand.</p>
     <div class="sync" aria-hidden="true">
         <div class="sw" data-win="maria">
@@ -275,53 +313,47 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
           <p class="sw-p"><span>The launch party </span><span class="sw-ins" data-part="m1"></span><span>is on </span><span class="sw-ins" data-part="m2"></span><span>April 10 at the Harbor Room.</span><span class="sw-ins" data-part="t1"></span></p>
         </div>
     </div>
+    <div class="live-demo-foot"><span>Illustrative collaboration demo</span><button type="button" class="live-pause" aria-pressed="false">Pause demo</button></div>
+    </div>
+    <div class="live-benefits"><div><span>01 / TOGETHER</span><h3>See the thought take shape.</h3><p>Named cursors show who’s writing. Changes appear as your teammates type.</p></div><div><span>02 / OFFLINE</span><h3>Stay with the idea.</h3><p>Your edits are saved on this device, even when your connection drops.</p></div><div><span>03 / RECONNECTED</span><h3>Pick up, already in sync.</h3><p>When you’re back online, everyone’s edits merge into the shared document.</p></div></div>
   </section>
 
-  <!-- 5. Start from a mode -->
-  <section class="begin" id="start">
-    <h2 class="section-title">What happens when you start</h2>
-    <p class="section-lede">Three steps, about a minute. You can skip any of them.</p>
-    <ol class="begin-steps">
-      <li>
-        <p class="bs-n" aria-hidden="true">1</p>
-        <h3>Name your space</h3>
-        <p class="bs-t">One space holds one piece of work.</p>
-        <div class="bs-ui" aria-hidden="true">
-          <p class="bs-label">Space name</p>
-          <p class="bs-field">Q4 launch<span class="bs-caret"></span></p>
-          <p class="bs-chips"><span>Hiring a designer</span><span>Website rewrite</span></p>
-        </div>
-      </li>
-      <li>
-        <p class="bs-n" aria-hidden="true">2</p>
-        <h3>Add who works on it</h3>
-        <p class="bs-t">Give each person a role. You can change it later.</p>
-        <div class="bs-ui" aria-hidden="true">
-          <p class="bs-person"><i style="background:#2e7d32">B</i><span>bea@example.com</span><b>Editor</b></p>
-          <p class="bs-person"><i style="background:#1565c0">S</i><span>sara@example.com</span><b>Reviewer</b></p>
-          <p class="bs-note">No email is sent yet, so tell them yourself.</p>
-        </div>
-      </li>
-      <li>
-        <p class="bs-n" aria-hidden="true">3</p>
-        <h3>Make the first move</h3>
-        <p class="bs-t">Start wherever the work is today.</p>
-        <div class="bs-ui" aria-hidden="true">
-          <p class="bs-move"><span class="bs-ic idea">✦</span><span><b>Put up an idea</b><small>On the space's board, for votes</small></span></p>
-          <p class="bs-move"><span class="bs-ic ask">?</span><span><b>Ask a question</b><small>Who decides, and by when</small></span></p>
-          <p class="bs-move"><span class="bs-ic plan">≡</span><span><b>Write a plan</b><small>Goal, tasks, a decision, ready to fill</small></span></p>
-        </div>
-      </li>
-    </ol>
+  <!-- 5. A short route into a shared space. -->
+  <section class="begin" id="start" aria-labelledby="begin-title">
+    <div class="begin-intro">
+      <p class="begin-kicker">A place to begin</p>
+      <h2 id="begin-title">Your next idea<br>needs <em>a home.</em></h2>
+      <p>Give the work a name. Bring your people. Start with whatever’s on your mind.</p>
+      <a class="begin-cta" href="/login?mode=up">Create your first space <span aria-hidden="true">↗</span></a>
+      <span class="begin-note">Free to use. No card needed.</span>
+      <a class="begin-try" href="/play">Or try a document first →</a>
+    </div>
+    <div class="begin-route">
+      <p class="begin-route-label">THREE SMALL STEPS <span>You can skip any step.</span></p>
+      <ol class="begin-steps">
+        <li>
+          <div class="begin-step-copy"><span class="bs-n" aria-hidden="true">01</span><div><h3>Name the work.</h3><p class="bs-t">A launch, a new hire, a half-formed idea. Give it a space of its own.</p></div></div>
+          <div class="bs-ui begin-name" aria-hidden="true"><span class="begin-space-mark">P</span><div><span class="begin-field-label">SPACE NAME</span><p>Product launch</p></div><span class="begin-saved">✓</span></div>
+        </li>
+        <li>
+          <div class="begin-step-copy"><span class="bs-n" aria-hidden="true">02</span><div><h3>Bring your people.</h3><p class="bs-t">Add teammates by the email they sign up with. Choose who can edit or review.</p></div></div>
+          <div class="bs-ui begin-people" aria-hidden="true"><p><i class="begin-avatar maria">M</i><span>Maria</span><b>Editor</b></p><p><i class="begin-avatar tom">T</i><span>Tom</span><b>Reviewer</b></p></div>
+          <p class="begin-email-note">CoWrite doesn’t send invitation emails yet. Share the space link with your team.</p>
+        </li>
+        <li>
+          <div class="begin-step-copy"><span class="bs-n" aria-hidden="true">03</span><div><h3>Make the first move.</h3><p class="bs-t">Capture an idea, open a question, or write a plan. There’s no required order.</p></div></div>
+          <div class="bs-ui begin-choices" aria-hidden="true"><span><i>✦</i> An idea</span><span><i>?</i> A question</span><span><i>≡</i> A plan</span></div>
+        </li>
+      </ol>
+    </div>
   </section>
 
-  <!-- 6. For the engineers -->
-  <section class="faq" id="questions">
+  <!-- 6. Straight answers, with room for the visitor's own question. -->
+  <section class="faq" id="questions" aria-labelledby="faq-title">
     <div class="faq-head">
-      <h2 class="section-title">Honest answers</h2>
-      <p class="section-lede">What people ask before they start.</p>
-      <p class="faq-own">Missing your question? Ask Nib at the end of the list. It answers from what CoWrite says about itself, and your questions stay in this browser.</p>
-      <p class="faq-code">Curious how it works inside? <a href="https://github.com/ulot2/cowrite">Read the code on GitHub →</a></p>
+      <p class="faq-kicker">Before you jump in</p>
+      <h2 id="faq-title">Good questions.<br><em>Straight answers.</em></h2>
+      <p class="faq-lede">A few things you might be wondering about CoWrite.</p>
     </div>
     <div class="faq-list">
       <details name="faq" open><summary>Is it free?</summary><p>Yes. There is no paid plan today, and nothing asks for a card.</p></details>
@@ -331,60 +363,52 @@ FORM: structure 5 of 7 (the scattered stack collapses), staged inside the app's 
       <details name="faq"><summary>What if I lose the connection?</summary><p>Keep writing. Your edits are saved on your device and merge with everyone else's when you are back.</p></details>
       <details name="faq"><summary>How do I bring my team in?</summary><p>Add people by the email they sign up with, or share the space's link. CoWrite does not send emails yet, so tell them yourself.</p></details>
       <details name="faq"><summary>Can I try it without signing up?</summary><p>Yes. Make up to 10 documents without an account, edit them, and download them. Only your browser can open them, and they stay for 30 days after your last edit. When you sign up, they move into your account.</p></details>
-      <details name="faq"><summary>Is the code open?</summary><p>Yes, under the MIT license. You can read it, run it yourself, or open an issue.</p></details>
-      <!-- Ask your own question: the last row is the field itself. Nib answers from the facts about CoWrite; rows stay in this browser. -->
+      <details name="faq"><summary>Do I need to install anything?</summary><p>No. CoWrite is a hosted app that works in your browser, on a computer or a phone. Create an account to start a space, or try a document without signing up.</p></details>
+    </div>
+    <div class="faq-conversation">
+      <div class="faq-conversation-copy"><span class="faq-nib-label">✦ ASK NIB</span><h3>Still curious?</h3><p>Ask about CoWrite. Nib answers from what we say about the product.</p></div>
+      <div class="faq-compose">
       <form class="faq-ask">
         <span class="faq-spark" aria-hidden="true">✦</span>
-        <input name="question" maxlength="300" required autocomplete="off" placeholder="Ask your own question" aria-label="Ask Nib your own question">
+        <input name="question" maxlength="300" required autocomplete="off" placeholder="What would you like to know?" aria-label="Ask Nib about CoWrite" aria-describedby="faq-privacy">
         <button class="faq-send" aria-label="Ask Nib"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </form>
       <p class="faq-ask-note" aria-live="polite"></p>
+        <p class="faq-privacy" id="faq-privacy">Your question is sent to Nib for an answer. Saved questions stay in this browser.</p>
+      </div>
     </div>
+    <p class="faq-try">Sometimes it’s easier to try. <a href="/play">Open a document — no account needed <span aria-hidden="true">↗</span></a></p>
   </section>
 
-  <!-- 7. Close: the page's last decision is the reader's own, drawn as a D-number card still waiting. -->
-  <section class="close">
-    <div class="close-copy">
-      <h2>Next time someone asks “why?”, the answer is already there.</h2>
-      <p class="section-lede">Start a space for the work in front of you. It takes about a minute.</p>
-      <div class="hero-actions">
-        <a class="btn primary big" href="/login?mode=up">Start a space, free</a>
-        <a class="btn big" href="/play">Try it first</a>
-      </div>
-    </div>
-    <div class="dec-card close-card">
-      <p class="dec-top"><span class="dec-num">D-1</span><span class="dec-state">Your call</span></p>
-      <p class="dec-title">Keep our work in one space</p>
-      <div class="dec-why">
-        <p class="dec-why-h">Why · from this page</p>
-        <ul>
-          <li>Every decision keeps the conversation that made it.</li>
-          <li>Nib suggests. Nothing changes until you accept.</li>
-          <li>You can keep writing when the connection drops.</li>
-          <li>It is free and open source.</li>
-        </ul>
-      </div>
+  <!-- 7. The next move belongs to the reader. -->
+  <section class="close" id="your-next-step" aria-labelledby="close-title">
+    <div class="close-invitation">
+      <p class="close-eyebrow"><span aria-hidden="true">↗</span> YOUR NEXT CHAPTER</p>
+      <h2 id="close-title">Good work starts<br>with <em>“what if.”</em></h2>
+      <p class="close-lede">Give that thought a space. Bring your people.<br>See what you can make of it, together.</p>
+      <div class="close-actions"><a class="close-primary" href="/login?mode=up">Start your space <span aria-hidden="true">↗</span></a><a class="close-secondary" href="/play">Try a document first <span aria-hidden="true">→</span></a></div>
+      <p class="close-reassurance">Free to use. No card needed.</p>
+      <div class="close-signoff"><span>Every idea. Every conversation. Every decision.</span><span>One shared space.</span></div>
     </div>
   </section>
 </main>
 
-<footer class="foot">
+<footer class="foot" id="footer">
   <div class="foot-brand">
     <a class="brand small" href="#top"><svg class="logo-c" viewBox="0 0 32 32" role="img" aria-label="CoWrite"><path d="M24.3 8.3A11 11 0 1 0 24.3 23.7" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/><path d="M6.6 19.6C7 24.2 5.6 27.6 2.6 30 7.5 30 11.6 27.7 13.7 24.8z" fill="var(--accent)"/></svg><span aria-hidden="true">oWrite</span></a>
-    <p>Every decision, with the conversation that made it.</p>
+    <p class="foot-statement">A little less scattered.<br><em>A lot more together.</em></p><p class="foot-description">Ideas, conversations, and decisions.<br>One home for your team’s work.</p>
   </div>
   <nav class="foot-links" aria-label="Footer">
-    <div><h2>Product</h2><a href="#pieces">How it works</a><a href="#nib">Nib</a><a href="#questions">Questions</a><a href="/play">Try it, no sign-up</a></div>
-    <div><h2>Account</h2><a href="/login?mode=up">Start a space</a><a href="/login">Sign in</a></div>
-    <div><h2>Open source</h2><a href="https://github.com/ulot2/cowrite">Code on GitHub</a><a href="https://github.com/ulot2/cowrite/issues">Report a problem</a></div>
+    <div><h2>Explore</h2><a href="#pieces">How it works</a><a href="#nib">Meet Nib</a><a href="#together">Work together</a><a href="#questions">Questions &amp; answers</a></div>
+    <div><h2>Make yourself at home</h2><a class="foot-start" href="/login?mode=up">Start a space <span aria-hidden="true">↗</span></a><a href="/play">Try a document</a><a href="/login">Sign in</a><span class="foot-free">Free to use. No card needed.</span></div>
   </nav>
   <div class="foot-base">
-    <p>Free and open source under the MIT license.</p>
-    <div class="theme" role="group" aria-label="Theme">
+    <p>CoWrite <span aria-hidden="true">/</span> Your team’s work, connected.</p><a class="foot-top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
+    <div class="foot-appearance"><span>Appearance</span><div class="theme" role="group" aria-label="Theme">
       <button type="button" data-theme-to="system" aria-label="Use the system theme" title="System"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
       <button type="button" data-theme-to="light" aria-label="Light theme" title="Light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
       <button type="button" data-theme-to="dark" aria-label="Dark theme" title="Dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button>
-    </div>
+    </div></div>
   </div>
 </footer>
 
@@ -473,30 +497,69 @@ else {
   next()
 }
 
-// "How it works": each step comes in as it nears the middle of the screen, and the chain's line fills
-// down to the step reached. Under reduced motion every step is simply there.
-const chain = document.querySelector('.chain')
-const links = [...chain.querySelectorAll('.chain-step')]
-// The line runs from the first circle to the last one.
-const ends = () => {
-  const first = links[0].querySelector('.link-n'), last = links.at(-1).querySelector('.link-n'), box = chain.getBoundingClientRect()
-  chain.style.setProperty('--top', `${first.getBoundingClientRect().top + first.offsetHeight / 2 - box.top}px`)
-  chain.style.setProperty('--bottom', `${box.bottom - (last.getBoundingClientRect().top + last.offsetHeight / 2)}px`)
+// The walkthrough is reader-paced. Without JS its links jump to four visible scenes.
+// With JS it becomes an accessible tab set; the in-example source links work backwards too.
+const how = document.querySelector('.how')
+const howControls = how.querySelector('.how-controls')
+const howTabs = [...how.querySelectorAll('[data-how-step]')]
+const howPanels = [...how.querySelectorAll('[data-how-panel]')]
+
+howControls.setAttribute('role', 'tablist')
+const howSelect = (index, focus = false) => {
+  howTabs.forEach((tab, i) => {
+    tab.setAttribute('aria-selected', String(i === index))
+    tab.tabIndex = i === index ? 0 : -1
+    tab.classList.toggle('is-past', i < index)
+    howPanels[i].hidden = i !== index
+  })
+  how.dataset.active = String(index)
+  if (focus) howTabs[index].focus({ preventScroll: true })
 }
-ends(); addEventListener('resize', ends)
-if (matchMedia('(prefers-reduced-motion: reduce)').matches) { links.forEach((l) => l.classList.add('in')); chain.style.setProperty('--p', 1) }
-else {
-  const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in') }), { rootMargin: '0px 0px -35% 0px' })
-  links.forEach((l) => io.observe(l))
-  let queued = false
-  const fill = () => {
-    queued = false
-    const r = chain.getBoundingClientRect()
-    chain.style.setProperty('--p', Math.min(1, Math.max(0, (innerHeight * 0.65 - r.top) / r.height)).toFixed(3))
-  }
-  addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(fill) } }, { passive: true })
-  fill()
+howTabs.forEach((tab, i) => {
+  tab.setAttribute('role', 'tab')
+  tab.setAttribute('aria-controls', howPanels[i].id)
+  howPanels[i].setAttribute('role', 'tabpanel')
+  howPanels[i].setAttribute('aria-labelledby', tab.id)
+  howPanels[i].tabIndex = 0
+  tab.addEventListener('click', (event) => { event.preventDefault(); howSelect(i) })
+  tab.addEventListener('keydown', (event) => {
+    let next
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (i + 1) % howTabs.length
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (i + howTabs.length - 1) % howTabs.length
+    if (event.key === 'Home') next = 0
+    if (event.key === 'End') next = howTabs.length - 1
+    if (event.key === ' ') next = i
+    if (next !== undefined) { event.preventDefault(); howSelect(next, true) }
+  })
+})
+how.querySelectorAll('[data-how-go]').forEach((link) => link.addEventListener('click', (event) => {
+  event.preventDefault()
+  howSelect(Number(link.dataset.howGo), true)
+}))
+how.classList.add('how-ready')
+howControls.setAttribute('aria-orientation', 'horizontal')
+// Measure every scene at the current width before hiding it, so switching never shifts the page.
+const howFit = () => {
+  how.style.removeProperty('--how-panel-height')
+  const hidden = howPanels.map(panel => panel.hidden)
+  howPanels.forEach(panel => { panel.hidden = false })
+  const height = Math.ceil(Math.max(...howPanels.map(panel => panel.getBoundingClientRect().height)))
+  howPanels.forEach((panel, index) => { panel.hidden = hidden[index] })
+  how.style.setProperty('--how-panel-height', `${height}px`)
 }
+const howFromHash = () => {
+  const index = howPanels.findIndex(panel => `#${panel.id}` === location.hash)
+  if (index >= 0) howSelect(index)
+  return index
+}
+howSelect(Math.max(0, howFromHash()))
+howFit()
+let howWidth = 0
+new ResizeObserver(([entry]) => {
+  if (entry.contentRect.width !== howWidth) { howWidth = entry.contentRect.width; howFit() }
+}).observe(how.querySelector('.how-window'))
+document.fonts.ready.then(howFit)
+addEventListener('hashchange', howFromHash)
 
 // Nib's demo: a person using Nib, played by a pointer. Each scene resets its window, then runs its
 // steps; a newer run (a click, a pause, the demo leaving the screen) stops the older one at its next
@@ -592,6 +655,11 @@ const showScene = (i) => {
   scenes.forEach((sc, k) => sc.toggleAttribute('data-on', k === i))
   acts.forEach((b, k) => (k === i ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current')))
   where.textContent = play[i].where
+  document.querySelector('[data-nib-description]').textContent = [
+    'Example: Nib answers that the launch party is April 10 at the Harbor Room, citing decision D-5 and the launch discussion.',
+    'Example: from Maria and Tom’s conversation, Nib suggests a task for Tom to call the Harbor Room. A person chooses to add it.',
+    'Example: Nib flags a March 3 date in the draft because decision D-4 sets the launch for April 10.'
+  ][i]
   play[i].reset(scenes[i])
 }
 const loop = async (from) => {
@@ -638,7 +706,8 @@ const syncText = document.querySelector('[data-sync-text]')
 const wins = { maria: sync.querySelector('[data-win="maria"]'), tom: sync.querySelector('[data-win="tom"]') }
 const colors = { maria: '#c2185b', tom: '#1565c0' }
 const texts = { m1: 'for 80 guests ', m2: 'the evening of ', t1: ' Doors open at 7 pm.' }
-let syncRun = 0, syncPlaying = false
+let syncRun = 0, syncPlaying = false, syncPaused = false
+const syncPause = document.querySelector('.live-pause')
 const sWait = (ms, gen) => new Promise((ok, stop) => setTimeout(() => (gen === syncRun ? ok() : stop('stopped')), ms))
 const part = (who, key) => wins[who].querySelector(`[data-part="${key}"]`)
 const caret = (who, name) => {
@@ -698,13 +767,21 @@ const syncLoop = async () => {
 }
 const syncStop = () => { syncRun++; syncPlaying = false }
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  syncPause.hidden = true
   syncReset()
   for (const who of ['maria', 'tom']) for (const key of Object.keys(texts)) part(who, key).textContent = texts[key]
   place('maria', 'Maria', 'm2'); place('tom', 'Tom', 't1')
   say('ok', 'In sync · nothing to resolve')
 } else {
-  new IntersectionObserver(([e]) => { if (!e.isIntersecting) syncStop(); else if (!syncPlaying) syncLoop() }, { threshold: 0.4 }).observe(sync)
+  new IntersectionObserver(([e]) => { if (!e.isIntersecting) syncStop(); else if (!syncPlaying && !syncPaused) syncLoop() }, { threshold: 0.4 }).observe(sync)
 }
+
+syncPause.addEventListener('click', () => {
+  syncPaused = !syncPaused
+  syncPause.setAttribute('aria-pressed', String(syncPaused))
+  syncPause.textContent = syncPaused ? 'Play demo' : 'Pause demo'
+  if (syncPaused) syncStop(); else syncLoop()
+})
 
 // A hidden tab plays nothing: the demos stop, and start again when the tab is shown and on screen.
 document.addEventListener('visibilitychange', () => {
@@ -712,7 +789,7 @@ document.addEventListener('visibilitychange', () => {
   else {
     const on = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight }
     if (!still && !nibPaused && on(nw)) loop(current)
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && on(sync)) syncLoop()
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !syncPaused && on(sync)) syncLoop()
   }
 })
 
@@ -733,7 +810,7 @@ const addRow = (row) => {
   remove.type = 'button'
   remove.addEventListener('click', () => { mine.write(mine.read().filter((r) => r.at !== row.at)); d.remove() })
   d.append(el('summary', '', row.q), el('p', '', row.a), remove)
-  faqList.insertBefore(d, faqForm)
+  faqList.append(d)
   return d
 }
 mine.read().forEach(addRow)
@@ -760,6 +837,8 @@ faqForm.addEventListener('submit', async (e) => {
       d.style.overflow = ''
     }
     d.open = true
+    d.querySelector('summary').focus({ preventScroll: true })
+    d.scrollIntoView({ behavior: reduce ? 'instant' : 'smooth', block: 'nearest' })
   } catch {
     faqNote.dataset.state = 'error'; faqNote.textContent = 'Nib did not answer. Check the connection and try again.'
   } finally {
@@ -782,6 +861,8 @@ const here = new IntersectionObserver((entries) => {
 }, { rootMargin: '-45% 0px -50% 0px' })
 ;['pieces', 'nib', 'questions'].forEach((id) => here.observe(document.getElementById(id)))
 const menu = bar.querySelector('.nav-menu')
+menu.addEventListener('toggle', () => menu.querySelector('summary').setAttribute('aria-label', menu.open ? 'Close navigation menu' : 'Open navigation menu'))
+matchMedia('(min-width: 961px)').addEventListener('change', (event) => { if (event.matches) menu.open = false })
 menu.addEventListener('click', (e) => { if (e.target.closest('nav a')) menu.open = false })
 document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false })
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus() } })
