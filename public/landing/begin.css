@@ -1,0 +1,50 @@
+/* A quiet invitation paired with a single, continuous setup route. */
+main > .begin { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(3rem, 8vw, 7rem); padding-block: 6rem; align-items: start; }
+.begin-intro { padding-top: 2rem; }
+.begin-kicker { color: var(--accent); font-size: .8rem; font-weight: 700; margin: 0 0 1.5rem; }
+.begin-intro h2 { font-size: clamp(2.6rem, 4.6vw, 4rem); letter-spacing: -.045em; line-height: 1.1; font-weight: 600; margin: 0 0 1.5rem; }
+.begin-intro h2 em { font-family: var(--font-display); font-weight: 400; color: var(--accent); }
+.begin-intro > p:not([class]) { color: var(--fg-muted); font-size: 1rem; line-height: 1.85; max-width: 30ch; margin: 0 0 2rem; }
+.begin-cta { display: inline-flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1rem 1.25rem; background: var(--accent); color: var(--accent-fg); border-radius: 6px; font-size: .85rem; font-weight: 700; text-decoration: none; transition: background 180ms; }
+.begin-cta:hover { background: var(--accent-hover); }
+.begin-cta > span { font-size: 1.2rem; }
+.begin-note { display: block; margin-top: .85rem; font-size: .7rem; color: var(--fg-muted); }
+.begin-try { display: inline-block; margin-top: 2rem; padding-block: .4rem; color: var(--fg-muted); font-size: .75rem; text-underline-offset: 4px; }
+.begin-try:hover { color: var(--accent); }
+.begin-cta:focus-visible, .begin-try:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.begin-route { min-width: 0; }
+.begin-route-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border); color: var(--fg-muted); font-size: .6rem; letter-spacing: .08em; font-weight: 700; }
+.begin-route-label span { font-weight: 400; letter-spacing: 0; font-size: .65rem; }
+.begin .begin-steps { display: block; margin: 0; background: transparent; border-radius: 0; }
+.begin .begin-steps li { display: block; padding: 1.75rem 0; border: 0; }
+.begin .begin-steps li + li { border-top: 1px solid var(--border); }
+.begin-step-copy { display: grid; grid-template-columns: 2rem minmax(0,1fr); gap: .75rem; }
+.begin .bs-n { display: block; background: transparent; color: var(--accent); width: auto; height: auto; margin: .2rem 0 0; font-size: .7rem; font-weight: 600; }
+.begin .begin-steps h3 { font-size: 1.2rem; font-weight: 600; letter-spacing: -.025em; margin: 0 0 .5rem; }
+.begin .bs-t { font-size: .8rem; line-height: 1.8; color: var(--fg-muted); margin: 0; max-width: 44ch; }
+.begin .bs-ui { margin: 1.1rem 0 0 2.75rem; border: 0; background: var(--tint); box-shadow: none; border-radius: 6px; padding: 1rem; }
+.begin .begin-name { display: flex; align-items: center; gap: .8rem; }
+.begin-space-mark { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; background: var(--accent-soft); color: var(--accent); border-radius: 6px; font-size: 1rem; font-weight: 700; }
+.begin-field-label { display: block; color: var(--fg-muted); font-size: .5rem; letter-spacing: .1em; margin-bottom: .25rem; }
+.begin-name p { font-size: .85rem; font-weight: 600; }
+.begin-saved { margin-left: auto; color: var(--ok); }
+.begin .begin-people { gap: .75rem; }
+.begin-people p { display: flex; align-items: center; gap: .65rem; font-size: .75rem; }
+.begin-avatar { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; color: white; font-style: normal; font-size: .6rem; }
+.begin-avatar.maria { background: #c2185b; }
+.begin-avatar.tom { background: #1565c0; }
+.begin-people b { margin-left: auto; font-weight: 500; color: var(--fg-muted); font-size: .65rem; }
+.begin-email-note { margin: .75rem 0 0 2.75rem; color: var(--fg-muted); font-size: .65rem; line-height: 1.7; }
+.begin .begin-choices { display: flex; flex-wrap: wrap; gap: .5rem; background: transparent; padding: 0; }
+.begin-choices > span { display: flex; align-items: center; gap: .5rem; padding: .75rem; border: 1px solid var(--border); border-radius: 5px; font-size: .7rem; }
+.begin-choices i { color: var(--accent); font-style: normal; font-size: .9rem; }
+@media (max-width: 760px) {
+  main > .begin { grid-template-columns: minmax(0,1fr); gap: 3rem; padding-block: 3rem 4rem; }
+  .begin-intro { padding: 0; }
+  .begin-intro > p:not([class]) { max-width: 38ch; font-size: .9rem; }
+  .begin-try { margin-top: 1rem; }
+}
+@media (max-width: 360px) {
+  .begin .bs-ui, .begin-email-note { margin-left: 0; }
+  .begin-route-label { font-size: .55rem; }
+}

@@ -10,13 +10,15 @@ web
 
 Small teams and writers who draft, review, and agree on documents together: a plan, a spec, a proposal, meeting notes. They write at the same time, leave comments, suggest changes, and need to know when a document is approved and what was decided.
 
-A second audience reads the public landing page: engineers and recruiters looking at CoWrite as a portfolio project. The page speaks to users first and gives this audience a short, honest "how it is built" part.
+The public landing page helps prospective teams understand the product and try it. It leads to the hosted app and a document demo without an account.
 
 ## Product Purpose
 
 CoWrite is one place for a document's whole life: write it together live, review it with comments and suggestions, move it from draft to approved, and keep the tasks and decisions it produces inside the text. Success is a team that no longer copies a draft between a chat, an editor, a review tool, and a task list.
 
 ## Positioning
+
+CoWrite is offered as a hosted product, not as an open-source project. Public marketing does not promote the repository, source access, or self-hosting. It remains free to use today; future pricing is undecided.
 
 Word helps you write a document. CoWrite moves an idea from thought to finished, agreed work with other people, and remembers why. A space holds the whole piece of work: discussions and questions with a deadline, the decisions they produce, the tasks, and the documents. Everything is linked, so any decision can be traced back to the conversation that made it. Nib, the assistant, only ever suggests, and it will learn to read the whole space. Features that Google Docs already has are not the point; every addition must strengthen the chain from idea to discussion to decision to done.
 
@@ -56,7 +58,7 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 ## Evidence on Hand
 
-- The live app: https://cowrite.cowrite.workers.dev, and the public repo: https://github.com/ulot2/cowrite (MIT license, 42 automated tests, CI deploys on every push).
+- The live app: https://cowrite.cowrite.workers.dev. The repository and its licensing are managed separately from public marketing.
 - Real screens of the app that can be shown or rebuilt.
 - None: no customers, testimonials, logos, usage numbers, or press. Do not invent any.
 

@@ -35,9 +35,9 @@ Search finds words in document titles, text, and comments.
 Sign up with an email and a password, or with GitHub.
 You can make up to 10 documents without an account ("Try it, no sign-up"), edit them, and download them. Only your browser can open them, and they stay for 30 days after your last edit. When you sign up or sign in, they move into your account. Without an account there are no comments, sharing, spaces, Nib, or images.
 CoWrite works in the browser, on a computer or a phone. There is no app to install.
-The code is open source under the MIT license. You can read it, run it yourself, or open an issue on GitHub.
+CoWrite is offered as a hosted app, not as an open-source project. Use the hosted app in your browser.
 CoWrite runs on Cloudflare Workers, Durable Objects, and D1, with Yjs to merge edits and BlockNote as the editor.`
-const NO_ANSWER = 'We do not have an answer to that yet. Ask on GitHub, and the team will answer.'
+const NO_ANSWER = 'We do not have an answer to that yet. Try asking about spaces, documents, decisions, or Nib.'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -52,14 +52,14 @@ export async function action({ request }: Route.ActionArgs) {
   const count = (who: string) => env.DB.prepare('INSERT INTO faq_asks (day, who, n) VALUES (?, ?, 1) ON CONFLICT DO UPDATE SET n = n + 1 RETURNING n').bind(today(), who)
   const [mine, all] = (await env.DB.batch<{ n: number }>([count(await visitorCode(request)), count('*'), env.DB.prepare('DELETE FROM faq_asks WHERE day < ?').bind(today())]))
     .map((r) => r.results[0]?.n ?? 0)
-  if (mine > PER_VISITOR) return Response.json({ error: `You have asked ${PER_VISITOR} questions today. Ask again tomorrow, or ask on GitHub.` }, { status: 429 })
-  if (all > PER_DAY) return Response.json({ error: 'Nib has answered a lot of questions today. Try again tomorrow, or ask on GitHub.' }, { status: 429 })
+  if (mine > PER_VISITOR) return Response.json({ error: `You have asked ${PER_VISITOR} questions today. Ask again tomorrow, or browse the questions above.` }, { status: 429 })
+  if (all > PER_DAY) return Response.json({ error: 'Nib has answered a lot of questions today. Try again tomorrow, or browse the questions above.' }, { status: 429 })
 
   try {
     const answer = await ask('faq', question, facts)
     return Response.json({ question, answer: !answer || answer.includes('NO_ANSWER') ? NO_ANSWER : answer })
   } catch (e) {
-    if (e instanceof AiLimit) return Response.json({ error: 'Nib is out of free answers for today. Try again tomorrow, or ask on GitHub.' }, { status: 429 })
+    if (e instanceof AiLimit) return Response.json({ error: 'Nib is out of free answers for today. Try again tomorrow, or browse the questions above.' }, { status: 429 })
     console.error(e)
     return Response.json({ error: 'Nib did not answer. Try again.' }, { status: 502 })
   }
