@@ -24,7 +24,7 @@ Word helps you write a document. CoWrite moves an idea from thought to finished,
 
 - People open a document in several tabs, devices, and places at once; cursors carry names. Edits made offline merge when the device reconnects.
 - Documents live in spaces with members and roles: viewer, commenter, reviewer, editor, owner. Share by email or by link.
-- Creating a space requires only its name, with an optional description. Both onboarding and the sidebar open the new private space directly; adding people stays optional. Spaces can be pinned per account in this browser, and the active space exposes its sections in the sidebar, including while reading its documents or decisions.
+- Creating a space requires only its name, with an optional description. First-time onboarding includes a welcome document, optional teammate setup, and a persistent checklist that tracks real progress. The sidebar's quick creation opens a private space directly, with three starting actions. Spaces can be pinned per account in this browser, and the active space exposes its sections in the sidebar, including while reading its documents or decisions.
 - A document can be published as a public page, exported (Markdown, Word, text, PDF), or presented as slides.
 - New documents start from a mode: Write, Brainstorm (a board of cards), Plan (a template with goals, tasks, a decision, a timeline), or Review.
 

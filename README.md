@@ -12,7 +12,7 @@ A shared writing tool. Sign in, create a document, and write it live with other 
 
 Live: **https://cowrite.cowrite.workers.dev**
 
-1. Create an account with an email and a password, or continue with GitHub.
+1. Create an account with an email and a password, or continue with GitHub. The first-time setup names your space, offers optional teammates, and opens a five-step Get started checklist with a working welcome document. Each step ticks itself as you try the app; you can skip setup or hide the checklist.
 2. Create a document and open it in two tabs.
 3. Type in one tab, or press `/` for headings, lists, tables, and images. The other tab follows, and shows your cursor with your name.
 4. Select a few words and use the comment button in the toolbar. The thread shows up in the other tab, in the text and in the Comments panel.
@@ -108,8 +108,8 @@ Decisions are records (`/decision/<id>`). A space has one numbered log fed from 
 
 1. Install the dependencies with `npm install`.
 2. Create `.dev.vars` with two lines: `BETTER_AUTH_SECRET=<any long random string>` and `BETTER_AUTH_URL=http://localhost:5173`.
-3. Create the local database tables with `npx wrangler d1 migrations apply cowrite --local`.
-4. Start everything with `npm run dev` (app, Worker, object, and database in one process), then open http://localhost:5173.
+3. Start everything with `npm run dev` (app, Worker, object, and database in one process), then open the local URL it prints. Before starting, it applies any pending migrations to the local database, including after pulling an update.
+4. To apply local migrations while the dev server is already running, use `npm run db:migrate`, then reload the page.
 
 ## Deploy
 

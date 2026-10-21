@@ -35,7 +35,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
   const next = params.get('next') ?? '/'
   const target = next.startsWith('/') && !next.startsWith('//') ? next : '/' // only paths on this site
   // A new account goes through the welcome steps, unless it came here on its way somewhere (a share link).
-  const firstStop = params.has('next') ? target : '/welcome'
+  const firstStop = params.has('next') && target !== '/' ? target : '/welcome'
   // "Start a space" on the landing page links here with ?mode=up, to open on sign-up.
   const [mode, setMode] = useState<'in' | 'up'>(params.get('mode') === 'up' ? 'up' : 'in')
   const [error, setError] = useState('')

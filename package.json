@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "db:migrate": "wrangler d1 migrations apply cowrite --local --config wrangler.jsonc",
+    "predev": "npm run db:migrate",
     "dev": "react-router dev",
     "build": "react-router build",
     "deploy": "npm run build && wrangler deploy",
