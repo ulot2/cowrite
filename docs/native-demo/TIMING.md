@@ -1,6 +1,7 @@
 # cowrite: 58-second demo, timing sheet
 
-`cowrite-native-demo.mp4` is 58.0 s, 1920×1080, 30 fps, H.264, and silent. Record your voiceover over it.
+`cowrite-native-demo.mp4` is 58.0 s, 1920×1080, 30 fps, H.264, and silent.
+`cowrite-native-demo-voiceover.mp4` is the same video with the recorded voiceover (AAC, −16 LUFS).
 Native's form asks: "Why did you build it, and how did you approach it?" (one minute max).
 
 Everything on screen is the live app at cowrite.tnuell.sbs, with two demo accounts (Ada Okafor, Bea Lindqvist).
